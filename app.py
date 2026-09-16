@@ -42,13 +42,18 @@ def load_live_data():
     combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
     combos['match_date'] = pd.to_datetime(combos['match_date'])
     
-    _cache = {'predictions': predictions, 'value_bets': value_bets, 'combos': combos}
+    _cache = {
+        'predictions': predictions,
+        'value_bets': value_bets,
+        'combos': combos
+    }
     return _cache
-    def get_data():
+
+
+def get_data():
     if not _cache:
         return load_live_data()
     return _cache
-
 TIER_LABELS = {
     'PRO_STRONG': {'label': 'Nguvu Kubwa', 'class': 'tier-strong', 'icon': '🔥'},
     'PRO_MEDIUM': {'label': 'Wastani', 'class': 'tier-medium', 'icon': '⚡'},
