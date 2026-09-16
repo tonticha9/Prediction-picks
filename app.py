@@ -30,13 +30,12 @@ _cache = {}
 def load_live_data():
     global _cache
     predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
-    predictions['match_date'] = pd.to_datetime(predictions['match_date'])
+    predictions['Date'] = pd.to_datetime(predictions['Date'])  # Badilisha match_date → Date
     value_bets = pd.read_csv(os.path.join(DATA_DIR, 'value_bets.csv'))
-    value_bets['Date'] = pd.to_datetime(value_bets['Date'])
+    value_bets['Date'] = pd.to_datetime(value_bets['Date'])    # Badilisha match_date → Date
     combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
     _cache = {'predictions': predictions, 'value_bets': value_bets, 'combos': combos}
     return _cache
-
 def get_data():
     if not _cache:
         return load_live_data()
