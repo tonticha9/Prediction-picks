@@ -32,7 +32,7 @@ def load_live_data():
     predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
     predictions['match_date'] = pd.to_datetime(predictions['match_date'])
     value_bets = pd.read_csv(os.path.join(DATA_DIR, 'value_bets.csv'))
-    value_bets['match_date'] = pd.to_datetime(value_bets['match_date'])
+    value_bets['Date'] = pd.to_datetime(value_bets['Date'])
     combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
     _cache = {'predictions': predictions, 'value_bets': value_bets, 'combos': combos}
     return _cache
