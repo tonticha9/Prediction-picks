@@ -29,19 +29,19 @@ _cache = {}
 
 def load_live_data():
     global _cache
-    
-    # Predictions - ina 'first_leg_date'
-    predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
-    predictions['first_leg_date'] = pd.to_datetime(predictions['first_leg_date'])
-    
-    # Value Bets - ina 'match_date'
+
+    # ── Individual predictions (for dashboard) are in combos.csv ──
+    predictions = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
+    predictions['match_date'] = pd.to_datetime(predictions['match_date'])
+
+    # ── Value Bets ─────────────────────────────────────────────
     value_bets = pd.read_csv(os.path.join(DATA_DIR, 'value_bets.csv'))
     value_bets['match_date'] = pd.to_datetime(value_bets['match_date'])
-    
-    # Combos - ina 'match_date'
-    combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
-    combos['match_date'] = pd.to_datetime(combos['match_date'])
-    
+
+    # ── Combo bets (for combos page) are in predictions.csv ────
+    combos = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
+    combos['first_leg_date'] = pd.to_datetime(combos['first_leg_date'])
+
     _cache = {
         'predictions': predictions,
         'value_bets': value_bets,
@@ -54,6 +54,8 @@ def get_data():
     if not _cache:
         return load_live_data()
     return _cache
+
+
 TIER_LABELS = {
     'PRO_STRONG': {'label': 'Nguvu Kubwa', 'class': 'tier-strong', 'icon': '🔥'},
     'PRO_MEDIUM': {'label': 'Wastani', 'class': 'tier-medium', 'icon': '⚡'},
@@ -62,13 +64,14 @@ TIER_LABELS = {
 def tier_info(tier_code):
     return TIER_LABELS.get(tier_code, {'label': tier_code, 'class': 'tier-other', 'icon': '•'})
 
+
 # ================================================================
 # DASHBOARD — Mechi za leo/mbeleni, best-pick + other picks
 # ================================================================
 @app.route('/')
 def dashboard():
     data = get_data()
-    df = data['predictions'].copy()
+    df = data['predictions'].copy()   # this is combos.csv (individual predictions)
     settings = Settings.get()
 
     date_filter = request.args.get('date')
@@ -94,23 +97,28 @@ def dashboard():
         other_picks = []
         for _, row in others.iterrows():
             other_picks.append({
-                'market': row['market'], 'probability': row['probability_%'],
+                'market': row['market'],
+                'probability': row['probability_%'],
                 'tier': tier_info(row['pro_tier']),
-                'has_odds': pd.notna(row.get('real_odds')), 'odds': row.get('real_odds'),
+                'has_odds': pd.notna(row.get('real_odds')),
+                'odds': row.get('real_odds'),
             })
 
         matches.append({
-            'home': home, 'away': away,
-            'date': mdate.strftime('%d %b %Y'), 'date_iso': mdate.strftime('%Y-%m-%d'),
+            'home': home,
+            'away': away,
+            'date': mdate.strftime('%d %b %Y'),
+            'date_iso': mdate.strftime('%Y-%m-%d'),
             'time_eat': mdate.strftime('%H:%M') if mdate.hour or mdate.minute else None,
-            'best_pick': best_pick, 'other_picks': other_picks,
+            'best_pick': best_pick,
+            'other_picks': other_picks,
         })
 
     matches.sort(key=lambda m: m['date_iso'])
     available_dates = sorted(data['predictions']['match_date'].dt.strftime('%Y-%m-%d').unique().tolist())
 
     return render_template('dashboard.html', matches=matches, available_dates=available_dates,
-                            selected_date=date_filter, page='dashboard')
+                           selected_date=date_filter, page='dashboard')
 
 
 # ================================================================
@@ -122,10 +130,14 @@ def value_bets():
     bets = []
     for _, row in df.iterrows():
         bets.append({
-            'home': row['HomeTeam'], 'away': row['AwayTeam'],
+            'home': row['HomeTeam'],
+            'away': row['AwayTeam'],
             'date': pd.to_datetime(row['match_date']).strftime('%d %b %Y'),
-            'market': row['market'], 'probability': row['probability_%'],
-            'odds': row['real_odds'], 'ev': row['ev_%'], 'tier': tier_info(row['pro_tier']),
+            'market': row['market'],
+            'probability': row['probability_%'],
+            'odds': row['real_odds'],
+            'ev': row['ev_%'],
+            'tier': tier_info(row['pro_tier']),
         })
     return render_template('value_bets.html', bets=bets, page='value_bets')
 
@@ -135,13 +147,16 @@ def value_bets():
 # ================================================================
 @app.route('/combos')
 def combos():
-    df = get_data()['combos'].copy()
+    df = get_data()['combos'].copy()   # this is predictions.csv (combo bets)
     combo_list = []
     for _, row in df.iterrows():
         legs = [leg.strip() for leg in row['legs'].split(' + ')]
         combo_list.append({
-            'target_odds': row['target_odds'], 'combined_odds': row['combined_odds'],
-            'combined_prob': row['combined_prob_%'], 'n_legs': row['n_legs'], 'legs': legs,
+            'target_odds': row['target_odds'],
+            'combined_odds': row['combined_odds'],
+            'combined_prob': row['combined_prob_%'],
+            'n_legs': row['n_legs'],
+            'legs': legs,
         })
     return render_template('combos.html', combos=combo_list, page='combos')
 
@@ -159,15 +174,22 @@ def history():
 
     rows = []
     if snapshot_date:
-        snap = DataSnapshot.query.filter_by(snapshot_date=datetime.strptime(snapshot_date, '%Y-%m-%d').date()).first()
+        snap = DataSnapshot.query.filter_by(
+            snapshot_date=datetime.strptime(snapshot_date, '%Y-%m-%d').date()
+        ).first()
         if snap:
-            path_map = {'predictions': snap.predictions_path, 'value_bets': snap.value_bets_path, 'combos': snap.combos_path}
+            path_map = {
+                'predictions': snap.predictions_path,
+                'value_bets': snap.value_bets_path,
+                'combos': snap.combos_path
+            }
             path = path_map.get(tier)
             if path and os.path.exists(path):
                 rows = pd.read_csv(path).to_dict('records')
 
-    return render_template('history.html', tier=tier, rows=rows, available_dates=available_dates,
-                            selected_date=snapshot_date, page='history')
+    return render_template('history.html', tier=tier, rows=rows,
+                           available_dates=available_dates,
+                           selected_date=snapshot_date, page='history')
 
 
 # ================================================================
@@ -175,6 +197,7 @@ def history():
 # ================================================================
 def admin_required():
     return request.cookies.get('is_admin') == 'yes'
+
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
@@ -202,7 +225,7 @@ def admin():
 
     days_left = api_config.days_until_expiry()
     return render_template('admin.html', settings=settings, api_config=api_config,
-                            days_left=days_left, page='admin')
+                           days_left=days_left, page='admin')
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -210,7 +233,7 @@ def admin_login():
     if request.method == 'POST':
         if request.form.get('password') == ADMIN_PASSWORD:
             resp = redirect(url_for('admin'))
-            resp.set_cookie('is_admin', 'yes', max_age=60*60*24*7)  # wiki 1
+            resp.set_cookie('is_admin', 'yes', max_age=60 * 60 * 24 * 7)  # wiki 1
             return resp
         flash('Password si sahihi.', 'error')
     return render_template('admin_login.html')
@@ -239,10 +262,12 @@ def admin_refresh():
 
     existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
     if not existing:
-        snap = DataSnapshot(snapshot_date=today,
-                             predictions_path=os.path.join(hist_folder, 'predictions.csv'),
-                             value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
-                             combos_path=os.path.join(hist_folder, 'combos.csv'))
+        snap = DataSnapshot(
+            snapshot_date=today,
+            predictions_path=os.path.join(hist_folder, 'predictions.csv'),
+            value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
+            combos_path=os.path.join(hist_folder, 'combos.csv')
+        )
         db.session.add(snap)
         db.session.commit()
 
