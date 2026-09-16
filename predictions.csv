@@ -1,0 +1,6 @@
+target_odds,n_legs,legs,combined_odds,combined_prob_%,first_leg_date
+2,2,Getafe vs Malaga: goals_over_15 @1.57 + Ath Madrid vs Osasuna: dc_1x @1.10,1.73,67.6,2026-09-20
+3,3,Motherwell vs Aberdeen: dc_1x @1.25 + Getafe vs Malaga: goals_over_15 @1.57 + Santa Clara vs Sp Braga: dc_x2 @1.30,2.55,45.5,2026-09-15
+5,5,Getafe vs Malaga: goals_over_15 @1.57 + Malaga vs Villarreal: dc_x2 @1.28 + Kortrijk vs Waasland-Beveren: dc_x2 @1.50 + Az Alkmaar vs Telstar: dc_1x @1.07 + Lincoln vs Swansea: goals_over_15 @1.28,4.13,27.3,2026-09-20
+7,5,Auxerre vs Brest: goals_over_15 @1.25 + Gil Vicente vs Maritimo: dc_x2 @1.68 + Getafe vs Malaga: goals_over_15 @1.57 + Betis vs Getafe: dc_1x @1.18 + Lommel SK vs Mechelen: dc_x2 @1.44,5.6,18.3,2026-09-20
+10,6,Trabzonspor vs Galatasaray: dc_x2 @1.40 + Kortrijk vs Waasland-Beveren: dc_x2 @1.50 + Leeds vs Crystal Palace: dc_1x @1.25 + Corum vs Alanyaspor: dc_x2 @1.67 + Angers vs Troyes: goals_over_15 @1.33 + Goztep vs Rizespor: dc_1x @1.40,8.16,9.6,2026-09-19
