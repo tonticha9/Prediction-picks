@@ -1,0 +1,165 @@
+/* ================================================================
+   BRAITON PICKS — mtindo wa "sports business dashboard"
+   Navy ya giza + emerald (nguvu) + amber (value) + indigo (vitufe)
+   ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0A0F1E;
+  --bg-elevated: #121A30;
+  --card: #161F3A;
+  --card-border: #232D4D;
+  --text: #F1F5F9;
+  --text-dim: #8B93A8;
+  --emerald: #12D68A;
+  --emerald-dim: #0D9C66;
+  --amber: #FFB020;
+  --indigo: #6366F1;
+  --red: #FF5C7A;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: radial-gradient(circle at top right, #10182F 0%, var(--bg) 45%);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+h1, h2, h3, .brand { font-family: 'Sora', sans-serif; }
+
+/* ── TOP BAR + HAMBURGER ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #10182F 0%, #0D1426 100%);
+  border-bottom: 1px solid var(--card-border);
+  position: sticky; top: 0; z-index: 100;
+}
+.brand { font-size: 20px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 8px; }
+.brand span.dot { color: var(--emerald); }
+
+.hamburger {
+  width: 40px; height: 40px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--card-border);
+  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 4px;
+  cursor: pointer;
+}
+.hamburger span { width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
+
+.nav-drawer {
+  position: fixed; top: 0; right: -280px; width: 260px; height: 100%;
+  background: var(--bg-elevated); border-left: 1px solid var(--card-border);
+  z-index: 200; transition: right 0.25s ease;
+  padding: 20px; display: flex; flex-direction: column; gap: 6px;
+}
+.nav-drawer.open { right: 0; }
+.nav-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150;
+}
+.nav-overlay.open { display: block; }
+.nav-drawer a {
+  color: var(--text); text-decoration: none; padding: 12px 14px; border-radius: 10px;
+  font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px;
+}
+.nav-drawer a:hover, .nav-drawer a.active { background: var(--card); color: var(--emerald); }
+.nav-drawer .close-btn { align-self: flex-end; font-size: 22px; color: var(--text-dim); cursor: pointer; margin-bottom: 10px; }
+
+/* ── CONTAINER ── */
+.container { max-width: 720px; margin: 0 auto; padding: 20px 16px; }
+
+/* ── FILTER BAR ── */
+.filter-bar { display: flex; gap: 10px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 4px; }
+.filter-bar select {
+  background: var(--card); color: var(--text); border: 1px solid var(--card-border);
+  border-radius: 10px; padding: 10px 14px; font-family: 'Inter'; font-size: 14px; font-weight: 500;
+}
+
+/* ── MATCH CARD ── */
+.match-card {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  margin-bottom: 14px; overflow: hidden;
+}
+.match-card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; background: var(--bg-elevated);
+}
+.match-teams { font-weight: 700; font-size: 15px; }
+.match-meta { font-size: 12px; color: var(--text-dim); text-align: right; }
+
+.best-pick { padding: 16px; }
+.best-pick-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-dim); margin-bottom: 6px; font-weight: 700; }
+.best-pick-row { display: flex; justify-content: space-between; align-items: center; }
+.best-pick-market { font-size: 17px; font-weight: 700; }
+.best-pick-prob { font-size: 24px; font-weight: 800; font-family: 'Sora'; color: var(--emerald); }
+.best-pick-extra { display: flex; gap: 14px; margin-top: 8px; font-size: 13px; color: var(--text-dim); }
+.best-pick-extra b { color: var(--text); }
+
+.tier-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.tier-strong { background: rgba(18,214,138,0.15); color: var(--emerald); }
+.tier-medium { background: rgba(255,176,32,0.15); color: var(--amber); }
+.tier-other { background: rgba(139,147,168,0.15); color: var(--text-dim); }
+
+.toggle-picks {
+  width: 100%; padding: 12px; background: transparent; border: none; border-top: 1px solid var(--card-border);
+  color: var(--indigo); font-weight: 600; font-size: 13px; cursor: pointer; font-family: 'Inter';
+}
+.other-picks { display: none; padding: 0 16px 16px; }
+.other-picks.open { display: block; }
+.other-pick-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--card-border); font-size: 13px;
+}
+.other-pick-row:last-child { border-bottom: none; }
+
+/* ── VALUE BETS / TABLE ── */
+.value-row, .table-row {
+  background: var(--card); border: 1px solid var(--card-border); border-left: 3px solid var(--amber);
+  border-radius: 10px; padding: 12px 14px; margin-bottom: 10px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.ev-badge { font-family: 'Sora'; font-weight: 800; font-size: 16px; color: var(--amber); }
+
+/* ── COMBO CARD ── */
+.combo-card {
+  background: linear-gradient(135deg, var(--card) 0%, #1A2444 100%);
+  border: 1px solid var(--card-border); border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+}
+.combo-target { font-size: 12px; color: var(--text-dim); text-transform: uppercase; font-weight: 700; }
+.combo-odds { font-family: 'Sora'; font-size: 28px; font-weight: 800; color: var(--indigo); margin: 4px 0; }
+.combo-leg { font-size: 13px; padding: 6px 0; border-bottom: 1px dashed var(--card-border); color: var(--text-dim); }
+.combo-leg:last-child { border-bottom: none; }
+
+/* ── ADMIN ── */
+.admin-section {
+  background: var(--card); border: 1px solid var(--card-border); border-radius: var(--radius);
+  padding: 18px; margin-bottom: 18px;
+}
+.admin-section h3 { margin-bottom: 12px; font-size: 15px; }
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+.form-group input {
+  width: 100%; background: var(--bg-elevated); border: 1px solid var(--card-border); color: var(--text);
+  padding: 10px 12px; border-radius: 8px; font-family: 'Inter'; font-size: 14px;
+}
+.btn {
+  background: var(--indigo); color: white; border: none; padding: 11px 20px; border-radius: 10px;
+  font-weight: 700; font-size: 14px; cursor: pointer; font-family: 'Inter';
+}
+.btn-secondary { background: var(--bg-elevated); border: 1px solid var(--card-border); }
+.expiry-warning { padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+.expiry-ok { background: rgba(18,214,138,0.15); color: var(--emerald); }
+.expiry-soon { background: rgba(255,176,32,0.15); color: var(--amber); }
+.expiry-critical { background: rgba(255,92,122,0.15); color: var(--red); }
+
+.flash { padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 13px; font-weight: 600; }
+.flash-success { background: rgba(18,214,138,0.15); color: var(--emerald); }
+.flash-error { background: rgba(255,92,122,0.15); color: var(--red); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-dim); }

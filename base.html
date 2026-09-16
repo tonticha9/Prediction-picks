@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Braiton Picks</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand">⚽ Braiton <span class="dot">Picks</span></div>
+    <div class="hamburger" onclick="toggleNav()">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
+  <div class="nav-drawer" id="navDrawer">
+    <div class="close-btn" onclick="toggleNav()">✕</div>
+    <a href="{{ url_for('dashboard') }}" class="{{ 'active' if page=='dashboard' else '' }}">📊 Predictions</a>
+    <a href="{{ url_for('value_bets') }}" class="{{ 'active' if page=='value_bets' else '' }}">💰 Value Bets</a>
+    <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
+    <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
+    <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' else '' }}">⚙️ Admin</a>
+  </div>
+
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash flash-{{ 'error' if category=='error' else 'success' }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <script>
+    function toggleNav() {
+      document.getElementById('navDrawer').classList.toggle('open');
+      document.getElementById('navOverlay').classList.toggle('open');
+    }
+    function togglePicks(id) {
+      document.getElementById(id).classList.toggle('open');
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

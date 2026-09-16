@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 style="margin-bottom:16px;">⚙️ Admin Panel</h2>
+
+<div class="admin-section">
+  <h3>Mipangilio ya Predictions</h3>
+  <form method="POST">
+    <input type="hidden" name="action" value="update_settings">
+    <div class="form-group">
+      <label>Number of markets kuonyesha kwa kila mechi (Other Picks)</label>
+      <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0" max="20">
+    </div>
+    <div class="form-group">
+      <label>Minimum probability (%) kuonyesha soko</label>
+      <input type="number" step="0.1" name="min_probability" value="{{ settings.min_probability }}" min="0" max="100">
+    </div>
+    <button class="btn" type="submit">Hifadhi Mipangilio</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h3>AllSportsAPI Key</h3>
+
+  {% if days_left is not none %}
+    {% if days_left < 0 %}
+      <div class="expiry-warning expiry-critical">⚠️ API key IMEISHA MUDA siku {{ -days_left }} zilizopita!</div>
+    {% elif days_left <= 7 %}
+      <div class="expiry-warning expiry-critical">⏰ Zimebaki siku {{ days_left }} tu kabla API key haijaisha!</div>
+    {% elif days_left <= 14 %}
+      <div class="expiry-warning expiry-soon">⏰ Zimebaki siku {{ days_left }} kabla ya kuisha.</div>
+    {% else %}
+      <div class="expiry-warning expiry-ok">✅ API key iko sawa — zimebaki siku {{ days_left }}.</div>
+    {% endif %}
+  {% endif %}
+
+  <form method="POST">
+    <input type="hidden" name="action" value="update_api">
+    <div class="form-group">
+      <label>AllSportsAPI Key</label>
+      <input type="text" name="api_key" placeholder="{{ '••••••••' + api_config.api_key[-4:] if api_config.api_key else 'Weka API key' }}">
+    </div>
+    <div class="form-group">
+      <label>Tarehe ya Kuisha</label>
+      <input type="date" name="expiry_date" value="{{ api_config.expiry_date.strftime('%Y-%m-%d') if api_config.expiry_date else '' }}">
+    </div>
+    <button class="btn" type="submit">Sasisha API Key</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h3>Data</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Baada ya kupakia faili mpya za CSV (predictions.csv, value_bets.csv, combos.csv) kwenye folder ya data/,
+    bonyeza hii kuzisasisha kwenye app na kuhifadhi history ya leo.
+  </p>
+  <form method="POST" action="{{ url_for('admin_refresh') }}">
+    <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <a href="{{ url_for('admin_logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
+</div>
+
+{% endblock %}

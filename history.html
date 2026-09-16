@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 style="margin-bottom:16px;">🕒 History</h2>
+
+<div class="filter-bar">
+  <select onchange="updateHistory()" id="tierSelect">
+    <option value="predictions" {{ 'selected' if tier=='predictions' else '' }}>Predictions</option>
+    <option value="value_bets" {{ 'selected' if tier=='value_bets' else '' }}>Value Bets</option>
+    <option value="combos" {{ 'selected' if tier=='combos' else '' }}>Combos</option>
+  </select>
+  <select onchange="updateHistory()" id="dateSelect">
+    <option value="">Chagua tarehe</option>
+    {% for d in available_dates %}
+      <option value="{{ d }}" {{ 'selected' if d==selected_date else '' }}>{{ d }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+{% if not rows %}
+  <div class="empty-state">Chagua tarehe kuona history ya siku hiyo.</div>
+{% else %}
+  {% for r in rows %}
+  <div class="table-row" style="border-left-color: var(--indigo);">
+    <div style="font-size:13px;">
+      {% if r.HomeTeam %}<b>{{ r.HomeTeam }} vs {{ r.AwayTeam }}</b> — {{ r.market }}{% endif %}
+      {% if r.legs %}{{ r.legs }}{% endif %}
+    </div>
+    <div style="font-size:13px; color:var(--text-dim);">
+      {% if r['probability_%'] %}{{ r['probability_%'] }}%{% endif %}
+      {% if r.combined_odds %}{{ r.combined_odds }}x{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+function updateHistory() {
+  const tier = document.getElementById('tierSelect').value;
+  const date = document.getElementById('dateSelect').value;
+  window.location.href = "{{ url_for('history') }}?tier=" + tier + "&date=" + date;
+}
+</script>
+{% endblock %}

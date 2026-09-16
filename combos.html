@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2 style="margin-bottom:16px;">🎯 Combos</h2>
+
+{% if not combos %}
+  <div class="empty-state">Hakuna combos kwa sasa.</div>
+{% endif %}
+
+{% for c in combos %}
+<div class="combo-card">
+  <div class="combo-target">Lengo: Odds {{ c.target_odds }}</div>
+  <div class="combo-odds">{{ c.combined_odds }}x</div>
+  <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
+    Uwezekano wa pamoja: <b style="color:var(--text);">{{ c.combined_prob }}%</b> · Legs {{ c.n_legs }}
+  </div>
+  {% for leg in c.legs %}
+    <div class="combo-leg">{{ leg }}</div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

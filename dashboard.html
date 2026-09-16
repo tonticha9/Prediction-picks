@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="filter-bar">
+  <select onchange="window.location.href='{{ url_for('dashboard') }}?date='+this.value">
+    <option value="">Tarehe zote</option>
+    {% for d in available_dates %}
+      <option value="{{ d }}" {{ 'selected' if d==selected_date else '' }}>{{ d }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+{% if not matches %}
+  <div class="empty-state">Hakuna mechi za kuonyesha kwa vigezo hivi.</div>
+{% endif %}
+
+{% for m in matches %}
+<div class="match-card">
+  <div class="match-card-header">
+    <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
+    <div class="match-meta">{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }} EAT{% endif %}</div>
+  </div>
+
+  <div class="best-pick">
+    <div class="best-pick-label">Best Pick</div>
+    <div class="best-pick-row">
+      <div class="best-pick-market">{{ m.best_pick.market }}</div>
+      <div class="best-pick-prob">{{ m.best_pick.probability }}%</div>
+    </div>
+    <div style="margin-top:8px;">
+      <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
+    </div>
+    {% if m.best_pick.has_odds %}
+    <div class="best-pick-extra">
+      <div>Odds: <b>{{ m.best_pick.odds }}</b></div>
+      <div>EV: <b style="color: {{ 'var(--emerald)' if m.best_pick.ev > 0 else 'var(--red)' }}">{{ m.best_pick.ev }}%</b></div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if m.other_picks %}
+  <button class="toggle-picks" onclick="togglePicks('picks-{{ loop.index }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <div class="other-picks" id="picks-{{ loop.index }}">
+    {% for p in m.other_picks %}
+    <div class="other-pick-row">
+      <div>{{ p.market }}</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
+        <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% endblock %}
