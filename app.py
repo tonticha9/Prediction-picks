@@ -27,12 +27,10 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
 # MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
 # ================================================================
 def is_market_allowed(market):
-    """Masoko ya mchanganyiko (win+corners/cards/goals) na goals za mwisho-mwisho
-    (0.5, 4.5) HAYARUHUSIWI KABISA - kanuni ya jumla, siyo orodha ya mfano mmoja mmoja.
-    Pia: 'under' za timu (home/away_goals_under_X) HAZIRUHUSIWI - 'over' za timu
-    zinabaki. Total goals (goals_over/under_15/25/35) HAZIGUSWI - zinabaki zote."""
-    if '_and_' in market:
-        return False
+    """Goals za mwisho-mwisho (0.5, 4.5 - jumla) na 'under' za timu
+    HAZIRUHUSIWI. Masoko ya mchanganyiko ('_and_') YAMETHIBITISHWA Kaggle
+    kuwa na range nzuri (14-65pp) - YANARUHUSIWA sasa. Total goals
+    (goals_over/under_15/25/35) HAZIGUSWI - zinabaki zote."""
     if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
         return False
     if market.startswith('home_goals_under_') or market.startswith('away_goals_under_'):
@@ -83,18 +81,13 @@ _cache = {}
 
 def load_live_data():
     global _cache
-
-    # ── Individual predictions (for dashboard) are in combos.csv ──
-    predictions = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
+    predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
     predictions['match_date'] = pd.to_datetime(predictions['match_date'])
 
-    # ── Value Bets ─────────────────────────────────────────────
     value_bets = pd.read_csv(os.path.join(DATA_DIR, 'value_bets.csv'))
     value_bets['match_date'] = pd.to_datetime(value_bets['match_date'])
 
-    # ── Combo bets (for combos page) are in predictions.csv ────
-    combos = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
-    combos['first_leg_date'] = pd.to_datetime(combos['first_leg_date'])
+    combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
 
     _cache = {
         'predictions': predictions,
@@ -125,7 +118,7 @@ def tier_info(tier_code):
 @app.route('/')
 def dashboard():
     data = get_data()
-    df = data['predictions'].copy()   # this is combos.csv (individual predictions)
+    df = data['predictions'].copy()
     settings = Settings.get()
 
     date_filter = request.args.get('date')
@@ -138,10 +131,9 @@ def dashboard():
     for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
         grp_sorted = grp.sort_values('probability_%', ascending=False)
 
-        # ── FIX: ondoa masoko hafifu + epuka lines/families zinazorudia ──
         grp_clean = filter_and_dedupe_picks(grp_sorted)
         if len(grp_clean) == 0:
-            grp_clean = grp_sorted  # fallback ya usalama (usiache mechi bila kitu)
+            grp_clean = grp_sorted
 
         best = grp_clean.iloc[0]
         others = grp_clean.iloc[1:1 + settings.max_markets_per_match]
@@ -207,7 +199,7 @@ def value_bets():
 # ================================================================
 @app.route('/combos')
 def combos():
-    df = get_data()['combos'].copy()   # this is predictions.csv (combo bets)
+    df = get_data()['combos'].copy()
     combo_list = []
     for _, row in df.iterrows():
         legs = [leg.strip() for leg in row['legs'].split(' + ')]
@@ -293,7 +285,7 @@ def admin_login():
     if request.method == 'POST':
         if request.form.get('password') == ADMIN_PASSWORD:
             resp = redirect(url_for('admin'))
-            resp.set_cookie('is_admin', 'yes', max_age=60 * 60 * 24 * 7)  # wiki 1
+            resp.set_cookie('is_admin', 'yes', max_age=60 * 60 * 24 * 7)
             return resp
         flash('Password si sahihi.', 'error')
     return render_template('admin_login.html')
