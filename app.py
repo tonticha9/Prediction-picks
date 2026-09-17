@@ -27,16 +27,17 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
 # MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
 # ================================================================
 def is_market_allowed(market):
-    """Goals za mwisho-mwisho (0.5, 4.5 - jumla) na 'under' za timu
-    HAZIRUHUSIWI. Masoko ya mchanganyiko ('_and_') YAMETHIBITISHWA Kaggle
-    kuwa na range nzuri (14-65pp) - YANARUHUSIWA sasa. Total goals
-    (goals_over/under_15/25/35) HAZIGUSWI - zinabaki zote."""
+    """Goals za mwisho-mwisho (0.5, 4.5) na 'under' za timu HAZIRUHUSIWI.
+    Masoko ya mchanganyiko ya 'under' (away_win_and_under_25) ni VIBAYA
+    KIMUUNDO (jinsi zilivyotengenezwa Kaggle si sahihi kihisabati) -
+    HAZIRUHUSIWI KABISA. Za 'over' (_and_..._over_) zinabaki - zimethibitika."""
     if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
         return False
     if market.startswith('home_goals_under_') or market.startswith('away_goals_under_'):
         return False
+    if '_and_' in market and 'under' in market:
+        return False
     return True
-
 MATCH_RESULT_FAMILY = {'home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'}
 
 def market_family(market):
