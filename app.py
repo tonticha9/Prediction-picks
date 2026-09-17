@@ -29,48 +29,42 @@ ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
 # Masoko yenye "range" finyu SANA (hayatofautishi mechi kwa mechi) -
 # yaligundulika Kaggle: goals_over/under_0.5 (range 5.6pp tu, karibu
 # kila mechi ya kitaalamu ina angalau bao 1). Hayaruhusiwi kuwa "pick".
-EXCLUDED_MARKETS = {
-    'goals_over_05', 'goals_under_05',
-    'home_goals_over_05', 'home_goals_under_05',
-    'away_goals_over_05', 'away_goals_under_05',
-}
+# ================================================================
+# MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
+# ================================================================
+def is_market_allowed(market):
+    """Masoko ya mchanganyiko (win+corners/cards/goals) na goals za mwisho-mwisho
+    (0.5, 4.5) HAYARUHUSIWI KABISA - kanuni ya jumla, siyo orodha ya mfano mmoja mmoja."""
+    if '_and_' in market:
+        return False
+    if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
+        return False
+    return True
 
-# Masoko haya ni "familia moja" (yanahusu matokeo ya mechi) - yanategemeana
-# kihisabati (dc_1x = SIYO away_win). Onyesha MOJA bora tu kwa kila mechi,
-# siyo zaidi ya moja - epuka mkanganyiko kama "away_win 85% NA dc_1x 85%".
 MATCH_RESULT_FAMILY = {'home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'}
 
 def market_family(market):
-    """Tambua 'familia' ya soko - kuzuia kuonyesha lines mbili za soko lile
-    lile (mfano goals_over_15 NA goals_over_25 kwa mechi moja), NA kuzuia
-    soko la 'wazi' (away_win) na la 'mchanganyiko' (away_win_and_under_25)
-    kuonekana yote mawili (yote mawili yanahusu 'nani anashinda')."""
     if market in MATCH_RESULT_FAMILY:
         return 'match_result'
-    for prefix in ('home_win_and_', 'away_win_and_', 'dc_1x_and_', 'dc_x2_and_', 'dc_12_and_'):
-        if market.startswith(prefix):
-            return 'match_result'
     base = re.sub(r'_(over|under)_\d+', '', market)
     return base
 
 def pick_score(row):
-    """Alama ya kuchagua 'best pick': soko lenye odds halisi + EV chanya
-    linapewa kipaumbele (kwa EV), SIYO probability ya juu tu. Masoko
-    yasiyo na odds yanabaki kupangwa kwa probability (hayana namba ya EV)."""
+    """(2)=odds halisi+EV chanya (bora zaidi), (1)=hakuna odds (probability),
+    (0)=odds halisi LAKINI EV hasi (mbaya zaidi - KAMWE isishinde dhidi ya
+    #1, hata kama probability yake ni kubwa - hii ndiyo bug uliyoiona)."""
     if pd.notna(row.get('real_odds')):
         ev = row['probability_%']/100 * row['real_odds'] - 1
         if ev > 0:
-            return (2, ev)          # kundi la juu kabisa: odds halisi + EV chanya
-        return (1, row['probability_%'])   # ina odds lakini EV siyo chanya
-    return (0, row['probability_%'])       # hakuna odds - probability tu
+            return (2, ev)
+        return (0, row['probability_%'])
+    return (1, row['probability_%'])
 
 def filter_and_dedupe_picks(df_sorted):
-    """Ondoa EXCLUDED_MARKETS, ruhusu MOJA TU kwa kila 'family', kisha
-    panga upya kwa pick_score (thamani, siyo probability tu)."""
     seen_families = set()
     kept_rows = []
     for _, row in df_sorted.iterrows():
-        if row['market'] in EXCLUDED_MARKETS:
+        if not is_market_allowed(row['market']):
             continue
         fam = market_family(row['market'])
         if fam in seen_families:
