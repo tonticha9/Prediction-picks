@@ -42,15 +42,31 @@ MATCH_RESULT_FAMILY = {'home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'}
 
 def market_family(market):
     """Tambua 'familia' ya soko - kuzuia kuonyesha lines mbili za soko lile
-    lile (mfano goals_over_15 NA goals_over_25 kwa mechi moja)."""
+    lile (mfano goals_over_15 NA goals_over_25 kwa mechi moja), NA kuzuia
+    soko la 'wazi' (away_win) na la 'mchanganyiko' (away_win_and_under_25)
+    kuonekana yote mawili (yote mawili yanahusu 'nani anashinda')."""
     if market in MATCH_RESULT_FAMILY:
         return 'match_result'
+    for prefix in ('home_win_and_', 'away_win_and_', 'dc_1x_and_', 'dc_x2_and_', 'dc_12_and_'):
+        if market.startswith(prefix):
+            return 'match_result'
     base = re.sub(r'_(over|under)_\d+', '', market)
     return base
 
+def pick_score(row):
+    """Alama ya kuchagua 'best pick': soko lenye odds halisi + EV chanya
+    linapewa kipaumbele (kwa EV), SIYO probability ya juu tu. Masoko
+    yasiyo na odds yanabaki kupangwa kwa probability (hayana namba ya EV)."""
+    if pd.notna(row.get('real_odds')):
+        ev = row['probability_%']/100 * row['real_odds'] - 1
+        if ev > 0:
+            return (2, ev)          # kundi la juu kabisa: odds halisi + EV chanya
+        return (1, row['probability_%'])   # ina odds lakini EV siyo chanya
+    return (0, row['probability_%'])       # hakuna odds - probability tu
+
 def filter_and_dedupe_picks(df_sorted):
-    """Kutoka orodha ya masoko yaliyopangwa (juu kwenda chini kwa probability),
-    ondoa EXCLUDED_MARKETS, kisha ruhusu MOJA TU kwa kila 'family'."""
+    """Ondoa EXCLUDED_MARKETS, ruhusu MOJA TU kwa kila 'family', kisha
+    panga upya kwa pick_score (thamani, siyo probability tu)."""
     seen_families = set()
     kept_rows = []
     for _, row in df_sorted.iterrows():
@@ -61,7 +77,12 @@ def filter_and_dedupe_picks(df_sorted):
             continue
         seen_families.add(fam)
         kept_rows.append(row)
-    return pd.DataFrame(kept_rows) if kept_rows else df_sorted.iloc[0:0]
+    if not kept_rows:
+        return df_sorted.iloc[0:0]
+    result = pd.DataFrame(kept_rows)
+    result['_score'] = result.apply(pick_score, axis=1)
+    result = result.iloc[result['_score'].map(lambda t: (-t[0], -t[1])).argsort()]
+    return result.drop(columns='_score')
 
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
