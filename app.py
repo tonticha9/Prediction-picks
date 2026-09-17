@@ -4,6 +4,7 @@ Dashboard ya predictions za kila siku + Value Bets + Combos + History + Admin.
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import pandas as pd
+import re
 from datetime import datetime, date
 import os
 import shutil
@@ -21,6 +22,46 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
+
+# ================================================================
+# MARKET QUALITY RULES (fix ya "best pick ni upuuzi")
+# ================================================================
+# Masoko yenye "range" finyu SANA (hayatofautishi mechi kwa mechi) -
+# yaligundulika Kaggle: goals_over/under_0.5 (range 5.6pp tu, karibu
+# kila mechi ya kitaalamu ina angalau bao 1). Hayaruhusiwi kuwa "pick".
+EXCLUDED_MARKETS = {
+    'goals_over_05', 'goals_under_05',
+    'home_goals_over_05', 'home_goals_under_05',
+    'away_goals_over_05', 'away_goals_under_05',
+}
+
+# Masoko haya ni "familia moja" (yanahusu matokeo ya mechi) - yanategemeana
+# kihisabati (dc_1x = SIYO away_win). Onyesha MOJA bora tu kwa kila mechi,
+# siyo zaidi ya moja - epuka mkanganyiko kama "away_win 85% NA dc_1x 85%".
+MATCH_RESULT_FAMILY = {'home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'}
+
+def market_family(market):
+    """Tambua 'familia' ya soko - kuzuia kuonyesha lines mbili za soko lile
+    lile (mfano goals_over_15 NA goals_over_25 kwa mechi moja)."""
+    if market in MATCH_RESULT_FAMILY:
+        return 'match_result'
+    base = re.sub(r'_(over|under)_\d+', '', market)
+    return base
+
+def filter_and_dedupe_picks(df_sorted):
+    """Kutoka orodha ya masoko yaliyopangwa (juu kwenda chini kwa probability),
+    ondoa EXCLUDED_MARKETS, kisha ruhusu MOJA TU kwa kila 'family'."""
+    seen_families = set()
+    kept_rows = []
+    for _, row in df_sorted.iterrows():
+        if row['market'] in EXCLUDED_MARKETS:
+            continue
+        fam = market_family(row['market'])
+        if fam in seen_families:
+            continue
+        seen_families.add(fam)
+        kept_rows.append(row)
+    return pd.DataFrame(kept_rows) if kept_rows else df_sorted.iloc[0:0]
 
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
@@ -83,8 +124,14 @@ def dashboard():
     matches = []
     for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
         grp_sorted = grp.sort_values('probability_%', ascending=False)
-        best = grp_sorted.iloc[0]
-        others = grp_sorted.iloc[1:1 + settings.max_markets_per_match]
+
+        # ── FIX: ondoa masoko hafifu + epuka lines/families zinazorudia ──
+        grp_clean = filter_and_dedupe_picks(grp_sorted)
+        if len(grp_clean) == 0:
+            grp_clean = grp_sorted  # fallback ya usalama (usiache mechi bila kitu)
+
+        best = grp_clean.iloc[0]
+        others = grp_clean.iloc[1:1 + settings.max_markets_per_match]
 
         best_pick = {
             'market': best['market'],
