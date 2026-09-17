@@ -24,20 +24,18 @@ db.init_app(app)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
 
 # ================================================================
-# MARKET QUALITY RULES (fix ya "best pick ni upuuzi")
-# ================================================================
-# Masoko yenye "range" finyu SANA (hayatofautishi mechi kwa mechi) -
-# yaligundulika Kaggle: goals_over/under_0.5 (range 5.6pp tu, karibu
-# kila mechi ya kitaalamu ina angalau bao 1). Hayaruhusiwi kuwa "pick".
-# ================================================================
 # MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
 # ================================================================
 def is_market_allowed(market):
     """Masoko ya mchanganyiko (win+corners/cards/goals) na goals za mwisho-mwisho
-    (0.5, 4.5) HAYARUHUSIWI KABISA - kanuni ya jumla, siyo orodha ya mfano mmoja mmoja."""
+    (0.5, 4.5) HAYARUHUSIWI KABISA - kanuni ya jumla, siyo orodha ya mfano mmoja mmoja.
+    Pia: 'under' za timu (home/away_goals_under_X) HAZIRUHUSIWI - 'over' za timu
+    zinabaki. Total goals (goals_over/under_15/25/35) HAZIGUSWI - zinabaki zote."""
     if '_and_' in market:
         return False
     if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
+        return False
+    if market.startswith('home_goals_under_') or market.startswith('away_goals_under_'):
         return False
     return True
 
