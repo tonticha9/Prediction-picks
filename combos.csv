@@ -1,0 +1,5 @@
+target_odds,n_legs,legs,combined_odds,combined_prob_%
+2,2,Wrexham vs Southampton: dc_12 @1.33 + Stuttgart vs Dortmund: dc_12 @1.22,1.62,69.2
+3,4,Nacional vs Famalicao: dc_12 @1.30 + Wrexham vs Southampton: dc_12 @1.33 + Anderlecht vs Waregem: dc_1x @1.20 + Aris vs Iraklis: dc_1x @1.17,2.43,46.7
+5,5,Fiorentina vs Napoli: dc_12 @1.30 + Wrexham vs Southampton: dc_12 @1.33 + Angers vs Troyes: dc_12 @1.36 + Bournemouth vs Liverpool: dc_12 @1.28 + Parma vs Genoa: dc_x2 @1.36,4.09,26.6
+7,6,Getafe vs Malaga: dc_12 @1.36 + Everton vs Ipswich: dc_1x @1.18 + Lincoln vs Swansea: dc_12 @1.33 + Rio Ave vs Estrela: dc_x2 @1.44 + La Coruna vs Sevilla: dc_12 @1.36 + Gil Vicente vs Maritimo: dc_12 @1.36,5.68,13.6
