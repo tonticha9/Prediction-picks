@@ -1,0 +1,111 @@
+"""
+.github/scripts/run_kaggle_and_fetch.py
+
+Inaiambia Kaggle "endesha notebook upya" (kernels push), inasubiri kwa
+uangalifu (polling ya dakika 1-2, si sekunde), na ikimaliza, inapakua
+predictions.csv/value_bets.csv/combos.csv kwenye kaggle_output/.
+
+Ina "retry with backoff" - haikati tamaa mara moja endapo Kaggle
+ikatoa error ya muda (403/429/network).
+"""
+import os
+import sys
+import time
+import subprocess
+import json
+
+KAGGLE_SLUG = os.environ.get('KAGGLE_SLUG')
+if not KAGGLE_SLUG:
+    print("❌ KAGGLE_SLUG haijawekwa (env variable)")
+    sys.exit(1)
+
+MAX_WAIT_MINUTES = 80          # Kikomo cha juu cha kusubiri Kaggle imalize
+POLL_INTERVAL_SECONDS = 90     # Angalia hali kila dakika 1.5 (tahadhari, si haraka mno)
+MAX_RETRIES_PER_CALL = 4
+
+
+def run_kaggle_cmd(args, allow_fail=False):
+    """Endesha amri ya 'kaggle' na retry+backoff endapo ikashindwa."""
+    delays = [15, 60, 180, 300]  # sekunde: 15s, dakika 1, dakika 3, dakika 5
+    last_err = None
+    for attempt in range(MAX_RETRIES_PER_CALL):
+        result = subprocess.run(['kaggle'] + args, capture_output=True, text=True)
+        if result.returncode == 0:
+            return result.stdout
+        last_err = result.stderr or result.stdout
+        print(f"⚠️  Jaribio {attempt+1}/{MAX_RETRIES_PER_CALL} lilishindwa: {last_err[:300]}")
+        if attempt < MAX_RETRIES_PER_CALL - 1:
+            wait = delays[min(attempt, len(delays)-1)]
+            print(f"   Kusubiri sekunde {wait} kabla ya kujaribu tena...")
+            time.sleep(wait)
+    if allow_fail:
+        return None
+    print(f"❌ Imeshindwa baada ya majaribio {MAX_RETRIES_PER_CALL}: {last_err}")
+    sys.exit(1)
+
+
+def main():
+    print(f"🚀 Kutrigger notebook: {KAGGLE_SLUG}")
+
+    # HATUA 1: Pakua notebook (kernel files) kwenye folder ya muda
+    os.makedirs('kaggle_kernel', exist_ok=True)
+    run_kaggle_cmd(['kernels', 'pull', KAGGLE_SLUG, '-p', 'kaggle_kernel', '-m'])
+
+    # HATUA 2: "Push" - hii inaanzisha uendeshaji mpya wa notebook
+    print("📤 Kuanzisha uendeshaji mpya...")
+    run_kaggle_cmd(['kernels', 'push', '-p', 'kaggle_kernel'])
+
+    # HATUA 3: Subiri ikamilike (polling ya taratibu)
+    print(f"⏳ Kusubiri Kaggle imalize (upeo: dakika {MAX_WAIT_MINUTES})...")
+    waited = 0
+    status = None
+    while waited < MAX_WAIT_MINUTES * 60:
+        time.sleep(POLL_INTERVAL_SECONDS)
+        waited += POLL_INTERVAL_SECONDS
+        output = run_kaggle_cmd(['kernels', 'status', KAGGLE_SLUG], allow_fail=True)
+        if output is None:
+            print("   (Hali haikupatikana mzunguko huu, naendelea kusubiri...)")
+            continue
+        print(f"   [{waited//60} dakika] Hali: {output.strip()}")
+        if 'complete' in output.lower():
+            status = 'complete'
+            break
+        if 'error' in output.lower() or 'failed' in output.lower():
+            status = 'error'
+            break
+
+    if status == 'error':
+        print("❌ Kaggle notebook ilishindwa kuendesha (error). Angalia logs Kaggle.")
+        sys.exit(1)
+    if status != 'complete':
+        print(f"❌ Muda umeisha (dakika {MAX_WAIT_MINUTES}) bila kukamilika. Kaggle bado inaendesha - angalia baadaye.")
+        sys.exit(1)
+
+    print("✅ Kaggle imemaliza kuendesha!")
+
+    # HATUA 4: Pakua matokeo
+    os.makedirs('kaggle_output', exist_ok=True)
+    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
+                     'predictions.csv'])
+    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
+                     'value_bets.csv'])
+    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
+                     'combos.csv'])
+
+    # HATUA 5: Uthibitisho wa msingi (sanity check) kabla ya kukubali matokeo
+    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
+        path = os.path.join('kaggle_output', fname)
+        if not os.path.exists(path):
+            print(f"❌ {fname} haipo baada ya kupakua - kitu kimeshindikana.")
+            sys.exit(1)
+        size = os.path.getsize(path)
+        if size < 50:  # faili tupu/karibu tupu - dalili ya tatizo
+            print(f"❌ {fname} ni ndogo mno ({size} bytes) - inaonekana ni tupu/mbovu.")
+            sys.exit(1)
+        print(f"✅ {fname}: {size:,} bytes")
+
+    print("🎉 Kila kitu kimekamilika kwa mafanikio!")
+
+
+if __name__ == '__main__':
+    main()
