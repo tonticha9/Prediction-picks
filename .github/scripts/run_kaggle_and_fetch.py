@@ -75,7 +75,40 @@ def main():
             break
 
     if status == 'error':
-        print("❌ Kaggle notebook ilishindwa kuendesha (error). Angalia logs Kaggle.")
+        print("❌ Kaggle notebook ilishindwa kuendesha (error).")
+        print("🔍 Kupakua logs za Kaggle kuonyesha error HASA...")
+        os.makedirs('kaggle_debug_logs', exist_ok=True)
+        # Jaribu kupakua kila kitu kilichopo (hata baada ya error - mara nyingi
+        # Kaggle bado inahifadhi log/notebook iliyoshindwa)
+        subprocess.run(['kaggle', 'kernels', 'output', KAGGLE_SLUG,
+                         '-p', 'kaggle_debug_logs'], capture_output=True, text=True)
+        found_log = False
+        for fname in os.listdir('kaggle_debug_logs'):
+            fpath = os.path.join('kaggle_debug_logs', fname)
+            if fname.endswith('.log'):
+                found_log = True
+                print(f"\n===== MAUDHUI YA {fname} =====")
+                with open(fpath, 'r', errors='replace') as f:
+                    print(f.read())
+                print(f"===== MWISHO WA {fname} =====\n")
+            elif fname.endswith('.ipynb'):
+                found_log = True
+                print(f"\n===== KUTAFUTA ERROR NDANI YA {fname} =====")
+                try:
+                    with open(fpath, 'r', errors='replace') as f:
+                        nb = json.load(f)
+                    for cell in nb.get('cells', []):
+                        for out in cell.get('outputs', []):
+                            if out.get('output_type') == 'error':
+                                print('TRACEBACK:')
+                                for line in out.get('traceback', []):
+                                    print(line)
+                except Exception as e:
+                    print(f"(Imeshindwa kusoma notebook: {e})")
+                print(f"===== MWISHO =====\n")
+        if not found_log:
+            print("⚠️ Hakuna log/notebook file iliyopatikana kwenye output ya Kaggle.")
+            print("   Nenda kaggle.com moja kwa moja kuona 'Version History' ya notebook.")
         sys.exit(1)
     if status != 'complete':
         print(f"❌ Muda umeisha (dakika {MAX_WAIT_MINUTES}) bila kukamilika. Kaggle bado inaendesha - angalia baadaye.")
