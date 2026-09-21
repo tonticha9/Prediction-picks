@@ -126,18 +126,37 @@ def main():
                      'combos.csv'])
 
     # HATUA 5: Uthibitisho wa msingi (sanity check) kabla ya kukubali matokeo
+    # MUHIMU: fixtures 0 (mfano wakati wa "international break") SI kosa -
+    # ni hali halali. Tunatofautisha "faili halali yenye mechi 0" (endelea,
+    # lakini USIBADILISHE data ya app) na "faili iliyoharibika kabisa" (kosa la
+    # kweli - simamisha workflow).
+    import pandas as pd
+    predictions_path = os.path.join('kaggle_output', 'predictions.csv')
     for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
         path = os.path.join('kaggle_output', fname)
         if not os.path.exists(path):
             print(f"❌ {fname} haipo baada ya kupakua - kitu kimeshindikana.")
             sys.exit(1)
-        size = os.path.getsize(path)
-        if size < 50:  # faili tupu/karibu tupu - dalili ya tatizo
-            print(f"❌ {fname} ni ndogo mno ({size} bytes) - inaonekana ni tupu/mbovu.")
-            sys.exit(1)
-        print(f"✅ {fname}: {size:,} bytes")
+        print(f"✅ {fname}: {os.path.getsize(path):,} bytes")
 
-    print("🎉 Kila kitu kimekamilika kwa mafanikio!")
+    try:
+        df_pred = pd.read_csv(predictions_path)
+        n_matches = len(df_pred)
+    except Exception as e:
+        print(f"❌ predictions.csv haiwezi kusomwa ({e}) - faili imeharibika.")
+        sys.exit(1)
+
+    if n_matches == 0:
+        print("\n⚠️  MECHI 0 ZIMEPATIKANA (huenda ni 'international break' au ligi hazina")
+        print("    ratiba kwa sasa) - HII SI KOSA. Data ya app HAITABADILISHWA -")
+        print("    predictions za mwisho zilizo sahihi zitaendelea kuonekana.")
+        # Andika alama maalum GitHub Actions itakayoisoma kuruka hatua za
+        # "commit" (badala ya kubadilisha data na faili tupu)
+        with open(os.environ.get('GITHUB_ENV', '/dev/null'), 'a') as f:
+            f.write("SKIP_UPDATE=true\n")
+        sys.exit(0)  # Kumaliza VIZURI (si kosa), lakini bila kubadilisha data
+
+    print(f"\n🎉 Mechi {n_matches} zimepatikana - data itasasishwa kwenye app.")
 
 
 if __name__ == '__main__':
