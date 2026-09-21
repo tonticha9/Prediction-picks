@@ -26,7 +26,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Kaggle CLI
-        run: pip install kaggle
+        run: pip install kaggle pandas
 
       - name: Configure Kaggle credentials
         env:
@@ -43,6 +43,7 @@ jobs:
         run: python .github/scripts/run_kaggle_and_fetch.py
 
       - name: Move downloaded files into data/
+        if: env.SKIP_UPDATE != 'true'
         run: |
           mkdir -p data
           cp kaggle_output/predictions.csv data/predictions.csv
@@ -50,9 +51,14 @@ jobs:
           cp kaggle_output/combos.csv data/combos.csv
 
       - name: Commit and push updated data
+        if: env.SKIP_UPDATE != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/predictions.csv data/value_bets.csv data/combos.csv
           git diff --staged --quiet || git commit -m "Auto-update predictions $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      - name: Skipped (no new matches)
+        if: env.SKIP_UPDATE == 'true'
+        run: echo "ℹ️ Hakuna mechi mpya zilizopatikana (huenda ni international break) - data ya app haijabadilishwa, predictions za zamani zinaendelea kutumika."
