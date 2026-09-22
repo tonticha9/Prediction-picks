@@ -22,8 +22,14 @@ from datetime import datetime, timedelta, date
 API_KEY = os.environ.get("ALLSPORTSAPI_KEY")
 KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")  # mfano: tonticha/historical-complete-no-gap
 
-if not API_KEY or not KAGGLE_DATASET:
-    print("❌ ALLSPORTSAPI_KEY au KAGGLE_DATASET_SLUG haijawekwa")
+missing = []
+if not API_KEY:
+    missing.append("ALLSPORTSAPI_KEY")
+if not KAGGLE_DATASET:
+    missing.append("KAGGLE_DATASET_SLUG")
+if missing:
+    print(f"❌ HAIPO: {', '.join(missing)} (angalia GitHub Secrets / workflow env)")
+    sys.exit(1)
     sys.exit(1)
 
 BASE_URL = "https://apiv2.allsportsapi.com/football/"
