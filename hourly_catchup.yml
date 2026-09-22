@@ -1,0 +1,44 @@
+# .github/workflows/hourly_catchup.yml
+#
+# JOB A — Kila saa, inavuta mechi zilizokwisha hivi karibuni na
+# kuzisasisha kwenye 'historical-complete-no-gap' dataset ya Kaggle.
+# Hii inazuia "pengo" la historia lisijitokeze tena.
+
+name: Hourly Catchup
+
+on:
+  schedule:
+    - cron: '15 * * * *'   # Dakika 15 baada ya kila saa (UTC)
+  workflow_dispatch:
+
+jobs:
+  catchup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install kaggle pandas numpy requests
+
+      - name: Configure Kaggle credentials
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Fetch recent results and update dataset
+        env:
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          KAGGLE_DATASET_SLUG: tonticha/historical-complete-no-gap
+        run: python .github/scripts/hourly_catchup.py
