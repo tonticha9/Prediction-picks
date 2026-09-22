@@ -116,14 +116,9 @@ def main():
 
     print("✅ Kaggle imemaliza kuendesha!")
 
-    # HATUA 4: Pakua matokeo
+    # HATUA 4: Pakua matokeo (FAILI ZOTE mara moja - hakuna '-f' flag kwa amri hii)
     os.makedirs('kaggle_output', exist_ok=True)
-    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
-                     'predictions.csv'])
-    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
-                     'value_bets.csv'])
-    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output', '-f',
-                     'combos.csv'])
+    run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output'])
 
     # HATUA 5: Uthibitisho wa msingi (sanity check) kabla ya kukubali matokeo
     # MUHIMU: fixtures 0 (mfano wakati wa "international break") SI kosa -
