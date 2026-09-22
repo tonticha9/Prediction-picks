@@ -17,11 +17,24 @@ HISTORY_DIR = os.path.join(DATA_DIR, 'history')
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+
+# ================================================================
+# DATABASE — Postgres (Neon) ikiwa DATABASE_URL ipo, vinginevyo SQLite
+# ya ndani kama kawaida (haivunji chochote ikiwa bado hujaweka Neon).
+# ================================================================
+_database_url = os.environ.get('DATABASE_URL')
+if _database_url:
+    if _database_url.startswith('postgres://'):
+        _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = _database_url
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
+REFRESH_SECRET = os.environ.get('REFRESH_SECRET')  # kwa /api/refresh - GitHub Actions itaituma
 
 # ================================================================
 # MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
@@ -102,6 +115,28 @@ def get_data():
     if not _cache:
         return load_live_data()
     return _cache
+
+
+def snapshot_today():
+    """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/ na uandike DataSnapshot
+    (kama haipo tayari kwa leo). Inatumiwa na /admin/refresh (mkono) na
+    /api/refresh (kiotomatiki, Job B kila usiku)."""
+    today = date.today()
+    hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
+    os.makedirs(hist_folder, exist_ok=True)
+    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
+        shutil.copy(os.path.join(DATA_DIR, fname), os.path.join(hist_folder, fname))
+
+    existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
+    if not existing:
+        snap = DataSnapshot(
+            snapshot_date=today,
+            predictions_path=os.path.join(hist_folder, 'predictions.csv'),
+            value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
+            combos_path=os.path.join(hist_folder, 'combos.csv')
+        )
+        db.session.add(snap)
+        db.session.commit()
 
 
 TIER_LABELS = {
@@ -301,31 +336,38 @@ def admin_logout():
 
 @app.route('/admin/refresh', methods=['POST'])
 def admin_refresh():
-    """Pakia upya CSV kutoka data/ (baada ya kupakia faili mpya), na hifadhi kama history snapshot."""
+    """Pakia upya CSV kutoka data/ (baada ya kupakia faili mpya kwa mkono), na hifadhi history snapshot."""
     if not admin_required():
         return redirect(url_for('admin_login'))
 
     load_live_data()
-
-    today = date.today()
-    hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
-    os.makedirs(hist_folder, exist_ok=True)
-    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
-        shutil.copy(os.path.join(DATA_DIR, fname), os.path.join(hist_folder, fname))
-
-    existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
-    if not existing:
-        snap = DataSnapshot(
-            snapshot_date=today,
-            predictions_path=os.path.join(hist_folder, 'predictions.csv'),
-            value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
-            combos_path=os.path.join(hist_folder, 'combos.csv')
-        )
-        db.session.add(snap)
-        db.session.commit()
+    snapshot_today()
 
     flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
     return redirect(url_for('admin'))
+
+
+# ================================================================
+# API — refresh ya KIOTOMATIKO, inaitwa na GitHub Actions (Job B) kila
+# usiku baada ya kupush data mpya. Inatumia secret key (header), SI
+# admin cookie, kwa sababu inaitwa na script - si browser ya mtu.
+# ================================================================
+@app.route('/api/refresh', methods=['POST'])
+def api_refresh():
+    if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
+        return jsonify({'error': 'unauthorized'}), 401
+
+    try:
+        load_live_data()
+        snapshot_today()
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+    return jsonify({
+        'status': 'ok',
+        'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
+        'refreshed_at': datetime.utcnow().isoformat()
+    }), 200
 
 
 # ================================================================
