@@ -173,6 +173,62 @@ def run_kaggle_cmd(args):
     return result.stdout
 
 
+def check_stuck_fixtures(from_date, to_date):
+    """
+    UKAGUZI WA UKWELI (si makisio ya wigo/statistiki): kwa kila mechi
+    iliyopangwa (kwenye 'from_date' hadi 'to_date'), angalia moja kwa
+    moja: je imepangwa kuanza SAA 4+ ZILIZOPITA, lakini bado haina
+    matokeo ("Finished")? Hii ni ushahidi HALISI wa tatizo (mechi
+    "imekwama" - API haijasasisha, au tatizo la mtandao la chanzo cha
+    data) - si "idadi isiyo ya kawaida".
+
+    Returns: list ya (league, HomeTeam, AwayTeam, kickoff_time, status)
+    kwa mechi zilizokwama.
+    """
+    stuck = []
+    now = datetime.utcnow()
+    for code, league_key in LEAGUE_MAP.items():
+        try:
+            resp = requests.get(BASE_URL, params={
+                "met": "Fixtures", "APIkey": API_KEY, "leagueId": league_key,
+                "from": from_date, "to": to_date,
+            }, timeout=30)
+            resp.raise_for_status()
+            data = resp.json()
+        except Exception as e:
+            print(f"   ⚠️ {code}: ukaguzi wa 'stuck fixtures' umeshindwa ({e})")
+            continue
+
+        for f in (data.get('result', []) or []):
+            status = f.get('event_status', '')
+            if status == 'Finished':
+                continue
+            try:
+                kickoff = datetime.strptime(
+                    f"{f.get('event_date')} {f.get('event_time')}", '%Y-%m-%d %H:%M')
+            except Exception:
+                continue
+            hours_since_kickoff = (now - kickoff).total_seconds() / 3600
+            if hours_since_kickoff > 4:  # muda wa kutosha kwa mechi yoyote kumalizika
+                stuck.append((code, f.get('event_home_team'), f.get('event_away_team'),
+                              f.get('event_date'), f.get('event_time'), status or '(tupu)'))
+        time.sleep(0.3)
+    return stuck
+
+
+def run_stuck_check(from_date, to_date):
+    print("\n🔍 Kukagua mechi 'zilizokwama' (zimepita masaa 4+ bila matokeo)...")
+    stuck = check_stuck_fixtures(from_date, to_date)
+    if stuck:
+        print(f"\n⚠️  MECHI {len(stuck)} ZIMEKWAMA (zimepita muda, bado hazina matokeo):")
+        for code, home, away, edate, etime, status in stuck:
+            msg = f"{code}: {home} vs {away} ({edate} {etime}) - status: '{status}'"
+            print(f"   • {msg}")
+            print(f"::warning::Mechi imekwama: {msg}")
+    else:
+        print("✅ Hakuna mechi zilizokwama - kila kitu kiko sawa.")
+
+
 def main():
     # HATUA 1: Pakua dataset ya sasa (historia iliyopo)
     print("📥 Kupakua historical-complete-no-gap dataset ya sasa...")
@@ -198,6 +254,7 @@ def main():
 
     if len(df_new) == 0:
         print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu. Hakuna kilichobadilika.")
+        run_stuck_check(from_date, to_date)
         return
 
     # HATUA 3: Unganisha (dedupe kwa Date+HomeTeam+AwayTeam, epuka kurudia)
@@ -208,6 +265,7 @@ def main():
 
     if len(df_new_unique) == 0:
         print("ℹ️ Mechi zote zilizopatikana tayari zipo kwenye historia. Hakuna kilichobadilika.")
+        run_stuck_check(from_date, to_date)
         return
 
     df_combined = pd.concat([df_existing, df_new_unique], ignore_index=True)
@@ -225,6 +283,11 @@ def main():
     run_kaggle_cmd(['datasets', 'version', '-p', 'kaggle_dataset',
                      '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"])
     print("🎉 Dataset imesasishwa kikamilifu!")
+
+    # HATUA 5: UKAGUZI WA UKWELI — mechi zilizokwama (zimepita muda,
+    # bado hazina matokeo). Hii HAIACHISHI job (data tayari imesasishwa
+    # salama) - ni ONYO tu, kwa mechi ZA KWELI zilizotambuliwa, si makisio.
+    run_stuck_check(from_date, to_date)
 
 
 if __name__ == '__main__':
