@@ -2,7 +2,9 @@
 #
 # JOB B — Inaendesha kila usiku, inatrigger Kaggle notebook, inapakua
 # predictions.csv/value_bets.csv/combos.csv, inaziweka kwenye data/
-# folder ya repo (Render itaziona na ku-deploy yenyewe).
+# folder ya repo (Render itaziona na ku-deploy yenyewe), KISHA inaita
+# /api/refresh ya app moja kwa moja ili data ionekane papo hapo bila
+# kusubiri Render redeploy.
 
 name: Nightly Predictions Update
 
@@ -58,6 +60,28 @@ jobs:
           git add data/predictions.csv data/value_bets.csv data/combos.csv
           git diff --staged --quiet || git commit -m "Auto-update predictions $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
+
+      - name: Trigger app refresh (/api/refresh)
+        if: env.SKIP_UPDATE != 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}                    # mfano: https://braiton-picks.onrender.com
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}       # sawa na REFRESH_SECRET kwenye Render env
+        run: |
+          echo "Kusubiri sekunde 20 Render ipate muda ikiwa bado inadeploy..."
+          sleep 20
+          for attempt in 1 2 3; do
+            status=$(curl -s -o /tmp/refresh_out.json -w "%{http_code}" -X POST "$APP_URL/api/refresh" \
+              -H "X-Refresh-Secret: $REFRESH_SECRET")
+            echo "Jaribio $attempt - HTTP $status"
+            cat /tmp/refresh_out.json
+            echo ""
+            if [ "$status" = "200" ]; then
+              echo "✅ App imesasishwa (refresh imefanikiwa)."
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::warning::App refresh haikufanikiwa baada ya majaribio 3 - data mpya ipo kwenye repo, lakini app inaweza bado kuonyesha cache ya zamani hadi redeploy ijayo."
 
       - name: Skipped (no new matches)
         if: env.SKIP_UPDATE == 'true'
