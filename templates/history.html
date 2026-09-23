@@ -16,19 +16,95 @@
   </select>
 </div>
 
-{% if not rows %}
+{% macro result_badge(result) %}
+  {% if result == 'WON' %}<span style="color:var(--emerald); font-weight:700;">✅ WON</span>
+  {% elif result == 'LOST' %}<span style="color:var(--red); font-weight:700;">❌ LOST</span>
+  {% elif result == 'VOID' %}<span style="color:var(--text-dim); font-weight:700;">⚪ VOID</span>
+  {% else %}<span style="color:var(--text-dim);">⏳ PENDING</span>
+  {% endif %}
+{% endmacro %}
+
+{% if tier == 'combos' %}
+  <div class="empty-state">{{ combos_message }}</div>
+
+{% elif not selected_date %}
   <div class="empty-state">Chagua tarehe kuona history ya siku hiyo.</div>
-{% else %}
-  {% for r in rows %}
+
+{% elif tier == 'predictions' %}
+  {% if summary %}
+  <div class="match-card" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+      <div>✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID</div>
+      {% if summary.win_rate is not none %}
+      <div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not matches %}
+    <div class="empty-state">Hakuna history kwa tarehe hii.</div>
+  {% endif %}
+
+  {% for m in matches %}
+  <div class="match-card">
+    <div class="match-card-header">
+      <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
+      <div class="match-meta">{{ m.date }}</div>
+    </div>
+
+    <div class="best-pick">
+      <div class="best-pick-label">Best Pick</div>
+      <div class="best-pick-row">
+        <div class="best-pick-market">{{ m.best_pick.market }}</div>
+        <div class="best-pick-prob">{{ m.best_pick.probability }}%</div>
+      </div>
+      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span>{{ result_badge(m.best_pick.result) }}</span>
+        {% if m.best_pick.odds %}<span style="color:var(--text-dim);">@{{ m.best_pick.odds }}</span>{% endif %}
+      </div>
+    </div>
+
+    {% if m.other_picks %}
+    <button class="toggle-picks" onclick="togglePicks('picks-{{ loop.index }}')">Masoko mengine ({{ m.other_picks|length }}) ▾</button>
+    <div class="other-picks" id="picks-{{ loop.index }}">
+      {% for p in m.other_picks %}
+      <div class="other-pick-row">
+        <div>{{ p.market }}</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          {% if p.odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
+          <span>{{ result_badge(p.result) }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+{% elif tier == 'value_bets' %}
+  {% if summary %}
+  <div class="match-card" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+      <div>✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID</div>
+      {% if summary.win_rate is not none %}
+      <div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not value_bets_list %}
+    <div class="empty-state">Hakuna value bets kwa tarehe hii.</div>
+  {% endif %}
+
+  {% for r in value_bets_list %}
   <div class="table-row" style="border-left-color: var(--indigo);">
     <div style="font-size:13px;">
-      {% if r.HomeTeam %}<b>{{ r.HomeTeam }} vs {{ r.AwayTeam }}</b> — {{ r.market }}{% endif %}
-      {% if r.legs %}{{ r.legs }}{% endif %}
+      <b>{{ r.home }} vs {{ r.away }}</b> — {{ r.market }}
+      <div style="color:var(--text-dim); margin-top:2px;">{{ r.date }}{% if r.odds %} · @{{ r.odds }}{% endif %} · {{ r.probability }}%</div>
     </div>
-    <div style="font-size:13px; color:var(--text-dim);">
-      {% if r['probability_%'] %}{{ r['probability_%'] }}%{% endif %}
-      {% if r.combined_odds %}{{ r.combined_odds }}x{% endif %}
-    </div>
+    <div>{{ result_badge(r.result) }}</div>
   </div>
   {% endfor %}
 {% endif %}
@@ -40,6 +116,10 @@ function updateHistory() {
   const tier = document.getElementById('tierSelect').value;
   const date = document.getElementById('dateSelect').value;
   window.location.href = "{{ url_for('history') }}?tier=" + tier + "&date=" + date;
+}
+function togglePicks(id) {
+  const el = document.getElementById(id);
+  el.style.display = el.style.display === 'block' ? 'none' : 'block';
 }
 </script>
 {% endblock %}
