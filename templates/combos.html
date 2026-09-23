@@ -1,21 +1,38 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 style="margin-bottom:16px;">🎯 Combos</h2>
+<h2 style="margin-bottom:16px;">🎯 Combos — Leo</h2>
 
 {% if not combos %}
-  <div class="empty-state">Hakuna combos kwa sasa.</div>
+  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
 
 {% for c in combos %}
-<div class="combo-card">
-  <div class="combo-target">Lengo: Odds {{ c.target_odds }}</div>
-  <div class="combo-odds">{{ c.combined_odds }}x</div>
-  <div style="font-size:13px; color:var(--text-dim); margin-bottom:10px;">
-    Uwezekano wa pamoja: <b style="color:var(--text);">{{ c.combined_prob }}%</b> · Legs {{ c.n_legs }}
+<div class="match-card">
+  <div class="match-card-header">
+    <div class="match-teams">Odds: {{ c.combined_odds }}x</div>
+    <div class="match-meta">Combined probability: {{ c.combined_probability }}%</div>
   </div>
-  {% for leg in c.legs %}
-    <div class="combo-leg">{{ leg }}</div>
+
+  <div style="font-size:12px; color:var(--text-dim); font-weight:700; margin:10px 0 4px;">STAKE LEGS (zenye odds)</div>
+  {% for leg in c.stake_legs %}
+  <div class="other-pick-row">
+    <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <span style="color:var(--text-dim);">@{{ leg.odds }}</span>
+      <span class="tier-badge tier-medium">{{ leg.probability }}%</span>
+    </div>
+  </div>
   {% endfor %}
+
+  {% if c.confidence_legs %}
+  <div style="font-size:12px; color:var(--text-dim); font-weight:700; margin:10px 0 4px;">CONFIDENCE LEGS (bila odds)</div>
+  {% for leg in c.confidence_legs %}
+  <div class="other-pick-row">
+    <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
+    <div><span class="tier-badge tier-other">{{ leg.probability }}%</span></div>
+  </div>
+  {% endfor %}
+  {% endif %}
 </div>
 {% endfor %}
 {% endblock %}
