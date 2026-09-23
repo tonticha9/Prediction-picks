@@ -1,17 +1,8 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="filter-bar">
-  <select onchange="window.location.href='{{ url_for('dashboard') }}?date='+this.value">
-    <option value="">Tarehe zote</option>
-    {% for d in available_dates %}
-      <option value="{{ d }}" {{ 'selected' if d==selected_date else '' }}>{{ d }}</option>
-    {% endfor %}
-  </select>
-</div>
-
 {% if not matches %}
-  <div class="empty-state">{{ empty_message }}</div>
+  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
 
 {% for m in matches %}
