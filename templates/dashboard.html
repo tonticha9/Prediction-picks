@@ -11,7 +11,7 @@
 </div>
 
 {% if not matches %}
-  <div class="empty-state">Hakuna mechi za kuonyesha kwa vigezo hivi.</div>
+  <div class="empty-state">{{ empty_message }}</div>
 {% endif %}
 
 {% for m in matches %}
