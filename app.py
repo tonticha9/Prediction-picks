@@ -4,12 +4,12 @@ Dashboard ya predictions za kila siku + Value Bets + Combos + History + Admin.
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import pandas as pd
-import re
-from datetime import datetime, date
 import os
 import shutil
+from datetime import datetime, date
 
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord
+from market_selection import is_market_allowed, select_markets
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -20,7 +20,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-pr
 
 # ================================================================
 # DATABASE — Postgres (Neon) ikiwa DATABASE_URL ipo, vinginevyo SQLite
-# ya ndani kama kawaida (haivunji chochote ikiwa bado hujaweka Neon).
 # ================================================================
 _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
@@ -34,96 +33,13 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
-REFRESH_SECRET = os.environ.get('REFRESH_SECRET')  # kwa /api/refresh - GitHub Actions itaituma
-
-# ================================================================
-# MARKET RULES — uamuzi wa MWISHO, wa kudumu (siyo blacklist inayoongezeka)
-# ================================================================
-def is_market_allowed(market):
-    """Goals za mwisho-mwisho (0.5, 4.5) na 'under' za timu HAZIRUHUSIWI.
-    Masoko ya mchanganyiko ya 'under' (away_win_and_under_25) ni VIBAYA
-    KIMUUNDO (jinsi zilivyotengenezwa Kaggle si sahihi kihisabati) -
-    HAZIRUHUSIWI KABISA. Za 'over' (_and_..._over_) zinabaki - zimethibitika."""
-    if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
-        return False
-    if market.startswith('home_goals_under_') or market.startswith('away_goals_under_'):
-        return False
-    if '_and_' in market and 'under' in market:
-        return False
-    return True
-MATCH_RESULT_FAMILY = {'home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'}
-
-def market_family(market):
-    if market in MATCH_RESULT_FAMILY:
-        return 'match_result'
-    base = re.sub(r'_(over|under)_\d+', '', market)
-    return base
-
-def pick_score(row):
-    """(2)=odds halisi+EV chanya (bora zaidi), (1)=hakuna odds (probability),
-    (0)=odds halisi LAKINI EV hasi (mbaya zaidi - KAMWE isishinde dhidi ya
-    #1, hata kama probability yake ni kubwa - hii ndiyo bug uliyoiona)."""
-    if pd.notna(row.get('real_odds')):
-        ev = row['probability_%']/100 * row['real_odds'] - 1
-        if ev > 0:
-            return (2, ev)
-        return (0, row['probability_%'])
-    return (1, row['probability_%'])
-
-def filter_and_dedupe_picks(df_sorted):
-    seen_families = set()
-    kept_rows = []
-    for _, row in df_sorted.iterrows():
-        if not is_market_allowed(row['market']):
-            continue
-        fam = market_family(row['market'])
-        if fam in seen_families:
-            continue
-        seen_families.add(fam)
-        kept_rows.append(row)
-    if not kept_rows:
-        return df_sorted.iloc[0:0]
-    result = pd.DataFrame(kept_rows)
-    result['_score'] = result.apply(pick_score, axis=1)
-    result = result.iloc[result['_score'].map(lambda t: (-t[0], -t[1])).argsort()]
-    return result.drop(columns='_score')
-
-TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet', 'combos': 'combo'}
-
-
-def pick_score_record(rec):
-    """Sawa na pick_score(), lakini kwa PredictionRecord (ORM object, si CSV row)."""
-    if rec.real_odds is not None:
-        ev = (rec.probability or 0) / 100 * rec.real_odds - 1
-        if ev > 0:
-            return (2, ev)
-        return (0, rec.probability or 0)
-    return (1, rec.probability or 0)
-
-
-def filter_and_dedupe_records(records):
-    """Sawa na filter_and_dedupe_picks(), kwa orodha ya PredictionRecord za mechi MOJA -
-    inaamua 'best pick' halisi ya mechi hiyo (ile ile logic Dashboard inayotumia)."""
-    seen_families = set()
-    kept = []
-    for rec in sorted(records, key=lambda r: -(r.probability or 0)):
-        if not is_market_allowed(rec.market):
-            continue
-        fam = market_family(rec.market)
-        if fam in seen_families:
-            continue
-        seen_families.add(fam)
-        kept.append(rec)
-    if not kept:
-        kept = list(records)
-    kept.sort(key=pick_score_record, reverse=True)
-    return kept
-
+REFRESH_SECRET = os.environ.get('REFRESH_SECRET')
 
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
 # ================================================================
 _cache = {}
+
 
 def load_live_data():
     global _cache
@@ -135,11 +51,7 @@ def load_live_data():
 
     combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
 
-    _cache = {
-        'predictions': predictions,
-        'value_bets': value_bets,
-        'combos': combos
-    }
+    _cache = {'predictions': predictions, 'value_bets': value_bets, 'combos': combos}
     return _cache
 
 
@@ -151,8 +63,7 @@ def get_data():
 
 def record_predictions_pending():
     """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
-    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo.
-    Hii ndiyo 'chanzo' Job A itakachotathmini baadaye (WON/LOST/VOID)."""
+    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo."""
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
     for cache_key, section in section_map.items():
@@ -182,9 +93,6 @@ def record_predictions_pending():
 
 
 def snapshot_today():
-    """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/ na uandike DataSnapshot
-    (kama haipo tayari kwa leo). Inatumiwa na /admin/refresh (mkono) na
-    /api/refresh (kiotomatiki, Job B kila usiku)."""
     today = date.today()
     hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
     os.makedirs(hist_folder, exist_ok=True)
@@ -210,12 +118,29 @@ TIER_LABELS = {
     'PRO_MEDIUM': {'label': 'Wastani', 'class': 'tier-medium', 'icon': '⚡'},
 }
 
+
 def tier_info(tier_code):
     return TIER_LABELS.get(tier_code, {'label': tier_code, 'class': 'tier-other', 'icon': '•'})
 
 
+def calc_edge(probability, real_odds):
+    """Edge = probability yako (%) - implied probability ya odds (%).
+    Tofauti na EV (ambayo ni % ya faida inayotarajiwa kwa stake)."""
+    if real_odds is None or not real_odds:
+        return None
+    implied = 100.0 / real_odds
+    return round((probability or 0) - implied, 1)
+
+
+def calc_ev(probability, real_odds):
+    if real_odds is None:
+        return None
+    return round(((probability or 0) / 100 * real_odds - 1) * 100, 1)
+
+
 # ================================================================
-# DASHBOARD — Mechi za leo/mbeleni, best-pick + other picks
+# DASHBOARD — LEO PEKEE. Mechi zikiisha (hazipo tena data ya leo),
+# hazionekani hapa - zinapatikana History pekee.
 # ================================================================
 @app.route('/')
 def dashboard():
@@ -223,88 +148,78 @@ def dashboard():
     df = data['predictions'].copy()
     settings = Settings.get()
 
-    is_default_view = 'date' not in request.args
-    date_filter = date.today().strftime('%Y-%m-%d') if is_default_view else request.args.get('date')
-    if date_filter:
-        df = df[df['match_date'].dt.strftime('%Y-%m-%d') == date_filter]
-
-    df = df[df['probability_%'] >= settings.min_probability]
+    today_str = date.today().strftime('%Y-%m-%d')
+    df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
 
     matches = []
     for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
-        grp_sorted = grp.sort_values('probability_%', ascending=False)
+        entries = [(row['market'], row['probability_%'],
+                    row['real_odds'] if pd.notna(row.get('real_odds')) else None, row)
+                   for _, row in grp.iterrows()]
+        survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+        if not survivors:
+            continue
 
-        grp_clean = filter_and_dedupe_picks(grp_sorted)
-        if len(grp_clean) == 0:
-            grp_clean = grp_sorted
-
-        best = grp_clean.iloc[0]
-        others = grp_clean.iloc[1:1 + settings.max_markets_per_match]
+        best = survivors[0]
+        others = survivors[1:1 + settings.max_markets_per_match]
 
         best_pick = {
             'market': best['market'],
             'probability': best['probability_%'],
-            'tier': tier_info(best['pro_tier']),
+            'tier': tier_info(best.get('pro_tier')),
             'has_odds': pd.notna(best.get('real_odds')),
             'odds': best.get('real_odds'),
-            'ev': round((best['probability_%']/100 * best['real_odds'] - 1) * 100, 1) if pd.notna(best.get('real_odds')) else None,
+            'ev': calc_ev(best['probability_%'], best.get('real_odds')) if pd.notna(best.get('real_odds')) else None,
         }
-        other_picks = []
-        for _, row in others.iterrows():
-            other_picks.append({
-                'market': row['market'],
-                'probability': row['probability_%'],
-                'tier': tier_info(row['pro_tier']),
-                'has_odds': pd.notna(row.get('real_odds')),
-                'odds': row.get('real_odds'),
-            })
+        other_picks = [{
+            'market': r['market'], 'probability': r['probability_%'],
+            'tier': tier_info(r.get('pro_tier')),
+            'has_odds': pd.notna(r.get('real_odds')), 'odds': r.get('real_odds'),
+        } for r in others]
 
         matches.append({
-            'home': home,
-            'away': away,
+            'home': home, 'away': away,
             'date': mdate.strftime('%d %b %Y'),
             'date_iso': mdate.strftime('%Y-%m-%d'),
             'time_eat': mdate.strftime('%H:%M') if mdate.hour or mdate.minute else None,
-            'best_pick': best_pick,
-            'other_picks': other_picks,
+            'best_pick': best_pick, 'other_picks': other_picks,
         })
 
-    matches.sort(key=lambda m: m['date_iso'])
-    available_dates = sorted(data['predictions']['match_date'].dt.strftime('%Y-%m-%d').unique().tolist())
+    matches.sort(key=lambda m: m.get('time_eat') or '')
+    empty_message = 'NO PICK TODAY' if not matches else None
 
-    if not matches:
-        empty_message = ('Hakuna prediction leo. Angalia baadaye au chagua tarehe nyingine.'
-                          if is_default_view else 'Hakuna mechi za kuonyesha kwa vigezo hivi.')
-    else:
-        empty_message = None
-
-    return render_template('dashboard.html', matches=matches, available_dates=available_dates,
-                           selected_date=date_filter, empty_message=empty_message, page='dashboard')
+    return render_template('dashboard.html', matches=matches,
+                           empty_message=empty_message, page='dashboard')
 
 
 # ================================================================
-# VALUE BETS
+# VALUE BETS — LEO PEKEE, sawa na Dashboard. Edge + EV zote mbili.
 # ================================================================
 @app.route('/value-bets')
 def value_bets():
-    df = get_data()['value_bets'].copy().sort_values('ev_%', ascending=False)
+    df = get_data()['value_bets'].copy()
+    today_str = date.today().strftime('%Y-%m-%d')
+    df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
+    df = df.sort_values('ev_%', ascending=False)
+
     bets = []
     for _, row in df.iterrows():
         bets.append({
-            'home': row['HomeTeam'],
-            'away': row['AwayTeam'],
+            'home': row['HomeTeam'], 'away': row['AwayTeam'],
             'date': pd.to_datetime(row['match_date']).strftime('%d %b %Y'),
-            'market': row['market'],
-            'probability': row['probability_%'],
-            'odds': row['real_odds'],
-            'ev': row['ev_%'],
-            'tier': tier_info(row['pro_tier']),
+            'market': row['market'], 'probability': row['probability_%'],
+            'odds': row['real_odds'], 'ev': row['ev_%'],
+            'edge': calc_edge(row['probability_%'], row['real_odds']),
+            'tier': tier_info(row.get('pro_tier')),
         })
-    return render_template('value_bets.html', bets=bets, page='value_bets')
+
+    empty_message = 'NO PICK TODAY' if not bets else None
+    return render_template('value_bets.html', bets=bets, empty_message=empty_message, page='value_bets')
 
 
 # ================================================================
-# COMBOS
+# COMBOS — bado hazina match_date ya kutegemewa kwa 'leo pekee' filter
+# (angalia ujumbe chini ya jibu hili - hii SEHEMU BADO HAIJAFANYIKA).
 # ================================================================
 @app.route('/combos')
 def combos():
@@ -313,25 +228,24 @@ def combos():
     for _, row in df.iterrows():
         legs = [leg.strip() for leg in row['legs'].split(' + ')]
         combo_list.append({
-            'target_odds': row['target_odds'],
-            'combined_odds': row['combined_odds'],
-            'combined_prob': row['combined_prob_%'],
-            'n_legs': row['n_legs'],
-            'legs': legs,
+            'target_odds': row['target_odds'], 'combined_odds': row['combined_odds'],
+            'combined_prob': row['combined_prob_%'], 'n_legs': row['n_legs'], 'legs': legs,
         })
     return render_template('combos.html', combos=combo_list, page='combos')
 
 
 # ================================================================
-# HISTORY — chagua tier (predictions/value_bets/combos), ona tarehe za nyuma
-# na matokeo WON/LOST/VOID (kutoka PredictionRecord, iliyojazwa na
-# backfill_history.py na - baadaye - na Job A ya kila siku).
+# HISTORY
 # ================================================================
+TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet', 'combos': 'combo'}
+
+
 @app.route('/history')
 def history():
     tier = request.args.get('tier', 'predictions')
     section = TIER_TO_SECTION.get(tier, 'prediction')
     selected_date = request.args.get('date')
+    settings = Settings.get()
 
     available_dates = sorted(
         {d[0].strftime('%Y-%m-%d') for d in
@@ -359,13 +273,15 @@ def history():
                 groups.setdefault(key, []).append(rec)
 
             for (home, away, mdate), recs in groups.items():
-                clean = filter_and_dedupe_records(recs)
-                best = clean[0]
-                others = clean[1:]
+                entries = [(r.market, r.probability, r.real_odds, r) for r in recs]
+                survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+                if not survivors:
+                    continue
+                best = survivors[0]
+                others = survivors[1:1 + settings.history_max_markets]
                 matches.append({
                     'home': home, 'away': away,
-                    'date': mdate.strftime('%d %b %Y'),
-                    'date_iso': mdate.strftime('%Y-%m-%d'),
+                    'date': mdate.strftime('%d %b %Y'), 'date_iso': mdate.strftime('%Y-%m-%d'),
                     'best_pick': {'market': best.market, 'probability': best.probability,
                                   'odds': best.real_odds, 'result': best.result},
                     'other_picks': [{'market': r.market, 'probability': r.probability,
@@ -385,7 +301,8 @@ def history():
                     'home': r.home_team, 'away': r.away_team,
                     'date': r.match_date.strftime('%d %b %Y'),
                     'market': r.market, 'probability': r.probability,
-                    'odds': r.real_odds, 'result': r.result,
+                    'odds': r.real_odds, 'ev': calc_ev(r.probability, r.real_odds),
+                    'edge': calc_edge(r.probability, r.real_odds), 'result': r.result,
                 })
             won = sum(1 for r in value_bets_list if r['result'] == 'WON')
             lost = sum(1 for r in value_bets_list if r['result'] == 'LOST')
@@ -400,7 +317,7 @@ def history():
 
 
 # ================================================================
-# ADMIN — settings, API key, refresh data
+# ADMIN
 # ================================================================
 def admin_required():
     return request.cookies.get('is_admin') == 'yes'
@@ -418,7 +335,9 @@ def admin():
         action = request.form.get('action')
         if action == 'update_settings':
             settings.max_markets_per_match = int(request.form.get('max_markets', 5))
-            settings.min_probability = float(request.form.get('min_probability', 0))
+            settings.history_max_markets = int(request.form.get('history_max_markets', 10))
+            settings.probability_threshold = float(request.form.get('probability_threshold', 50.0))
+            settings.best_pick_formula = request.form.get('best_pick_formula', 'hybrid')
             db.session.commit()
             flash('Mipangilio imesasishwa.', 'success')
         elif action == 'update_api':
@@ -455,33 +374,23 @@ def admin_logout():
 
 @app.route('/admin/refresh', methods=['POST'])
 def admin_refresh():
-    """Pakia upya CSV kutoka data/ (baada ya kupakia faili mpya kwa mkono), na hifadhi history snapshot."""
     if not admin_required():
         return redirect(url_for('admin_login'))
-
     load_live_data()
     snapshot_today()
-
     flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
     return redirect(url_for('admin'))
 
 
-# ================================================================
-# API — refresh ya KIOTOMATIKO, inaitwa na GitHub Actions (Job B) kila
-# usiku baada ya kupush data mpya. Inatumia secret key (header), SI
-# admin cookie, kwa sababu inaitwa na script - si browser ya mtu.
-# ================================================================
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
     if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
         return jsonify({'error': 'unauthorized'}), 401
-
     try:
         load_live_data()
         snapshot_today()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
     return jsonify({
         'status': 'ok',
         'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
