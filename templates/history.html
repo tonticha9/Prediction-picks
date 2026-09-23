@@ -70,7 +70,7 @@
     <div class="other-picks" id="picks-{{ loop.index }}">
       {% for p in m.other_picks %}
       <div class="other-pick-row">
-        <div>{{ p.market }}</div>
+        <div>{{ p.market }} <span style="color:var(--text-dim); font-size:12px;">({{ p.probability }}%)</span></div>
         <div style="display:flex; align-items:center; gap:10px;">
           {% if p.odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
           <span>{{ result_badge(p.result) }}</span>
@@ -102,7 +102,11 @@
   <div class="table-row" style="border-left-color: var(--indigo);">
     <div style="font-size:13px;">
       <b>{{ r.home }} vs {{ r.away }}</b> — {{ r.market }}
-      <div style="color:var(--text-dim); margin-top:2px;">{{ r.date }}{% if r.odds %} · @{{ r.odds }}{% endif %} · {{ r.probability }}%</div>
+      <div style="color:var(--text-dim); margin-top:2px;">
+        {{ r.date }}{% if r.odds %} · @{{ r.odds }}{% endif %} · {{ r.probability }}%
+        {% if r.edge is not none %} · Edge: {{ r.edge }}%{% endif %}
+        {% if r.ev is not none %} · EV: {{ r.ev }}%{% endif %}
+      </div>
     </div>
     <div>{{ result_badge(r.result) }}</div>
   </div>
