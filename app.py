@@ -9,7 +9,7 @@ from datetime import datetime, date
 import os
 import shutil
 
-from models import db, Settings, ApiConfig, DataSnapshot
+from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -88,6 +88,38 @@ def filter_and_dedupe_picks(df_sorted):
     result = result.iloc[result['_score'].map(lambda t: (-t[0], -t[1])).argsort()]
     return result.drop(columns='_score')
 
+TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet', 'combos': 'combo'}
+
+
+def pick_score_record(rec):
+    """Sawa na pick_score(), lakini kwa PredictionRecord (ORM object, si CSV row)."""
+    if rec.real_odds is not None:
+        ev = (rec.probability or 0) / 100 * rec.real_odds - 1
+        if ev > 0:
+            return (2, ev)
+        return (0, rec.probability or 0)
+    return (1, rec.probability or 0)
+
+
+def filter_and_dedupe_records(records):
+    """Sawa na filter_and_dedupe_picks(), kwa orodha ya PredictionRecord za mechi MOJA -
+    inaamua 'best pick' halisi ya mechi hiyo (ile ile logic Dashboard inayotumia)."""
+    seen_families = set()
+    kept = []
+    for rec in sorted(records, key=lambda r: -(r.probability or 0)):
+        if not is_market_allowed(rec.market):
+            continue
+        fam = market_family(rec.market)
+        if fam in seen_families:
+            continue
+        seen_families.add(fam)
+        kept.append(rec)
+    if not kept:
+        kept = list(records)
+    kept.sort(key=pick_score_record, reverse=True)
+    return kept
+
+
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
 # ================================================================
@@ -117,6 +149,38 @@ def get_data():
     return _cache
 
 
+def record_predictions_pending():
+    """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
+    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo.
+    Hii ndiyo 'chanzo' Job A itakachotathmini baadaye (WON/LOST/VOID)."""
+    section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
+    new_count = 0
+    for cache_key, section in section_map.items():
+        df = _cache.get(cache_key)
+        if df is None or len(df) == 0:
+            continue
+        for _, row in df.iterrows():
+            exists = PredictionRecord.query.filter_by(
+                match_date=row['match_date'], home_team=row['HomeTeam'],
+                away_team=row['AwayTeam'], market=row['market'], section=section
+            ).first()
+            if exists:
+                continue
+            rec = PredictionRecord(
+                match_date=row['match_date'], home_team=row['HomeTeam'],
+                away_team=row['AwayTeam'], market=row['market'], section=section,
+                probability=row.get('probability_%'),
+                real_odds=row.get('real_odds') if pd.notna(row.get('real_odds')) else None,
+                pro_tier=row.get('pro_tier'), result='PENDING',
+                shown_date=date.today(),
+            )
+            db.session.add(rec)
+            new_count += 1
+    if new_count:
+        db.session.commit()
+    return new_count
+
+
 def snapshot_today():
     """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/ na uandike DataSnapshot
     (kama haipo tayari kwa leo). Inatumiwa na /admin/refresh (mkono) na
@@ -138,6 +202,8 @@ def snapshot_today():
         db.session.add(snap)
         db.session.commit()
 
+    record_predictions_pending()
+
 
 TIER_LABELS = {
     'PRO_STRONG': {'label': 'Nguvu Kubwa', 'class': 'tier-strong', 'icon': '🔥'},
@@ -157,7 +223,8 @@ def dashboard():
     df = data['predictions'].copy()
     settings = Settings.get()
 
-    date_filter = request.args.get('date')
+    is_default_view = 'date' not in request.args
+    date_filter = date.today().strftime('%Y-%m-%d') if is_default_view else request.args.get('date')
     if date_filter:
         df = df[df['match_date'].dt.strftime('%Y-%m-%d') == date_filter]
 
@@ -205,8 +272,14 @@ def dashboard():
     matches.sort(key=lambda m: m['date_iso'])
     available_dates = sorted(data['predictions']['match_date'].dt.strftime('%Y-%m-%d').unique().tolist())
 
+    if not matches:
+        empty_message = ('Hakuna prediction leo. Angalia baadaye au chagua tarehe nyingine.'
+                          if is_default_view else 'Hakuna mechi za kuonyesha kwa vigezo hivi.')
+    else:
+        empty_message = None
+
     return render_template('dashboard.html', matches=matches, available_dates=available_dates,
-                           selected_date=date_filter, page='dashboard')
+                           selected_date=date_filter, empty_message=empty_message, page='dashboard')
 
 
 # ================================================================
@@ -251,33 +324,79 @@ def combos():
 
 # ================================================================
 # HISTORY — chagua tier (predictions/value_bets/combos), ona tarehe za nyuma
+# na matokeo WON/LOST/VOID (kutoka PredictionRecord, iliyojazwa na
+# backfill_history.py na - baadaye - na Job A ya kila siku).
 # ================================================================
 @app.route('/history')
 def history():
     tier = request.args.get('tier', 'predictions')
-    snapshot_date = request.args.get('date')
+    section = TIER_TO_SECTION.get(tier, 'prediction')
+    selected_date = request.args.get('date')
 
-    snapshots = DataSnapshot.query.order_by(DataSnapshot.snapshot_date.desc()).all()
-    available_dates = [s.snapshot_date.strftime('%Y-%m-%d') for s in snapshots]
+    available_dates = sorted(
+        {d[0].strftime('%Y-%m-%d') for d in
+         db.session.query(PredictionRecord.shown_date)
+         .filter(PredictionRecord.section == section).distinct().all()},
+        reverse=True
+    )
 
-    rows = []
-    if snapshot_date:
-        snap = DataSnapshot.query.filter_by(
-            snapshot_date=datetime.strptime(snapshot_date, '%Y-%m-%d').date()
-        ).first()
-        if snap:
-            path_map = {
-                'predictions': snap.predictions_path,
-                'value_bets': snap.value_bets_path,
-                'combos': snap.combos_path
-            }
-            path = path_map.get(tier)
-            if path and os.path.exists(path):
-                rows = pd.read_csv(path).to_dict('records')
+    matches = []
+    value_bets_list = []
+    summary = None
+    combos_message = None
 
-    return render_template('history.html', tier=tier, rows=rows,
-                           available_dates=available_dates,
-                           selected_date=snapshot_date, page='history')
+    if tier == 'combos':
+        combos_message = 'History ya Combos bado haijapatikana - inakuja hivi karibuni.'
+
+    elif selected_date:
+        day = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        records = PredictionRecord.query.filter_by(section=section, shown_date=day).all()
+
+        if tier == 'predictions':
+            groups = {}
+            for rec in records:
+                key = (rec.home_team, rec.away_team, rec.match_date)
+                groups.setdefault(key, []).append(rec)
+
+            for (home, away, mdate), recs in groups.items():
+                clean = filter_and_dedupe_records(recs)
+                best = clean[0]
+                others = clean[1:]
+                matches.append({
+                    'home': home, 'away': away,
+                    'date': mdate.strftime('%d %b %Y'),
+                    'date_iso': mdate.strftime('%Y-%m-%d'),
+                    'best_pick': {'market': best.market, 'probability': best.probability,
+                                  'odds': best.real_odds, 'result': best.result},
+                    'other_picks': [{'market': r.market, 'probability': r.probability,
+                                      'odds': r.real_odds, 'result': r.result} for r in others],
+                })
+            matches.sort(key=lambda m: m['date_iso'])
+
+            won = sum(1 for m in matches if m['best_pick']['result'] == 'WON')
+            lost = sum(1 for m in matches if m['best_pick']['result'] == 'LOST')
+            void = sum(1 for m in matches if m['best_pick']['result'] == 'VOID')
+            summary = {'won': won, 'lost': lost, 'void': void,
+                       'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
+
+        elif tier == 'value_bets':
+            for r in sorted(records, key=lambda r: -(r.probability or 0)):
+                value_bets_list.append({
+                    'home': r.home_team, 'away': r.away_team,
+                    'date': r.match_date.strftime('%d %b %Y'),
+                    'market': r.market, 'probability': r.probability,
+                    'odds': r.real_odds, 'result': r.result,
+                })
+            won = sum(1 for r in value_bets_list if r['result'] == 'WON')
+            lost = sum(1 for r in value_bets_list if r['result'] == 'LOST')
+            void = sum(1 for r in value_bets_list if r['result'] == 'VOID')
+            summary = {'won': won, 'lost': lost, 'void': void,
+                       'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
+
+    return render_template('history.html', tier=tier, available_dates=available_dates,
+                           selected_date=selected_date, matches=matches,
+                           value_bets_list=value_bets_list, summary=summary,
+                           combos_message=combos_message, page='history')
 
 
 # ================================================================
