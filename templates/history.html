@@ -24,10 +24,7 @@
   {% endif %}
 {% endmacro %}
 
-{% if tier == 'combos' %}
-  <div class="empty-state">{{ combos_message }}</div>
-
-{% elif not selected_date %}
+{% if not selected_date %}
   <div class="empty-state">Chagua tarehe kuona history ya siku hiyo.</div>
 
 {% elif tier == 'predictions' %}
@@ -35,16 +32,11 @@
   <div class="match-card" style="margin-bottom:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
       <div>✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID</div>
-      {% if summary.win_rate is not none %}
-      <div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>
-      {% endif %}
+      {% if summary.win_rate is not none %}<div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>{% endif %}
     </div>
   </div>
   {% endif %}
-
-  {% if not matches %}
-    <div class="empty-state">Hakuna history kwa tarehe hii.</div>
-  {% endif %}
+  {% if not matches %}<div class="empty-state">Hakuna history kwa tarehe hii.</div>{% endif %}
 
   {% for m in matches %}
   <div class="match-card">
@@ -52,7 +44,6 @@
       <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
       <div class="match-meta">{{ m.date }}</div>
     </div>
-
     <div class="best-pick">
       <div class="best-pick-label">Best Pick</div>
       <div class="best-pick-row">
@@ -64,7 +55,6 @@
         {% if m.best_pick.odds %}<span style="color:var(--text-dim);">@{{ m.best_pick.odds }}</span>{% endif %}
       </div>
     </div>
-
     {% if m.other_picks %}
     <button class="toggle-picks" onclick="togglePicks('picks-{{ loop.index }}')">Masoko mengine ({{ m.other_picks|length }}) ▾</button>
     <div class="other-picks" id="picks-{{ loop.index }}">
@@ -87,16 +77,11 @@
   <div class="match-card" style="margin-bottom:16px;">
     <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
       <div>✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID</div>
-      {% if summary.win_rate is not none %}
-      <div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>
-      {% endif %}
+      {% if summary.win_rate is not none %}<div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>{% endif %}
     </div>
   </div>
   {% endif %}
-
-  {% if not value_bets_list %}
-    <div class="empty-state">Hakuna value bets kwa tarehe hii.</div>
-  {% endif %}
+  {% if not value_bets_list %}<div class="empty-state">Hakuna value bets kwa tarehe hii.</div>{% endif %}
 
   {% for r in value_bets_list %}
   <div class="table-row" style="border-left-color: var(--indigo);">
@@ -109,6 +94,41 @@
       </div>
     </div>
     <div>{{ result_badge(r.result) }}</div>
+  </div>
+  {% endfor %}
+
+{% elif tier == 'combos' %}
+  {% if summary %}
+  <div class="match-card" style="margin-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px;">
+      <div>✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID</div>
+      {% if summary.win_rate is not none %}<div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% if not combos_list %}<div class="empty-state">Hakuna combos kwa tarehe hii.</div>{% endif %}
+
+  {% for c in combos_list %}
+  <div class="match-card">
+    <div class="match-card-header">
+      <div class="match-teams">Odds: {{ c.combined_odds }}x</div>
+      <div class="match-meta">{{ c.combined_probability }}% · {{ result_badge(c.result) }}</div>
+    </div>
+    {% for leg in c.stake_legs %}
+    <div class="other-pick-row">
+      <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span style="color:var(--text-dim);">@{{ leg.odds }}</span>
+        {{ result_badge(leg.result) }}
+      </div>
+    </div>
+    {% endfor %}
+    {% for leg in c.confidence_legs %}
+    <div class="other-pick-row">
+      <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }} <span style="color:var(--text-dim); font-size:12px;">(confidence)</span></div>
+      <div>{{ result_badge(leg.result) }}</div>
+    </div>
+    {% endfor %}
   </div>
   {% endfor %}
 {% endif %}
