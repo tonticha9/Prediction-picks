@@ -20,6 +20,7 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-pr
 
 # ================================================================
 # DATABASE — Postgres (Neon) ikiwa DATABASE_URL ipo, vinginevyo SQLite
+# ya ndani kama kawaida (haivunji chochote ikiwa bado hujaweka Neon).
 # ================================================================
 _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
@@ -33,7 +34,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
-REFRESH_SECRET = os.environ.get('REFRESH_SECRET')
+REFRESH_SECRET = os.environ.get('REFRESH_SECRET')  # kwa /api/refresh - GitHub Actions itaituma
 
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
@@ -63,7 +64,8 @@ def get_data():
 
 def record_predictions_pending():
     """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
-    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo."""
+    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo.
+    Hii ndiyo 'chanzo' Job A itakachotathmini baadaye (WON/LOST/VOID)."""
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
     for cache_key, section in section_map.items():
@@ -93,6 +95,9 @@ def record_predictions_pending():
 
 
 def snapshot_today():
+    """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/, andika DataSnapshot,
+    kisha andika PredictionRecord mpya (PENDING). Inatumiwa na /admin/refresh
+    (mkono) na /api/refresh (kiotomatiki, Job B kila usiku)."""
     today = date.today()
     hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
     os.makedirs(hist_folder, exist_ok=True)
@@ -154,7 +159,8 @@ def dashboard():
     matches = []
     for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
         entries = [(row['market'], row['probability_%'],
-                    row['real_odds'] if pd.notna(row.get('real_odds')) else None, row)
+                    row['real_odds'] if pd.notna(row.get('real_odds')) else None,
+                    row.get('pro_tier'), row)
                    for _, row in grp.iterrows()]
         survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
         if not survivors:
@@ -218,8 +224,8 @@ def value_bets():
 
 
 # ================================================================
-# COMBOS — bado hazina match_date ya kutegemewa kwa 'leo pekee' filter
-# (angalia ujumbe chini ya jibu hili - hii SEHEMU BADO HAIJAFANYIKA).
+# COMBOS — bado hazina match_date ya kutegemewa (kikwazo cha data ya
+# Kaggle-side) - formula mpya ya combos itakuja baada ya hili kutatuliwa.
 # ================================================================
 @app.route('/combos')
 def combos():
@@ -273,7 +279,7 @@ def history():
                 groups.setdefault(key, []).append(rec)
 
             for (home, away, mdate), recs in groups.items():
-                entries = [(r.market, r.probability, r.real_odds, r) for r in recs]
+                entries = [(r.market, r.probability, r.real_odds, r.pro_tier, r) for r in recs]
                 survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
                 if not survivors:
                     continue
@@ -317,7 +323,7 @@ def history():
 
 
 # ================================================================
-# ADMIN
+# ADMIN — settings, API key, refresh data
 # ================================================================
 def admin_required():
     return request.cookies.get('is_admin') == 'yes'
@@ -374,23 +380,32 @@ def admin_logout():
 
 @app.route('/admin/refresh', methods=['POST'])
 def admin_refresh():
+    """Pakia upya CSV kutoka data/ (baada ya kupakia faili mpya kwa mkono), na hifadhi history snapshot."""
     if not admin_required():
         return redirect(url_for('admin_login'))
+
     load_live_data()
     snapshot_today()
+
     flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
     return redirect(url_for('admin'))
 
 
+# ================================================================
+# API — refresh ya KIOTOMATIKO, inaitwa na GitHub Actions (Job B) kila
+# usiku baada ya kupush data mpya.
+# ================================================================
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
     if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
         return jsonify({'error': 'unauthorized'}), 401
+
     try:
         load_live_data()
         snapshot_today()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
     return jsonify({
         'status': 'ok',
         'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
