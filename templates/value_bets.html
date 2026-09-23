@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 style="margin-bottom:16px;">💰 Value Bets</h2>
+<h2 style="margin-bottom:16px;">💰 Value Bets — Leo</h2>
 
 {% if not bets %}
-  <div class="empty-state">Hakuna value bets kwa sasa.</div>
+  <div class="empty-state">{{ empty_message or 'Hakuna value bets kwa sasa.' }}</div>
 {% endif %}
 
 {% for b in bets %}
@@ -16,7 +16,10 @@
       <span style="font-size:12px; color:var(--text-dim); margin-left:6px;">@ {{ b.odds }}</span>
     </div>
   </div>
-  <div class="ev-badge">+{{ b.ev }}%</div>
+  <div style="text-align:right;">
+    <div class="ev-badge">+{{ b.ev }}%</div>
+    <div style="font-size:11px; color:var(--text-dim); margin-top:4px;">Edge: {{ b.edge }}%</div>
+  </div>
 </div>
 {% endfor %}
 {% endblock %}
