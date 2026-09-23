@@ -6,6 +6,11 @@ kutoka AllSportsAPI, inaziongeza kwenye 'historical-complete-no-gap'
 dataset (Kaggle), na inapakia toleo JIPYA la dataset hiyo - ili Job B
 (usiku) ipate historia iliyosasika kila wakati, bila pengo kuunda tena.
 
+MPYA (Sept 22 2026): baada ya kupata matokeo mapya, inatathmini moja kwa
+moja PredictionRecord zote za PENDING za mechi hizo (kwa market_evaluator.py)
+na kuandika WON/LOST/VOID kwenye database - History inasasika kiotomatiki
+bila hatua yoyote ya mkono.
+
 Logic ya kuvuta/kuchakata mechi ni NAKALA HALISI ya backfill_gap.py
 (iliyokwisha jaribiwa na kufanya kazi).
 """
@@ -19,6 +24,9 @@ import numpy as np
 import subprocess
 from datetime import datetime, timedelta, date
 
+# --- ongeza root ya repo kwenye sys.path ili tuweze ku-import app/models/evaluator ---
+sys.path.insert(0, os.getcwd())
+
 API_KEY = os.environ.get("ALLSPORTSAPI_KEY")
 KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")  # mfano: tonticha/historical-complete-no-gap
 
@@ -29,7 +37,6 @@ if not KAGGLE_DATASET:
     missing.append("KAGGLE_DATASET_SLUG")
 if missing:
     print(f"❌ HAIPO: {', '.join(missing)} (angalia GitHub Secrets / workflow env)")
-    sys.exit(1)
     sys.exit(1)
 
 BASE_URL = "https://apiv2.allsportsapi.com/football/"
@@ -229,6 +236,108 @@ def run_stuck_check(from_date, to_date):
         print("✅ Hakuna mechi zilizokwama - kila kitu kiko sawa.")
 
 
+def evaluate_pending_predictions(df_finished):
+    """MPYA: kwa kila mechi mpya iliyoisha (df_finished), tafuta PredictionRecord
+    zote za PENDING zinazolingana (Date+HomeTeam+AwayTeam) na uzitathmini kwa
+    market_evaluator.py, kisha uandike WON/LOST/VOID. Inahitaji DATABASE_URL."""
+    if len(df_finished) == 0:
+        return
+
+    if not os.environ.get('DATABASE_URL'):
+        print("\nℹ️ DATABASE_URL haipo - naruka utathmini wa PredictionRecord mzunguko huu.")
+        return
+
+    try:
+        from market_evaluator import evaluate_market, result_label
+        from app import app
+        from models import db, PredictionRecord
+    except Exception as e:
+        print(f"\n⚠️ Imeshindwa kuunganisha na app/models/evaluator ({e}) - naruka utathmini.")
+        return
+
+    print(f"\n🧮 Kutathmini PredictionRecord za PENDING kwa mechi {len(df_finished)} zilizoisha...")
+    evaluated = 0
+    with app.app_context():
+        for _, r in df_finished.iterrows():
+            match_day = r['Date'].date()
+            records = PredictionRecord.query.filter_by(
+                home_team=r['HomeTeam'], away_team=r['AwayTeam'], result='PENDING'
+            ).filter(db.func.date(PredictionRecord.match_date) == match_day).all()
+
+            if not records:
+                continue
+
+            result_row = r.to_dict()
+            for rec in records:
+                evaluated_val = evaluate_market(rec.market, result_row)
+                rec.result = result_label(evaluated_val)
+                rec.settled_at = datetime.utcnow()
+                evaluated += 1
+
+        if evaluated:
+            db.session.commit()
+
+    print(f"   ✅ PredictionRecord {evaluated} zimesasishwa na matokeo (WON/LOST/VOID).")
+
+
+def evaluate_pending_combo_legs(df_finished):
+    """MPYA: tathmini ComboLeg za PENDING zinazolingana na mechi mpya
+    zilizoisha, kisha kwa kila ComboRecord iliyoguswa, angalia kama legs
+    ZOTE tayari zina matokeo (si PENDING) - ikiwa ndiyo, amua result ya
+    combo nzima: LOST (leg yoyote LOST) > VOID (hakuna LOST, kuna VOID) > WON."""
+    if len(df_finished) == 0:
+        return
+    if not os.environ.get('DATABASE_URL'):
+        return
+    try:
+        from market_evaluator import evaluate_market, result_label
+        from app import app
+        from models import db, ComboLeg, ComboRecord
+    except Exception as e:
+        print(f"\n⚠️ Imeshindwa kuunganisha na app/models/evaluator kwa combos ({e}) - naruka.")
+        return
+
+    print(f"\n🧮 Kutathmini ComboLeg za PENDING kwa mechi {len(df_finished)} zilizoisha...")
+    legs_evaluated, combos_settled = 0, 0
+    with app.app_context():
+        touched_combo_ids = set()
+        for _, r in df_finished.iterrows():
+            match_day = r['Date'].date()
+            legs = ComboLeg.query.filter_by(
+                home_team=r['HomeTeam'], away_team=r['AwayTeam'], result='PENDING'
+            ).filter(db.func.date(ComboLeg.match_date) == match_day).all()
+
+            if not legs:
+                continue
+            result_row = r.to_dict()
+            for leg in legs:
+                evaluated_val = evaluate_market(leg.market, result_row)
+                leg.result = result_label(evaluated_val)
+                legs_evaluated += 1
+                touched_combo_ids.add(leg.combo_id)
+
+        for combo_id in touched_combo_ids:
+            combo = ComboRecord.query.get(combo_id)
+            if not combo or combo.result != 'PENDING':
+                continue
+            leg_results = [leg.result for leg in combo.legs]
+            if any(r == 'PENDING' for r in leg_results):
+                continue  # bado kuna legs hazijamalizika - subiri
+            if any(r == 'LOST' for r in leg_results):
+                combo.result = 'LOST'
+            elif any(r == 'VOID' for r in leg_results):
+                combo.result = 'VOID'
+            else:
+                combo.result = 'WON'
+            combo.settled_at = datetime.utcnow()
+            combos_settled += 1
+
+        if legs_evaluated:
+            db.session.commit()
+
+    print(f"   ✅ ComboLeg {legs_evaluated} zimesasishwa, Combos {combos_settled} zimekamilika (WON/LOST/VOID).")
+
+
 def main():
     # HATUA 1: Pakua dataset ya sasa (historia iliyopo)
     print("📥 Kupakua historical-complete-no-gap dataset ya sasa...")
@@ -284,7 +393,13 @@ def main():
                      '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"])
     print("🎉 Dataset imesasishwa kikamilifu!")
 
-    # HATUA 5: UKAGUZI WA UKWELI — mechi zilizokwama (zimepita muda,
+    # HATUA 5: MPYA - tathmini PredictionRecord za PENDING kwa mechi hizi mpya
+    evaluate_pending_predictions(df_new_unique)
+
+    # HATUA 5b: MPYA - tathmini ComboLeg/ComboRecord za PENDING pia
+    evaluate_pending_combo_legs(df_new_unique)
+
+    # HATUA 6: UKAGUZI WA UKWELI — mechi zilizokwama (zimepita muda,
     # bado hazina matokeo). Hii HAIACHISHI job (data tayari imesasishwa
     # salama) - ni ONYO tu, kwa mechi ZA KWELI zilizotambuliwa, si makisio.
     run_stuck_check(from_date, to_date)
