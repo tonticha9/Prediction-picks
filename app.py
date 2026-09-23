@@ -8,8 +8,9 @@ import os
 import shutil
 from datetime import datetime, date
 
-from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord
+from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
 from market_selection import is_market_allowed, select_markets
+from combo_builder import build_daily_combos
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -20,7 +21,6 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-pr
 
 # ================================================================
 # DATABASE — Postgres (Neon) ikiwa DATABASE_URL ipo, vinginevyo SQLite
-# ya ndani kama kawaida (haivunji chochote ikiwa bado hujaweka Neon).
 # ================================================================
 _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
@@ -34,7 +34,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
-REFRESH_SECRET = os.environ.get('REFRESH_SECRET')  # kwa /api/refresh - GitHub Actions itaituma
+REFRESH_SECRET = os.environ.get('REFRESH_SECRET')
 
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
@@ -62,10 +62,30 @@ def get_data():
     return _cache
 
 
+def today_predictions_survivors(settings):
+    """Kwa kila mechi ya LEO, rudisha {'home','away','match_date','survivors':[...]}
+    kwa kutumia select_markets() - hii ndiyo picha ile ile Dashboard inayoonyesha,
+    inatumika pia kujenga Combos za leo."""
+    data = get_data()
+    df = data['predictions'].copy()
+    today_str = date.today().strftime('%Y-%m-%d')
+    df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
+
+    out = []
+    for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
+        entries = [(row['market'], row['probability_%'],
+                    row['real_odds'] if pd.notna(row.get('real_odds')) else None,
+                    row.get('pro_tier'), row)
+                   for _, row in grp.iterrows()]
+        survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+        if survivors:
+            out.append({'home': home, 'away': away, 'match_date': mdate, 'survivors': survivors})
+    return out
+
+
 def record_predictions_pending():
     """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
-    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo.
-    Hii ndiyo 'chanzo' Job A itakachotathmini baadaye (WON/LOST/VOID)."""
+    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo."""
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
     for cache_key, section in section_map.items():
@@ -94,15 +114,56 @@ def record_predictions_pending():
     return new_count
 
 
+def generate_daily_combos():
+    """Jenga na uhifadhi Combos za LEO (mara moja tu kwa siku - ikiwa
+    tayari zipo kwa leo, haziundwi tena)."""
+    today = date.today()
+    already = ComboRecord.query.filter_by(shown_date=today).first()
+    if already:
+        return 0
+
+    settings = Settings.get()
+    match_survivors = today_predictions_survivors(settings)
+    if not match_survivors:
+        return 0
+
+    combos = build_daily_combos(
+        match_survivors,
+        min_legs=settings.combo_min_legs,
+        max_legs=settings.combo_max_legs,
+        min_leg_probability=settings.combo_min_leg_probability,
+    )
+
+    count = 0
+    for c in combos:
+        rec = ComboRecord(
+            shown_date=today, combined_odds=c['combined_odds'],
+            combined_probability=c['combined_probability'], result='PENDING'
+        )
+        db.session.add(rec)
+        db.session.flush()  # ili rec.id ipatikane kabla ya legs
+        for leg in c['legs']:
+            db.session.add(ComboLeg(
+                combo_id=rec.id, home_team=leg['home'], away_team=leg['away'],
+                match_date=leg['match_date'], market=leg['market'],
+                probability=leg['probability'], real_odds=leg['real_odds'],
+                is_stake_leg=leg['is_stake'], result='PENDING'
+            ))
+        count += 1
+    db.session.commit()
+    return count
+
+
 def snapshot_today():
     """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/, andika DataSnapshot,
-    kisha andika PredictionRecord mpya (PENDING). Inatumiwa na /admin/refresh
-    (mkono) na /api/refresh (kiotomatiki, Job B kila usiku)."""
+    PredictionRecord mpya (PENDING), na Combos za leo."""
     today = date.today()
     hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
     os.makedirs(hist_folder, exist_ok=True)
     for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
-        shutil.copy(os.path.join(DATA_DIR, fname), os.path.join(hist_folder, fname))
+        path = os.path.join(DATA_DIR, fname)
+        if os.path.exists(path):
+            shutil.copy(path, os.path.join(hist_folder, fname))
 
     existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
     if not existing:
@@ -116,6 +177,7 @@ def snapshot_today():
         db.session.commit()
 
     record_predictions_pending()
+    generate_daily_combos()
 
 
 TIER_LABELS = {
@@ -129,8 +191,6 @@ def tier_info(tier_code):
 
 
 def calc_edge(probability, real_odds):
-    """Edge = probability yako (%) - implied probability ya odds (%).
-    Tofauti na EV (ambayo ni % ya faida inayotarajiwa kwa stake)."""
     if real_odds is None or not real_odds:
         return None
     implied = 100.0 / real_odds
@@ -144,37 +204,23 @@ def calc_ev(probability, real_odds):
 
 
 # ================================================================
-# DASHBOARD — LEO PEKEE. Mechi zikiisha (hazipo tena data ya leo),
-# hazionekani hapa - zinapatikana History pekee.
+# DASHBOARD — LEO PEKEE.
 # ================================================================
 @app.route('/')
 def dashboard():
-    data = get_data()
-    df = data['predictions'].copy()
     settings = Settings.get()
-
-    today_str = date.today().strftime('%Y-%m-%d')
-    df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
+    match_survivors = today_predictions_survivors(settings)
 
     matches = []
-    for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
-        entries = [(row['market'], row['probability_%'],
-                    row['real_odds'] if pd.notna(row.get('real_odds')) else None,
-                    row.get('pro_tier'), row)
-                   for _, row in grp.iterrows()]
-        survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
-        if not survivors:
-            continue
-
+    for m in match_survivors:
+        survivors = m['survivors']
         best = survivors[0]
         others = survivors[1:1 + settings.max_markets_per_match]
 
         best_pick = {
-            'market': best['market'],
-            'probability': best['probability_%'],
+            'market': best['market'], 'probability': best['probability_%'],
             'tier': tier_info(best.get('pro_tier')),
-            'has_odds': pd.notna(best.get('real_odds')),
-            'odds': best.get('real_odds'),
+            'has_odds': pd.notna(best.get('real_odds')), 'odds': best.get('real_odds'),
             'ev': calc_ev(best['probability_%'], best.get('real_odds')) if pd.notna(best.get('real_odds')) else None,
         }
         other_picks = [{
@@ -184,10 +230,9 @@ def dashboard():
         } for r in others]
 
         matches.append({
-            'home': home, 'away': away,
-            'date': mdate.strftime('%d %b %Y'),
-            'date_iso': mdate.strftime('%Y-%m-%d'),
-            'time_eat': mdate.strftime('%H:%M') if mdate.hour or mdate.minute else None,
+            'home': m['home'], 'away': m['away'],
+            'date': m['match_date'].strftime('%d %b %Y'),
+            'time_eat': m['match_date'].strftime('%H:%M') if m['match_date'].hour or m['match_date'].minute else None,
             'best_pick': best_pick, 'other_picks': other_picks,
         })
 
@@ -199,7 +244,7 @@ def dashboard():
 
 
 # ================================================================
-# VALUE BETS — LEO PEKEE, sawa na Dashboard. Edge + EV zote mbili.
+# VALUE BETS — LEO PEKEE.
 # ================================================================
 @app.route('/value-bets')
 def value_bets():
@@ -224,35 +269,78 @@ def value_bets():
 
 
 # ================================================================
-# COMBOS — bado hazina match_date ya kutegemewa (kikwazo cha data ya
-# Kaggle-side) - formula mpya ya combos itakuja baada ya hili kutatuliwa.
+# COMBOS — LEO PEKEE, kutoka ComboRecord (database), si combos.csv tena.
 # ================================================================
 @app.route('/combos')
 def combos():
-    df = get_data()['combos'].copy()
+    today = date.today()
+    records = ComboRecord.query.filter_by(shown_date=today).order_by(ComboRecord.combined_odds).all()
+
     combo_list = []
-    for _, row in df.iterrows():
-        legs = [leg.strip() for leg in row['legs'].split(' + ')]
+    for rec in records:
         combo_list.append({
-            'target_odds': row['target_odds'], 'combined_odds': row['combined_odds'],
-            'combined_prob': row['combined_prob_%'], 'n_legs': row['n_legs'], 'legs': legs,
+            'combined_odds': rec.combined_odds, 'combined_probability': rec.combined_probability,
+            'result': rec.result,
+            'stake_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                            'probability': l.probability, 'odds': l.real_odds}
+                           for l in rec.legs if l.is_stake_leg],
+            'confidence_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                                 'probability': l.probability}
+                                for l in rec.legs if not l.is_stake_leg],
         })
-    return render_template('combos.html', combos=combo_list, page='combos')
+
+    empty_message = 'NO PICK TODAY' if not combo_list else None
+    return render_template('combos.html', combos=combo_list, empty_message=empty_message, page='combos')
 
 
 # ================================================================
 # HISTORY
 # ================================================================
-TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet', 'combos': 'combo'}
+TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet'}
 
 
 @app.route('/history')
 def history():
     tier = request.args.get('tier', 'predictions')
-    section = TIER_TO_SECTION.get(tier, 'prediction')
     selected_date = request.args.get('date')
     settings = Settings.get()
 
+    matches = []
+    value_bets_list = []
+    combos_list = []
+    summary = None
+
+    if tier == 'combos':
+        available_dates = sorted(
+            {d[0].strftime('%Y-%m-%d') for d in
+             db.session.query(ComboRecord.shown_date).distinct().all()}, reverse=True)
+
+        if selected_date:
+            day = datetime.strptime(selected_date, '%Y-%m-%d').date()
+            records = ComboRecord.query.filter_by(shown_date=day).order_by(ComboRecord.combined_odds).all()
+            for rec in records:
+                combos_list.append({
+                    'combined_odds': rec.combined_odds, 'combined_probability': rec.combined_probability,
+                    'result': rec.result,
+                    'stake_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                                    'probability': l.probability, 'odds': l.real_odds, 'result': l.result}
+                                   for l in rec.legs if l.is_stake_leg],
+                    'confidence_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                                         'probability': l.probability, 'result': l.result}
+                                        for l in rec.legs if not l.is_stake_leg],
+                })
+            won = sum(1 for c in combos_list if c['result'] == 'WON')
+            lost = sum(1 for c in combos_list if c['result'] == 'LOST')
+            void = sum(1 for c in combos_list if c['result'] == 'VOID')
+            summary = {'won': won, 'lost': lost, 'void': void,
+                       'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
+
+        return render_template('history.html', tier=tier, available_dates=available_dates,
+                               selected_date=selected_date, matches=matches,
+                               value_bets_list=value_bets_list, combos_list=combos_list,
+                               summary=summary, combos_message=None, page='history')
+
+    section = TIER_TO_SECTION.get(tier, 'prediction')
     available_dates = sorted(
         {d[0].strftime('%Y-%m-%d') for d in
          db.session.query(PredictionRecord.shown_date)
@@ -260,15 +348,7 @@ def history():
         reverse=True
     )
 
-    matches = []
-    value_bets_list = []
-    summary = None
-    combos_message = None
-
-    if tier == 'combos':
-        combos_message = 'History ya Combos bado haijapatikana - inakuja hivi karibuni.'
-
-    elif selected_date:
+    if selected_date:
         day = datetime.strptime(selected_date, '%Y-%m-%d').date()
         records = PredictionRecord.query.filter_by(section=section, shown_date=day).all()
 
@@ -318,12 +398,12 @@ def history():
 
     return render_template('history.html', tier=tier, available_dates=available_dates,
                            selected_date=selected_date, matches=matches,
-                           value_bets_list=value_bets_list, summary=summary,
-                           combos_message=combos_message, page='history')
+                           value_bets_list=value_bets_list, combos_list=combos_list,
+                           summary=summary, combos_message=None, page='history')
 
 
 # ================================================================
-# ADMIN — settings, API key, refresh data
+# ADMIN
 # ================================================================
 def admin_required():
     return request.cookies.get('is_admin') == 'yes'
@@ -344,6 +424,9 @@ def admin():
             settings.history_max_markets = int(request.form.get('history_max_markets', 10))
             settings.probability_threshold = float(request.form.get('probability_threshold', 50.0))
             settings.best_pick_formula = request.form.get('best_pick_formula', 'hybrid')
+            settings.combo_min_legs = int(request.form.get('combo_min_legs', 3))
+            settings.combo_max_legs = int(request.form.get('combo_max_legs', 5))
+            settings.combo_min_leg_probability = float(request.form.get('combo_min_leg_probability', 70.0))
             db.session.commit()
             flash('Mipangilio imesasishwa.', 'success')
         elif action == 'update_api':
@@ -380,32 +463,23 @@ def admin_logout():
 
 @app.route('/admin/refresh', methods=['POST'])
 def admin_refresh():
-    """Pakia upya CSV kutoka data/ (baada ya kupakia faili mpya kwa mkono), na hifadhi history snapshot."""
     if not admin_required():
         return redirect(url_for('admin_login'))
-
     load_live_data()
     snapshot_today()
-
     flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
     return redirect(url_for('admin'))
 
 
-# ================================================================
-# API — refresh ya KIOTOMATIKO, inaitwa na GitHub Actions (Job B) kila
-# usiku baada ya kupush data mpya.
-# ================================================================
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
     if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
         return jsonify({'error': 'unauthorized'}), 401
-
     try:
         load_live_data()
         snapshot_today()
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
     return jsonify({
         'status': 'ok',
         'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
