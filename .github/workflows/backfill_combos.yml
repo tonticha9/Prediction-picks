@@ -1,0 +1,46 @@
+# .github/workflows/backfill_combos.yml
+#
+# MOJA KWA MOJA (workflow_dispatch TU): backfill ya combos za ZAMANI
+# (data/combos.csv ya kale) - Combos zijazo ni automatic tayari.
+
+name: Backfill Combo History
+
+on:
+  workflow_dispatch:
+    inputs:
+      combos_file:
+        description: 'Njia ya faili ya combos (default: data/combos.csv)'
+        required: false
+        default: 'data/combos.csv'
+      predictions_file:
+        description: 'Njia ya faili ya predictions (kwa tarehe)'
+        required: false
+        default: 'data/predictions.csv'
+
+jobs:
+  backfill-combos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt requests
+
+      - name: Run combo backfill
+        env:
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          COMBOS_FILE: ${{ github.event.inputs.combos_file }}
+          PREDICTIONS_FILE: ${{ github.event.inputs.predictions_file }}
+        run: python .github/scripts/backfill_combos.py
