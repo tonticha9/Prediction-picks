@@ -8,27 +8,38 @@
     <input type="hidden" name="action" value="update_settings">
 
     <div class="form-group">
-      <label>Number of markets kuonyesha - Dashboard (Other Picks)</label>
+      <label>Number of markets - Dashboard (Other Picks)</label>
       <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0" max="20">
     </div>
-
     <div class="form-group">
-      <label>Number of markets kuonyesha - History (Other Picks)</label>
+      <label>Number of markets - History (Other Picks)</label>
       <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0" max="30">
     </div>
-
     <div class="form-group">
       <label>Probability Threshold (%) — soko chini ya hii halionekani kabisa</label>
       <input type="number" step="0.1" name="probability_threshold" value="{{ settings.probability_threshold }}" min="0" max="100">
     </div>
-
     <div class="form-group">
       <label>Best Pick Formula</label>
       <select name="best_pick_formula">
-        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability, ya sasa)</option>
-        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (odds haziathiri)</option>
+        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability)</option>
+        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (+ pro_tier tiebreaker)</option>
         <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee</option>
       </select>
+    </div>
+
+    <h3 style="margin-top:20px;">Mipangilio ya Combos</h3>
+    <div class="form-group">
+      <label>Minimum legs kwa combo moja</label>
+      <input type="number" name="combo_min_legs" value="{{ settings.combo_min_legs }}" min="1" max="10">
+    </div>
+    <div class="form-group">
+      <label>Maximum legs kwa combo moja</label>
+      <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10">
+    </div>
+    <div class="form-group">
+      <label>Minimum probability (%) kwa LEG moja kuingia kwenye combo</label>
+      <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100">
     </div>
 
     <button class="btn" type="submit">Hifadhi Mipangilio</button>
@@ -37,7 +48,6 @@
 
 <div class="admin-section">
   <h3>AllSportsAPI Key</h3>
-
   {% if days_left is not none %}
     {% if days_left < 0 %}
       <div class="expiry-warning expiry-critical">⚠️ API key IMEISHA MUDA siku {{ -days_left }} zilizopita!</div>
@@ -49,7 +59,6 @@
       <div class="expiry-warning expiry-ok">✅ API key iko sawa — zimebaki siku {{ days_left }}.</div>
     {% endif %}
   {% endif %}
-
   <form method="POST">
     <input type="hidden" name="action" value="update_api">
     <div class="form-group">
@@ -67,7 +76,7 @@
 <div class="admin-section">
   <h3>Data</h3>
   <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Baada ya kupakia faili mpya za CSV kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo.
+    Baada ya kupakia faili mpya za CSV kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).
   </p>
   <form method="POST" action="{{ url_for('admin_refresh') }}">
     <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
@@ -77,5 +86,4 @@
 <div class="admin-section">
   <a href="{{ url_for('admin_logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
 </div>
-
 {% endblock %}
