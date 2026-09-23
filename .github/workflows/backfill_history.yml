@@ -1,0 +1,42 @@
+# .github/workflows/backfill_history.yml
+#
+# MOJA KWA MOJA (workflow_dispatch TU - hakuna schedule): inaendesha
+# backfill_history.py kujaza PredictionRecord kwa predictions za nyuma
+# (mfano tarehe 14-20 Sept) zenye matokeo WON/LOST kutoka AllSportsAPI.
+
+name: Backfill Prediction History
+
+on:
+  workflow_dispatch:
+    inputs:
+      predictions_file:
+        description: 'Njia ya faili ya predictions (default: data/predictions.csv)'
+        required: false
+        default: 'data/predictions.csv'
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt requests
+
+      - name: Run backfill
+        env:
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          PREDICTIONS_FILE: ${{ github.event.inputs.predictions_file }}
+        run: python .github/scripts/backfill_history.py
