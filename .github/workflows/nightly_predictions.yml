@@ -41,7 +41,7 @@ jobs:
 
       - name: Trigger Kaggle notebook run + poll + download
         env:
-          KAGGLE_SLUG: tonticha/final-notebook-and-dataset   # BADILISHA: jina HASA la notebook yako (username/slug)
+          KAGGLE_SLUG: tonticha/final-notebook-and-dataset
         run: python .github/scripts/run_kaggle_and_fetch.py
 
       - name: Move downloaded files into data/
@@ -64,8 +64,8 @@ jobs:
       - name: Trigger app refresh (/api/refresh)
         if: env.SKIP_UPDATE != 'true'
         env:
-          APP_URL: ${{ secrets.APP_URL }}                    # mfano: https://braiton-picks.onrender.com
-          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}       # sawa na REFRESH_SECRET kwenye Render env
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
         run: |
           echo "Kusubiri sekunde 20 Render ipate muda ikiwa bado inadeploy..."
           sleep 20
