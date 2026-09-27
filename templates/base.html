@@ -19,6 +19,7 @@
   <div class="nav-drawer" id="navDrawer">
     <div class="close-btn" onclick="toggleNav()">✕</div>
     <a href="{{ url_for('dashboard') }}" class="{{ 'active' if page=='dashboard' else '' }}">📊 Predictions</a>
+    <a href="{{ url_for('upcoming') }}" class="{{ 'active' if page=='upcoming' else '' }}">📅 Zijazo</a>
     <a href="{{ url_for('value_bets') }}" class="{{ 'active' if page=='value_bets' else '' }}">💰 Value Bets</a>
     <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
     <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
