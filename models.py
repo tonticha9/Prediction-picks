@@ -25,9 +25,10 @@ class Settings(db.Model):
     combo_min_legs = db.Column(db.Integer, default=4)
     combo_max_legs = db.Column(db.Integer, default=4)
     combo_min_leg_probability = db.Column(db.Float, default=65.0)
-    # MPYA: idadi ya juu ya combos zitakazotengenezwa kwa siku moja.
+    # MPYA: kizingiti cha probability ya COMBO NZIMA (zidisho la legs zote),
+    # si leg moja. Combo yenye combined_probability chini ya hii HAIONYESHWI.
+    combo_min_combined_probability = db.Column(db.Float, default=0.0)
     max_combos_per_day = db.Column(db.Integer, default=50)
-    # MPYA: formula ya kuchagua LEG (soko) moja kwa kila mechi kwenye combo.
     # 'random_threshold' | 'ev_odds_only' | 'highest_probability' | 'highest_probability_odds_only'
     combo_leg_formula = db.Column(db.String(30), default='random_threshold')
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -39,8 +40,8 @@ class Settings(db.Model):
             s = Settings(max_markets_per_match=5, min_probability=0.0,
                          probability_threshold=50.0, best_pick_formula='hybrid',
                          history_max_markets=10, combo_min_legs=4, combo_max_legs=4,
-                         combo_min_leg_probability=65.0, max_combos_per_day=50,
-                         combo_leg_formula='random_threshold')
+                         combo_min_leg_probability=65.0, combo_min_combined_probability=0.0,
+                         max_combos_per_day=50, combo_leg_formula='random_threshold')
             db.session.add(s)
             db.session.commit()
         return s
@@ -105,10 +106,6 @@ class PredictionRecord(db.Model):
     market = db.Column(db.String(80), index=True, nullable=False)
     section = db.Column(db.String(20), default='prediction')
     probability = db.Column(db.Float, nullable=True)
-    # MPYA: thamani za SIKU YA KWANZA rekodi hii ilipoonekana - haziguswi
-    # kamwe tena baada ya kuwekwa. Msingi wa delta indicator NA wa
-    # History-simulation ya combos (formula za deterministic zinatumia
-    # hizi, si probability/real_odds/pro_tier za sasa).
     first_probability = db.Column(db.Float, nullable=True)
     first_real_odds = db.Column(db.Float, nullable=True)
     first_pro_tier = db.Column(db.String(20), nullable=True)
@@ -126,15 +123,11 @@ class PredictionRecord(db.Model):
 
 
 class ComboRecord(db.Model):
-    """Combo moja (siku moja), na legs zake (ComboLeg). Kwa mfumo mpya wa
-    'random legs kutoka mechi tofauti', combined_odds HUACHWA None (haihesabiwi).
-    result inajazwa baada ya LEGS ZOTE kuwa na matokeo: WON = zote WON;
-    LOST = leg YOYOTE LOST; VOID = hakuna LOST lakini kuna VOID."""
     id = db.Column(db.Integer, primary_key=True)
     shown_date = db.Column(db.Date, default=datetime.utcnow, index=True)
     combined_odds = db.Column(db.Float, nullable=True)
     combined_probability = db.Column(db.Float, nullable=True)
-    formula_used = db.Column(db.String(30), nullable=True)  # kumbukumbu ya formula iliyotumika
+    formula_used = db.Column(db.String(30), nullable=True)
     result = db.Column(db.String(10), default='PENDING', index=True)
     settled_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
