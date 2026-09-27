@@ -1,19 +1,13 @@
 """
-combo_builder.py — Mfumo MPYA wa combos (badala ya best_pick_formula):
+combo_builder.py — Mfumo wa combos: kila combo ina legs kati ya min_legs na
+max_legs, kila leg kutoka MECHI TOFAUTI (hakuna mechi mbili kwenye combo
+moja). Formula inaamua SOKO gani litumike kwa mechi husika.
 
-Kwa kila mechi, kama ipo soko lolote linalopita 'min_leg_probability'
-(na, kwa formula za 'odds_only', lina real_odds), mechi hiyo ni
-'mgombea'. Kila combo ina legs kati ya min_legs na max_legs, kila leg
-kutoka MECHI TOFAUTI (hakuna mechi mbili kwenye combo moja). Formula
-inaamua SOKO gani litumike kwa mechi husika:
-  - random_threshold: soko la nasibu miongoni mwa yanayopita kiwango
-  - highest_probability: soko lenye probability ya juu zaidi
-  - ev_odds_only: (mechi zenye odds pekee) soko lenye EV ya juu zaidi
-  - highest_probability_odds_only: (mechi zenye odds pekee) probability ya juu zaidi
+Hakuna combo mbili zenye MCHANGANYIKO ULEULE wa (mechi+soko) kwa siku moja.
+Combo yenye combined_probability CHINI ya min_combined_probability HAIINGII
+kwenye matokeo (inarukwa, jaribio linaendelea kutafuta nyingine).
 
 combined_odds HAIHESABIWI KAMWE (imeachwa None kwa makusudi).
-combined_probability = zidisho la probability za legs zote (fraction ya
-uwezekano legs zote kutokea, ikiwa ni huru/independent).
 """
 import random
 
@@ -26,8 +20,8 @@ def _candidates(match, min_leg_probability, formula):
     return markets
 
 
-def _pick_leg(candidates, formula):
-    if formula == 'highest_probability' or formula == 'highest_probability_odds_only':
+def _pick_leg(candidates, formula, rng):
+    if formula in ('highest_probability', 'highest_probability_odds_only'):
         return max(candidates, key=lambda m: m.get('probability') or 0)
     if formula == 'ev_odds_only':
         def ev(m):
@@ -36,14 +30,10 @@ def _pick_leg(candidates, formula):
                 return -999
             return ((m.get('probability') or 0) / 100 * odds - 1) * 100
         return max(candidates, key=ev)
-    # random_threshold (default/fallback)
-    return random.choice(candidates)
+    return rng.choice(candidates)  # random_threshold (default/fallback)
 
 
 def combo_result_from_legs(legs):
-    """Result ya combo kutoka result za legs zake (kwa History-simulation,
-    ambako kila leg inaweza kuwa na 'result' iliyopachikwa). 'PENDING'
-    ikiwa leg yoyote haina result bado."""
     results = [leg.get('result') for leg in legs]
     if any(r in (None, 'PENDING') for r in results):
         return 'PENDING'
@@ -55,12 +45,16 @@ def combo_result_from_legs(legs):
 
 
 def build_daily_combos(match_pool, min_legs=4, max_legs=4, min_leg_probability=65.0,
-                       formula='random_threshold', max_combos=50, rng=None):
+                       min_combined_probability=0.0, formula='random_threshold',
+                       max_combos=50, rng=None):
     """match_pool: [{'home','away','match_date','markets':[{'market','probability',
     'real_odds','pro_tier', 'result' (hiari, kwa simulation)}, ...]}, ...]
-    Inarudisha listi ya combos: [{'combined_odds': None, 'combined_probability': float,
-    'formula_used': str, 'legs': [{'home','away','match_date','market','probability',
-    'real_odds','is_stake','result'}, ...]}, ...]"""
+
+    Inarudisha listi ya combos (INASIMAMA MAPEMA ikiwa mchanganyiko mpya
+    unaokidhi vigezo haupatikani tena):
+    [{'combined_odds': None, 'combined_probability': float, 'formula_used': str,
+      'legs': [{'home','away','match_date','market','probability','real_odds',
+                'is_stake','result'}, ...]}, ...]"""
     rng = rng or random
 
     eligible = []
@@ -73,7 +67,12 @@ def build_daily_combos(match_pool, min_legs=4, max_legs=4, min_leg_probability=6
         return []
 
     combos = []
-    for _ in range(max_combos):
+    seen_signatures = set()
+    max_attempts = max_combos * 30  # nafasi ya ziada kwa sababu baadhi zitakataliwa na kizingiti
+
+    attempts = 0
+    while len(combos) < max_combos and attempts < max_attempts:
+        attempts += 1
         legs_count = rng.randint(min_legs, max_legs) if max_legs > min_legs else min_legs
         if len(eligible) < legs_count:
             break
@@ -81,22 +80,31 @@ def build_daily_combos(match_pool, min_legs=4, max_legs=4, min_leg_probability=6
 
         legs = []
         for match, cands in chosen:
-            leg_market = _pick_leg(cands, formula)
+            leg_market = _pick_leg(cands, formula, rng)
             legs.append({
                 'home': match['home'], 'away': match['away'], 'match_date': match['match_date'],
                 'market': leg_market['market'], 'probability': leg_market.get('probability'),
                 'real_odds': leg_market.get('real_odds'),
                 'is_stake': leg_market.get('real_odds') is not None,
-                'result': leg_market.get('result'),  # ipo tu kwa History-simulation
+                'result': leg_market.get('result'),
             })
+
+        signature = frozenset((l['home'], l['away'], l['market']) for l in legs)
+        if signature in seen_signatures:
+            continue
+        seen_signatures.add(signature)
 
         prob_product = 1.0
         for leg in legs:
             prob_product *= (leg['probability'] or 0) / 100.0
+        combined_probability = round(prob_product * 100, 2)
+
+        if combined_probability < min_combined_probability:
+            continue  # haikidhi kizingiti cha combo nzima - kataa, jaribu tena
 
         combos.append({
             'combined_odds': None,
-            'combined_probability': round(prob_product * 100, 2),
+            'combined_probability': combined_probability,
             'formula_used': formula,
             'legs': legs,
         })
