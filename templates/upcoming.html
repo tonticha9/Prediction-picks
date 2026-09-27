@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+  <label for="date-select" style="font-weight:600;">Tarehe:</label>
+  <select id="date-select" onchange="window.location.href='{{ url_for('upcoming') }}?date=' + this.value"
+          style="padding:6px 10px; border-radius:8px; border:1px solid var(--border, #333); background:transparent; color:inherit;">
+    {% for d in future_dates %}
+      <option value="{{ d }}" {{ 'selected' if d == selected_date else '' }}>{{ d }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+{% macro delta_badge(delta) %}
+  {% if delta is not none and delta != 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px;
+                 color:{{ 'seagreen' if delta > 0 else 'crimson' }}; white-space:nowrap;">
+      {{ '▲' if delta > 0 else '▼' }} {{ '+%.1f'|format(delta) if delta > 0 else '%.1f'|format(delta) }}
+    </span>
+  {% endif %}
+{% endmacro %}
+
+{% if not matches %}
+  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
+{% endif %}
+
+{% for m in matches %}
+<div class="match-card">
+  <div class="match-card-header">
+    <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
+    <div class="match-meta">{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }} EAT{% endif %}</div>
+  </div>
+
+  <div class="best-pick">
+    <div class="best-pick-label">Best Pick</div>
+    <div class="best-pick-row">
+      <div class="best-pick-market">{{ m.best_pick.market }}</div>
+      <div class="best-pick-prob">
+        {{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}
+      </div>
+    </div>
+    <div style="margin-top:8px;">
+      <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
+    </div>
+    {% if m.best_pick.has_odds %}
+    <div class="best-pick-extra">
+      <div>Odds: <b>{{ m.best_pick.odds }}</b></div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if m.other_picks %}
+  <button class="toggle-picks" onclick="togglePicks('upcoming-picks-{{ loop.index }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <div class="other-picks" id="upcoming-picks-{{ loop.index }}">
+    {% for p in m.other_picks %}
+    <div class="other-pick-row">
+      <div>{{ p.market }}</div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
+        <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
+        {{ delta_badge(p.delta) }}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+{% endblock %}
