@@ -1,6 +1,6 @@
 """
 Braiton Picks — Flask app
-Dashboard ya predictions za kila siku + Value Bets + Combos + History + Admin.
+Dashboard ya predictions za kila siku + Value Bets + Combos + History + Zijazo + Admin.
 """
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import pandas as pd
@@ -85,33 +85,63 @@ def today_predictions_survivors(settings):
 
 def record_predictions_pending():
     """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
-    kwenye _cache['predictions']/['value_bets'] - ISIPOKUWA tayari zipo."""
+    kwenye _cache['predictions']/['value_bets'], NA SASISHA probability/pro_tier/
+    real_odds kwa rekodi ZILIZOPO ambazo bado ni PENDING (mechi haijachezwa) -
+    ili predictions za 'Zijazo' ziendelee kuboreshwa kila siku model inapokimbia
+    upya, mpaka mechi ifike. `first_probability` inawekwa MARA MOJA TU (siku ya
+    kwanza rekodi ilipoundwa) na haiguswi tena - ndiyo msingi wa delta indicator.
+    Rekodi zilizokwisha-settle (WON/LOST/VOID) HAZIGUSWI KAMWE."""
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
+    updated_count = 0
     for cache_key, section in section_map.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
             continue
         for _, row in df.iterrows():
-            exists = PredictionRecord.query.filter_by(
+            prob = row.get('probability_%')
+            odds = row.get('real_odds') if pd.notna(row.get('real_odds')) else None
+            tier = row.get('pro_tier')
+
+            existing = PredictionRecord.query.filter_by(
                 match_date=row['match_date'], home_team=row['HomeTeam'],
                 away_team=row['AwayTeam'], market=row['market'], section=section
             ).first()
-            if exists:
+
+            if existing:
+                if existing.result == 'PENDING':
+                    existing.probability = prob
+                    existing.real_odds = odds
+                    existing.pro_tier = tier
+                    if existing.first_probability is None:
+                        existing.first_probability = prob  # rekodi za kale kabla ya uwanja huu
+                    updated_count += 1
                 continue
+
             rec = PredictionRecord(
                 match_date=row['match_date'], home_team=row['HomeTeam'],
                 away_team=row['AwayTeam'], market=row['market'], section=section,
-                probability=row.get('probability_%'),
-                real_odds=row.get('real_odds') if pd.notna(row.get('real_odds')) else None,
-                pro_tier=row.get('pro_tier'), result='PENDING',
+                probability=prob, first_probability=prob,
+                real_odds=odds, pro_tier=tier, result='PENDING',
                 shown_date=date.today(),
             )
             db.session.add(rec)
             new_count += 1
-    if new_count:
+
+    if new_count or updated_count:
         db.session.commit()
     return new_count
+
+
+def calc_delta(current_prob, home, away, mdate, market, section='prediction'):
+    """Tofauti kati ya probability ya SASA na ile ya SIKU YA KWANZA rekodi hii
+    ilipoonekana (first_probability). None ikiwa rekodi haipo bado."""
+    rec = PredictionRecord.query.filter_by(
+        home_team=home, away_team=away, match_date=mdate, market=market, section=section
+    ).first()
+    if not rec or rec.first_probability is None or current_prob is None:
+        return None
+    return round(current_prob - rec.first_probability, 1)
 
 
 def generate_daily_combos():
@@ -222,11 +252,13 @@ def dashboard():
             'tier': tier_info(best.get('pro_tier')),
             'has_odds': pd.notna(best.get('real_odds')), 'odds': best.get('real_odds'),
             'ev': calc_ev(best['probability_%'], best.get('real_odds')) if pd.notna(best.get('real_odds')) else None,
+            'delta': calc_delta(best['probability_%'], m['home'], m['away'], m['match_date'], best['market']),
         }
         other_picks = [{
             'market': r['market'], 'probability': r['probability_%'],
             'tier': tier_info(r.get('pro_tier')),
             'has_odds': pd.notna(r.get('real_odds')), 'odds': r.get('real_odds'),
+            'delta': calc_delta(r['probability_%'], m['home'], m['away'], m['match_date'], r['market']),
         } for r in others]
 
         matches.append({
@@ -241,6 +273,62 @@ def dashboard():
 
     return render_template('dashboard.html', matches=matches,
                            empty_message=empty_message, page='dashboard')
+
+
+# ================================================================
+# ZIJAZO — mechi za baadaye ya leo ambazo tayari zina prediction safi.
+# Probability inaendelea kuboreshwa kila siku (model inajisahihisha) mpaka
+# tarehe ifike na mechi ihamie kwenye Dashboard (Leo). Dropdown ya tarehe
+# inaonyesha tarehe ZOTE zilizopo kwenye predictions.csv ya sasa - hakuna
+# kikomo cha siku kilichowekwa Flask-side (Kaggle ndiyo inayoamua dirisha).
+# ================================================================
+@app.route('/upcoming')
+def upcoming():
+    settings = Settings.get()
+    df = get_data()['predictions'].copy()
+    today = date.today()
+
+    future_dates = sorted(df.loc[df['match_date'].dt.date > today, 'match_date']
+                          .dt.strftime('%Y-%m-%d').unique().tolist())
+    selected_date = request.args.get('date')
+    if not selected_date or selected_date not in future_dates:
+        selected_date = future_dates[0] if future_dates else None
+
+    matches = []
+    if selected_date:
+        day_df = df[df['match_date'].dt.strftime('%Y-%m-%d') == selected_date]
+        for (home, away, mdate), grp in day_df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
+            entries = [(row['market'], row['probability_%'],
+                        row['real_odds'] if pd.notna(row.get('real_odds')) else None,
+                        row.get('pro_tier'), row)
+                       for _, row in grp.iterrows()]
+            survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+            if not survivors:
+                continue
+            best = survivors[0]
+            others = survivors[1:1 + settings.max_markets_per_match]
+
+            def with_delta(r):
+                return {
+                    'market': r['market'], 'probability': r['probability_%'],
+                    'tier': tier_info(r.get('pro_tier')),
+                    'has_odds': pd.notna(r.get('real_odds')), 'odds': r.get('real_odds'),
+                    'delta': calc_delta(r['probability_%'], home, away, mdate, r['market']),
+                }
+
+            matches.append({
+                'home': home, 'away': away,
+                'date': mdate.strftime('%d %b %Y'),
+                'time_eat': mdate.strftime('%H:%M') if mdate.hour or mdate.minute else None,
+                'best_pick': with_delta(best),
+                'other_picks': [with_delta(r) for r in others],
+            })
+
+    matches.sort(key=lambda m: m.get('time_eat') or '')
+    empty_message = 'HAKUNA PREDICTIONS ZA ZIJAZO KWA SASA' if not matches else None
+
+    return render_template('upcoming.html', matches=matches, future_dates=future_dates,
+                           selected_date=selected_date, empty_message=empty_message, page='upcoming')
 
 
 # ================================================================
