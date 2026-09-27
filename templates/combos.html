@@ -9,30 +9,19 @@
 {% for c in combos %}
 <div class="match-card">
   <div class="match-card-header">
-    <div class="match-teams">Odds: {{ c.combined_odds }}x</div>
+    <div class="match-teams">Combo #{{ loop.index }} — Legs {{ c.legs|length }}</div>
     <div class="match-meta">Combined probability: {{ c.combined_probability }}%</div>
   </div>
 
-  <div style="font-size:12px; color:var(--text-dim); font-weight:700; margin:10px 0 4px;">STAKE LEGS (zenye odds)</div>
-  {% for leg in c.stake_legs %}
+  {% for leg in c.legs %}
   <div class="other-pick-row">
     <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
     <div style="display:flex; gap:10px; align-items:center;">
-      <span style="color:var(--text-dim);">@{{ leg.odds }}</span>
-      <span class="tier-badge tier-medium">{{ leg.probability }}%</span>
+      {% if leg.has_odds %}<span style="color:var(--text-dim);">@{{ leg.odds }}</span>{% endif %}
+      <span class="tier-badge {{ 'tier-medium' if leg.has_odds else 'tier-other' }}">{{ leg.probability }}%</span>
     </div>
   </div>
   {% endfor %}
-
-  {% if c.confidence_legs %}
-  <div style="font-size:12px; color:var(--text-dim); font-weight:700; margin:10px 0 4px;">CONFIDENCE LEGS (bila odds)</div>
-  {% for leg in c.confidence_legs %}
-  <div class="other-pick-row">
-    <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
-    <div><span class="tier-badge tier-other">{{ leg.probability }}%</span></div>
-  </div>
-  {% endfor %}
-  {% endif %}
 </div>
 {% endfor %}
 {% endblock %}
