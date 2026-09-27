@@ -6,13 +6,12 @@ kutoka AllSportsAPI, inaziongeza kwenye 'historical-complete-no-gap'
 dataset (Kaggle), na inapakia toleo JIPYA la dataset hiyo - ili Job B
 (usiku) ipate historia iliyosasika kila wakati, bila pengo kuunda tena.
 
-MPYA (Sept 22 2026): baada ya kupata matokeo mapya, inatathmini moja kwa
-moja PredictionRecord zote za PENDING za mechi hizo (kwa market_evaluator.py)
-na kuandika WON/LOST/VOID kwenye database - History inasasika kiotomatiki
-bila hatua yoyote ya mkono.
+Inatathmini moja kwa moja PredictionRecord/ComboLeg za PENDING za mechi
+zilizoisha (kwa market_evaluator.py) - History inasasika kiotomatiki.
 
-Logic ya kuvuta/kuchakata mechi ni NAKALA HALISI ya backfill_gap.py
-(iliyokwisha jaribiwa na kufanya kazi).
+MPYA: API_KEY sasa inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
+ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU (usalama, ikiwa
+Render iko chini au REFRESH_SECRET haipo).
 """
 import os
 import sys
@@ -24,19 +23,43 @@ import numpy as np
 import subprocess
 from datetime import datetime, timedelta, date
 
-# --- ongeza root ya repo kwenye sys.path ili tuweze ku-import app/models/evaluator ---
 sys.path.insert(0, os.getcwd())
 
-API_KEY = os.environ.get("ALLSPORTSAPI_KEY")
-KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")  # mfano: tonticha/historical-complete-no-gap
+APP_URL = os.environ.get("APP_URL")
+REFRESH_SECRET = os.environ.get("REFRESH_SECRET")
+KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")
+
+
+def fetch_api_key_from_admin():
+    """Jaribu kupata API key kutoka Admin (chanzo cha ukweli). None
+    ikishindikana (Render iko chini, secrets hazipo, n.k) - GITHUB_SECRET
+    fallback itatumika badala yake."""
+    if not APP_URL or not REFRESH_SECRET:
+        return None
+    try:
+        resp = requests.get(
+            f"{APP_URL}/api/config/allsportsapi-key",
+            headers={"X-Refresh-Secret": REFRESH_SECRET}, timeout=15
+        )
+        resp.raise_for_status()
+        key = resp.json().get('api_key')
+        if key:
+            print("✅ API key imepatikana kutoka Admin.")
+        return key
+    except Exception as e:
+        print(f"⚠️ Imeshindwa kupata API key kutoka Admin ({e}) - natumia GitHub Secret fallback.")
+        return None
+
+
+API_KEY = fetch_api_key_from_admin() or os.environ.get("ALLSPORTSAPI_KEY")
 
 missing = []
 if not API_KEY:
-    missing.append("ALLSPORTSAPI_KEY")
+    missing.append("ALLSPORTSAPI_KEY (Admin wala GitHub Secret havina thamani)")
 if not KAGGLE_DATASET:
     missing.append("KAGGLE_DATASET_SLUG")
 if missing:
-    print(f"❌ HAIPO: {', '.join(missing)} (angalia GitHub Secrets / workflow env)")
+    print(f"❌ HAIPO: {', '.join(missing)}")
     sys.exit(1)
 
 BASE_URL = "https://apiv2.allsportsapi.com/football/"
@@ -111,8 +134,6 @@ def parse_cards(cards_list):
 
 
 def fetch_recent_results(from_date, to_date):
-    """NAKALA HALISI ya backfill_gap.py's fetch_gap(), lakini kwa wigo
-    mfupi wa muda (masaa machache, si wiki)."""
     all_matches = []
     for code, league_key in LEAGUE_MAP.items():
         try:
@@ -181,17 +202,6 @@ def run_kaggle_cmd(args):
 
 
 def check_stuck_fixtures(from_date, to_date):
-    """
-    UKAGUZI WA UKWELI (si makisio ya wigo/statistiki): kwa kila mechi
-    iliyopangwa (kwenye 'from_date' hadi 'to_date'), angalia moja kwa
-    moja: je imepangwa kuanza SAA 4+ ZILIZOPITA, lakini bado haina
-    matokeo ("Finished")? Hii ni ushahidi HALISI wa tatizo (mechi
-    "imekwama" - API haijasasisha, au tatizo la mtandao la chanzo cha
-    data) - si "idadi isiyo ya kawaida".
-
-    Returns: list ya (league, HomeTeam, AwayTeam, kickoff_time, status)
-    kwa mechi zilizokwama.
-    """
     stuck = []
     now = datetime.utcnow()
     for code, league_key in LEAGUE_MAP.items():
@@ -216,7 +226,7 @@ def check_stuck_fixtures(from_date, to_date):
             except Exception:
                 continue
             hours_since_kickoff = (now - kickoff).total_seconds() / 3600
-            if hours_since_kickoff > 4:  # muda wa kutosha kwa mechi yoyote kumalizika
+            if hours_since_kickoff > 4:
                 stuck.append((code, f.get('event_home_team'), f.get('event_away_team'),
                               f.get('event_date'), f.get('event_time'), status or '(tupu)'))
         time.sleep(0.3)
@@ -237,16 +247,11 @@ def run_stuck_check(from_date, to_date):
 
 
 def evaluate_pending_predictions(df_finished):
-    """MPYA: kwa kila mechi mpya iliyoisha (df_finished), tafuta PredictionRecord
-    zote za PENDING zinazolingana (Date+HomeTeam+AwayTeam) na uzitathmini kwa
-    market_evaluator.py, kisha uandike WON/LOST/VOID. Inahitaji DATABASE_URL."""
     if len(df_finished) == 0:
         return
-
     if not os.environ.get('DATABASE_URL'):
         print("\nℹ️ DATABASE_URL haipo - naruka utathmini wa PredictionRecord mzunguko huu.")
         return
-
     try:
         from market_evaluator import evaluate_market, result_label
         from app import app
@@ -281,10 +286,6 @@ def evaluate_pending_predictions(df_finished):
 
 
 def evaluate_pending_combo_legs(df_finished):
-    """MPYA: tathmini ComboLeg za PENDING zinazolingana na mechi mpya
-    zilizoisha, kisha kwa kila ComboRecord iliyoguswa, angalia kama legs
-    ZOTE tayari zina matokeo (si PENDING) - ikiwa ndiyo, amua result ya
-    combo nzima: LOST (leg yoyote LOST) > VOID (hakuna LOST, kuna VOID) > WON."""
     if len(df_finished) == 0:
         return
     if not os.environ.get('DATABASE_URL'):
@@ -322,7 +323,7 @@ def evaluate_pending_combo_legs(df_finished):
                 continue
             leg_results = [leg.result for leg in combo.legs]
             if any(r == 'PENDING' for r in leg_results):
-                continue  # bado kuna legs hazijamalizika - subiri
+                continue
             if any(r == 'LOST' for r in leg_results):
                 combo.result = 'LOST'
             elif any(r == 'VOID' for r in leg_results):
@@ -339,7 +340,6 @@ def evaluate_pending_combo_legs(df_finished):
 
 
 def main():
-    # HATUA 1: Pakua dataset ya sasa (historia iliyopo)
     print("📥 Kupakua historical-complete-no-gap dataset ya sasa...")
     os.makedirs('kaggle_dataset', exist_ok=True)
     run_kaggle_cmd(['datasets', 'download', '-d', KAGGLE_DATASET,
@@ -354,9 +354,8 @@ def main():
     df_existing['Date'] = pd.to_datetime(df_existing['Date'])
     print(f"   Historia ya sasa: {len(df_existing):,} mechi")
 
-    # HATUA 2: Vuta matokeo mapya (masaa 6 ya nyuma - "overlap" ya usalama)
     to_date = date.today().isoformat()
-    from_date = (date.today() - timedelta(days=2)).isoformat()  # wigo mpana kidogo, dedup itashughulikia
+    from_date = (date.today() - timedelta(days=2)).isoformat()
     print(f"🔍 Kutafuta mechi zilizokwisha: {from_date} hadi {to_date}")
     df_new = fetch_recent_results(from_date, to_date)
     print(f"   Jumla ya mechi mpya zilizopatikana: {len(df_new)}")
@@ -366,7 +365,6 @@ def main():
         run_stuck_check(from_date, to_date)
         return
 
-    # HATUA 3: Unganisha (dedupe kwa Date+HomeTeam+AwayTeam, epuka kurudia)
     key_cols = ['Date', 'HomeTeam', 'AwayTeam']
     df_existing_keys = set(df_existing[key_cols].apply(tuple, axis=1))
     df_new_unique = df_new[~df_new[key_cols].apply(tuple, axis=1).isin(df_existing_keys)]
@@ -382,7 +380,6 @@ def main():
     df_combined.to_csv(csv_path, index=False)
     print(f"✅ Historia mpya: {len(df_combined):,} mechi (+{len(df_new_unique)})")
 
-    # HATUA 4: Pakia toleo JIPYA la dataset kwenye Kaggle
     metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
                 "licenses": [{"name": "CC0-1.0"}]}
     with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
@@ -393,15 +390,8 @@ def main():
                      '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"])
     print("🎉 Dataset imesasishwa kikamilifu!")
 
-    # HATUA 5: MPYA - tathmini PredictionRecord za PENDING kwa mechi hizi mpya
     evaluate_pending_predictions(df_new_unique)
-
-    # HATUA 5b: MPYA - tathmini ComboLeg/ComboRecord za PENDING pia
     evaluate_pending_combo_legs(df_new_unique)
-
-    # HATUA 6: UKAGUZI WA UKWELI — mechi zilizokwama (zimepita muda,
-    # bado hazina matokeo). Hii HAIACHISHI job (data tayari imesasishwa
-    # salama) - ni ONYO tu, kwa mechi ZA KWELI zilizotambuliwa, si makisio.
     run_stuck_check(from_date, to_date)
 
 
