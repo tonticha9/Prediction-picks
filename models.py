@@ -99,6 +99,10 @@ class PredictionRecord(db.Model):
     market = db.Column(db.String(80), index=True, nullable=False)
     section = db.Column(db.String(20), default='prediction')
     probability = db.Column(db.Float, nullable=True)
+    # MPYA: probability ya SIKU YA KWANZA rekodi hii ilipoonekana. Haibadiliki
+    # kamwe baada ya kuwekwa - ndiyo msingi wa kiashiria cha mabadiliko (delta)
+    # kwenye Dashboard/Zijazo ("+2.4" tangu siku ya kwanza mpaka leo).
+    first_probability = db.Column(db.Float, nullable=True)
     real_odds = db.Column(db.Float, nullable=True)
     ev_percent = db.Column(db.Float, nullable=True)
     pro_tier = db.Column(db.String(20), nullable=True)
