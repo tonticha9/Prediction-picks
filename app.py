@@ -26,6 +26,11 @@ _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
     if _database_url.startswith('postgres://'):
         _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
+    # Lazimisha driver ya psycopg2 (iliyopo kwenye requirements.txt), bila
+    # kujali Neon imetoa 'postgresql://' au 'postgresql+psycopg://'
+    _database_url = _database_url.replace('postgresql+psycopg://', 'postgresql+psycopg2://', 1)
+    if '+psycopg' not in _database_url:
+        _database_url = _database_url.replace('postgresql://', 'postgresql+psycopg2://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = _database_url
 else:
     app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(BASE_DIR, 'app.db')}"
