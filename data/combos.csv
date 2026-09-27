@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Wrexham vs Southampton: dc_12 @1.33 + Stuttgart vs Dortmund: dc_12 @1.22,1.62,69.2
-3,4,Nacional vs Famalicao: dc_12 @1.30 + Wrexham vs Southampton: dc_12 @1.33 + Anderlecht vs Waregem: dc_1x @1.20 + Aris vs Iraklis: dc_1x @1.17,2.43,46.7
-5,5,Fiorentina vs Napoli: dc_12 @1.30 + Wrexham vs Southampton: dc_12 @1.33 + Angers vs Troyes: dc_12 @1.36 + Bournemouth vs Liverpool: dc_12 @1.28 + Parma vs Genoa: dc_x2 @1.36,4.09,26.6
-7,6,Getafe vs Malaga: dc_12 @1.36 + Everton vs Ipswich: dc_1x @1.18 + Lincoln vs Swansea: dc_12 @1.33 + Rio Ave vs Estrela: dc_x2 @1.44 + La Coruna vs Sevilla: dc_12 @1.36 + Gil Vicente vs Maritimo: dc_12 @1.36,5.68,13.6
+2,2,Excelsior vs Groningen: dc_12 @1.28 + Man United vs Tottenham: dc_12 @1.25,1.6,67.5
+3,3,Man United vs Tottenham: dc_12 @1.25 + Union Berlin vs Elversberg: dc_12 @1.30 + Kifisia vs Aris: dc_1x @1.53,2.49,45.2
+5,6,Brest vs Angers: dc_1x @1.22 + Udinese vs Lecce: dc_1x @1.22 + Charlton vs Bristol City: dc_12 @1.33 + Levante vs Ath Bilbao: dc_x2 @1.30 + Brighton vs Crystal Palace: dc_1x @1.17 + Lorient vs Monaco: dc_x2 @1.33,4.0,25.8
+7,6,Levante vs Sevilla: dc_12 @1.33 + Aston Villa vs Brentford: dc_12 @1.30 + Swansea vs Norwich: dc_12 @1.30 + Watford vs Burnley: dc_12 @1.30 + Lorient vs Paris FC: dc_12 @1.30 + Kifisia vs Aris: dc_1x @1.53,5.81,16.8
