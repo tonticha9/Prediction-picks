@@ -6,11 +6,12 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import pandas as pd
 import os
 import shutil
-from datetime import datetime, date
+import random
+from datetime import datetime, date, timedelta
 
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
 from market_selection import is_market_allowed, select_markets
-from combo_builder import build_daily_combos
+from combo_builder import build_daily_combos, combo_result_from_legs
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
@@ -26,8 +27,6 @@ _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
     if _database_url.startswith('postgres://'):
         _database_url = _database_url.replace('postgres://', 'postgresql://', 1)
-    # Lazimisha driver ya psycopg2 (iliyopo kwenye requirements.txt), bila
-    # kujali Neon imetoa 'postgresql://' au 'postgresql+psycopg://'
     _database_url = _database_url.replace('postgresql+psycopg://', 'postgresql+psycopg2://', 1)
     if '+psycopg' not in _database_url:
         _database_url = _database_url.replace('postgresql://', 'postgresql+psycopg2://', 1)
@@ -41,6 +40,8 @@ db.init_app(app)
 ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
 REFRESH_SECRET = os.environ.get('REFRESH_SECRET')
 
+FORMULA_CHOICES = ['random_threshold', 'ev_odds_only', 'highest_probability', 'highest_probability_odds_only']
+
 # ================================================================
 # DATA LOADING (cache kwenye kumbukumbu, 'refresh' kuisasisha)
 # ================================================================
@@ -51,8 +52,10 @@ def load_live_data():
     global _cache
     predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
     predictions['match_date'] = pd.to_datetime(predictions['match_date'], format='mixed')
+
     value_bets = pd.read_csv(os.path.join(DATA_DIR, 'value_bets.csv'))
     value_bets['match_date'] = pd.to_datetime(value_bets['match_date'], format='mixed')
+
     combos = pd.read_csv(os.path.join(DATA_DIR, 'combos.csv'))
 
     _cache = {'predictions': predictions, 'value_bets': value_bets, 'combos': combos}
@@ -67,8 +70,7 @@ def get_data():
 
 def today_predictions_survivors(settings):
     """Kwa kila mechi ya LEO, rudisha {'home','away','match_date','survivors':[...]}
-    kwa kutumia select_markets() - hii ndiyo picha ile ile Dashboard inayoonyesha,
-    inatumika pia kujenga Combos za leo."""
+    kwa kutumia select_markets() - hii ndiyo picha ile ile Dashboard inayoonyesha."""
     data = get_data()
     df = data['predictions'].copy()
     today_str = date.today().strftime('%Y-%m-%d')
@@ -86,14 +88,33 @@ def today_predictions_survivors(settings):
     return out
 
 
+def all_matches_market_pool():
+    """Mechi ZOTE za LEO + ZIJAZO kutoka predictions.csv, kila mechi ikiwa
+    na ORODHA KAMILI ya masoko yake (BILA kuchujwa na select_markets() -
+    Combos mpya zinahitaji masoko yote, si 'best pick' pekee)."""
+    df = get_data()['predictions'].copy()
+    today = date.today()
+    df = df[df['match_date'].dt.date >= today]
+
+    pool = []
+    for (home, away, mdate), grp in df.groupby(['HomeTeam', 'AwayTeam', 'match_date']):
+        markets = [{
+            'market': row['market'], 'probability': row['probability_%'],
+            'real_odds': row['real_odds'] if pd.notna(row.get('real_odds')) else None,
+            'pro_tier': row.get('pro_tier'),
+        } for _, row in grp.iterrows()]
+        pool.append({'home': home, 'away': away, 'match_date': mdate, 'markets': markets})
+    return pool
+
+
 def record_predictions_pending():
-    """Andika PredictionRecord mpya (result='PENDING') kwa kila mstari mpya
-    kwenye _cache['predictions']/['value_bets'], NA SASISHA probability/pro_tier/
-    real_odds kwa rekodi ZILIZOPO ambazo bado ni PENDING (mechi haijachezwa) -
-    ili predictions za 'Zijazo' ziendelee kuboreshwa kila siku model inapokimbia
-    upya, mpaka mechi ifike. `first_probability` inawekwa MARA MOJA TU (siku ya
-    kwanza rekodi ilipoundwa) na haiguswi tena - ndiyo msingi wa delta indicator.
-    Rekodi zilizokwisha-settle (WON/LOST/VOID) HAZIGUSWI KAMWE."""
+    """Andika PredictionRecord mpya (PENDING) kwa kila mstari mpya, NA
+    SASISHA probability/pro_tier/real_odds kwa rekodi ZILIZOPO ambazo bado
+    ni PENDING (mechi haijachezwa) - ili 'Zijazo' ziendelee kuboreshwa kila
+    siku, mpaka mechi ifike. first_probability/first_real_odds/first_pro_tier
+    zinawekwa MARA MOJA TU (siku ya kwanza) na haziguswi tena - msingi wa
+    delta indicator NA wa History-simulation ya combos. Rekodi zilizokwisha-
+    settle (WON/LOST/VOID) HAZIGUSWI KAMWE."""
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
     updated_count = 0
@@ -117,7 +138,9 @@ def record_predictions_pending():
                     existing.real_odds = odds
                     existing.pro_tier = tier
                     if existing.first_probability is None:
-                        existing.first_probability = prob  # rekodi za kale kabla ya uwanja huu
+                        existing.first_probability = prob
+                        existing.first_real_odds = odds
+                        existing.first_pro_tier = tier
                     updated_count += 1
                 continue
 
@@ -125,8 +148,9 @@ def record_predictions_pending():
                 match_date=row['match_date'], home_team=row['HomeTeam'],
                 away_team=row['AwayTeam'], market=row['market'], section=section,
                 probability=prob, first_probability=prob,
-                real_odds=odds, pro_tier=tier, result='PENDING',
-                shown_date=date.today(),
+                real_odds=odds, first_real_odds=odds,
+                pro_tier=tier, first_pro_tier=tier,
+                result='PENDING', shown_date=date.today(),
             )
             db.session.add(rec)
             new_count += 1
@@ -137,8 +161,6 @@ def record_predictions_pending():
 
 
 def calc_delta(current_prob, home, away, mdate, market, section='prediction'):
-    """Tofauti kati ya probability ya SASA na ile ya SIKU YA KWANZA rekodi hii
-    ilipoonekana (first_probability). None ikiwa rekodi haipo bado."""
     rec = PredictionRecord.query.filter_by(
         home_team=home, away_team=away, match_date=mdate, market=market, section=section
     ).first()
@@ -147,34 +169,36 @@ def calc_delta(current_prob, home, away, mdate, market, section='prediction'):
     return round(current_prob - rec.first_probability, 1)
 
 
+# ================================================================
+# COMBOS — jenzi la LIVE (siku ya leo, mechi za Leo+Zijazo, formula ya sasa)
+# ================================================================
 def generate_daily_combos():
-    """Jenga na uhifadhi Combos za LEO (mara moja tu kwa siku - ikiwa
-    tayari zipo kwa leo, haziundwi tena)."""
+    """Jenga na uhifadhi Combos za LEO (mara moja tu kwa siku)."""
     today = date.today()
     already = ComboRecord.query.filter_by(shown_date=today).first()
     if already:
         return 0
 
     settings = Settings.get()
-    match_survivors = today_predictions_survivors(settings)
-    if not match_survivors:
+    pool = all_matches_market_pool()
+    if not pool:
         return 0
 
     combos = build_daily_combos(
-        match_survivors,
-        min_legs=settings.combo_min_legs,
-        max_legs=settings.combo_max_legs,
+        pool, min_legs=settings.combo_min_legs, max_legs=settings.combo_max_legs,
         min_leg_probability=settings.combo_min_leg_probability,
+        formula=settings.combo_leg_formula, max_combos=settings.max_combos_per_day,
     )
 
     count = 0
     for c in combos:
         rec = ComboRecord(
             shown_date=today, combined_odds=c['combined_odds'],
-            combined_probability=c['combined_probability'], result='PENDING'
+            combined_probability=c['combined_probability'],
+            formula_used=c['formula_used'], result='PENDING'
         )
         db.session.add(rec)
-        db.session.flush()  # ili rec.id ipatikane kabla ya legs
+        db.session.flush()
         for leg in c['legs']:
             db.session.add(ComboLeg(
                 combo_id=rec.id, home_team=leg['home'], away_team=leg['away'],
@@ -187,30 +211,56 @@ def generate_daily_combos():
     return count
 
 
-def snapshot_today():
-    """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/, andika DataSnapshot,
-    PredictionRecord mpya (PENDING), na Combos za leo."""
-    today = date.today()
-    hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
-    os.makedirs(hist_folder, exist_ok=True)
-    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
-        path = os.path.join(DATA_DIR, fname)
-        if os.path.exists(path):
-            shutil.copy(path, os.path.join(hist_folder, fname))
+# ================================================================
+# COMBOS — History-SIMULATION (formula za deterministic pekee), kwa
+# tarehe yoyote ya nyuma, ikitumia first_probability/first_real_odds
+# (fallback: probability/real_odds za sasa, kwa rekodi za kale kabla
+# ya uwanja huu kuwepo). 'random_threshold' HAIJASIMULISHWA - History
+# yake inasoma ComboRecord ZILIZOHIFADHIWA (rejea history_combos_stored()).
+# ================================================================
+def market_pool_asof(target_date, section='prediction'):
+    day_start = datetime.combine(target_date, datetime.min.time())
+    records = PredictionRecord.query.filter(
+        PredictionRecord.section == section,
+        PredictionRecord.shown_date <= target_date,
+        PredictionRecord.match_date >= day_start,
+    ).all()
 
-    existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
-    if not existing:
-        snap = DataSnapshot(
-            snapshot_date=today,
-            predictions_path=os.path.join(hist_folder, 'predictions.csv'),
-            value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
-            combos_path=os.path.join(hist_folder, 'combos.csv')
-        )
-        db.session.add(snap)
-        db.session.commit()
+    groups = {}
+    for r in records:
+        key = (r.home_team, r.away_team, r.match_date)
+        groups.setdefault(key, []).append(r)
 
-    record_predictions_pending()
-    generate_daily_combos()
+    pool = []
+    for (home, away, mdate), recs in groups.items():
+        markets = []
+        for r in recs:
+            prob = r.first_probability if r.first_probability is not None else r.probability
+            odds = r.first_real_odds if r.first_real_odds is not None else r.real_odds
+            tier = r.first_pro_tier if r.first_pro_tier is not None else r.pro_tier
+            markets.append({'market': r.market, 'probability': prob, 'real_odds': odds,
+                            'pro_tier': tier, 'result': r.result})
+        pool.append({'home': home, 'away': away, 'match_date': mdate, 'markets': markets})
+    return pool
+
+
+def simulate_combos_for_date(target_date, formula, settings):
+    """Combos zinazoWEZA KUJIRUDIA (thabiti) kwa tarehe hii + formula hii -
+    RNG imepandikizwa (seeded) na tarehe+formula+mipangilio, kwa hiyo
+    matokeo hayabadiliki unapoangalia tena."""
+    pool = market_pool_asof(target_date)
+    if not pool:
+        return []
+    seed = f"{target_date.isoformat()}|{formula}|{settings.combo_min_legs}|{settings.combo_max_legs}|{settings.combo_min_leg_probability}|{settings.max_combos_per_day}"
+    rng = random.Random(seed)
+    combos = build_daily_combos(
+        pool, min_legs=settings.combo_min_legs, max_legs=settings.combo_max_legs,
+        min_leg_probability=settings.combo_min_leg_probability,
+        formula=formula, max_combos=settings.max_combos_per_day, rng=rng,
+    )
+    for c in combos:
+        c['result'] = combo_result_from_legs(c['legs'])
+    return combos
 
 
 TIER_LABELS = {
@@ -279,11 +329,7 @@ def dashboard():
 
 
 # ================================================================
-# ZIJAZO — mechi za baadaye ya leo ambazo tayari zina prediction safi.
-# Probability inaendelea kuboreshwa kila siku (model inajisahihisha) mpaka
-# tarehe ifike na mechi ihamie kwenye Dashboard (Leo). Dropdown ya tarehe
-# inaonyesha tarehe ZOTE zilizopo kwenye predictions.csv ya sasa - hakuna
-# kikomo cha siku kilichowekwa Flask-side (Kaggle ndiyo inayoamua dirisha).
+# ZIJAZO
 # ================================================================
 @app.route('/upcoming')
 def upcoming():
@@ -360,24 +406,20 @@ def value_bets():
 
 
 # ================================================================
-# COMBOS — LEO PEKEE, kutoka ComboRecord (database), si combos.csv tena.
+# COMBOS — LEO PEKEE (live), kutoka ComboRecord.
 # ================================================================
 @app.route('/combos')
 def combos():
     today = date.today()
-    records = ComboRecord.query.filter_by(shown_date=today).order_by(ComboRecord.combined_odds).all()
+    records = ComboRecord.query.filter_by(shown_date=today).all()
 
     combo_list = []
     for rec in records:
         combo_list.append({
-            'combined_odds': rec.combined_odds, 'combined_probability': rec.combined_probability,
-            'result': rec.result,
-            'stake_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
-                            'probability': l.probability, 'odds': l.real_odds}
-                           for l in rec.legs if l.is_stake_leg],
-            'confidence_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
-                                 'probability': l.probability}
-                                for l in rec.legs if not l.is_stake_leg],
+            'combined_probability': rec.combined_probability, 'result': rec.result,
+            'legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                     'probability': l.probability, 'odds': l.real_odds, 'has_odds': l.real_odds is not None}
+                    for l in rec.legs],
         })
 
     empty_message = 'NO PICK TODAY' if not combo_list else None
@@ -402,24 +444,42 @@ def history():
     summary = None
 
     if tier == 'combos':
+        # Tarehe zinazopatikana = tarehe zote zenye PredictionRecord za mechi
+        # (msingi wa simulation) - zinafanya kazi kwa formula ZOTE nne.
         available_dates = sorted(
             {d[0].strftime('%Y-%m-%d') for d in
-             db.session.query(ComboRecord.shown_date).distinct().all()}, reverse=True)
+             db.session.query(PredictionRecord.shown_date)
+             .filter(PredictionRecord.section == 'prediction').distinct().all()},
+            reverse=True
+        )
 
         if selected_date:
             day = datetime.strptime(selected_date, '%Y-%m-%d').date()
-            records = ComboRecord.query.filter_by(shown_date=day).order_by(ComboRecord.combined_odds).all()
-            for rec in records:
-                combos_list.append({
-                    'combined_odds': rec.combined_odds, 'combined_probability': rec.combined_probability,
-                    'result': rec.result,
-                    'stake_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
-                                    'probability': l.probability, 'odds': l.real_odds, 'result': l.result}
-                                   for l in rec.legs if l.is_stake_leg],
-                    'confidence_legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
-                                         'probability': l.probability, 'result': l.result}
-                                        for l in rec.legs if not l.is_stake_leg],
-                })
+            formula = settings.combo_leg_formula
+
+            if formula == 'random_threshold':
+                # HAKUNA simulation - onyesha rekodi ZILIZOHIFADHIWA za siku hiyo halisi.
+                records = ComboRecord.query.filter_by(shown_date=day).all()
+                for rec in records:
+                    combos_list.append({
+                        'combined_probability': rec.combined_probability, 'result': rec.result,
+                        'legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
+                                 'probability': l.probability, 'odds': l.real_odds,
+                                 'has_odds': l.real_odds is not None, 'result': l.result}
+                                for l in rec.legs],
+                    })
+            else:
+                # Simulation - thabiti (seeded), kwa formula ya SASA.
+                simulated = simulate_combos_for_date(day, formula, settings)
+                for c in simulated:
+                    combos_list.append({
+                        'combined_probability': c['combined_probability'], 'result': c['result'],
+                        'legs': [{'home': l['home'], 'away': l['away'], 'market': l['market'],
+                                 'probability': l['probability'], 'odds': l['real_odds'],
+                                 'has_odds': l['real_odds'] is not None, 'result': l.get('result')}
+                                for l in c['legs']],
+                    })
+
             won = sum(1 for c in combos_list if c['result'] == 'WON')
             lost = sum(1 for c in combos_list if c['result'] == 'LOST')
             void = sum(1 for c in combos_list if c['result'] == 'VOID')
@@ -429,7 +489,8 @@ def history():
         return render_template('history.html', tier=tier, available_dates=available_dates,
                                selected_date=selected_date, matches=matches,
                                value_bets_list=value_bets_list, combos_list=combos_list,
-                               summary=summary, combos_message=None, page='history')
+                               summary=summary, combos_message=None,
+                               combo_formula=settings.combo_leg_formula, page='history')
 
     section = TIER_TO_SECTION.get(tier, 'prediction')
     available_dates = sorted(
@@ -490,7 +551,8 @@ def history():
     return render_template('history.html', tier=tier, available_dates=available_dates,
                            selected_date=selected_date, matches=matches,
                            value_bets_list=value_bets_list, combos_list=combos_list,
-                           summary=summary, combos_message=None, page='history')
+                           summary=summary, combos_message=None,
+                           combo_formula=settings.combo_leg_formula, page='history')
 
 
 # ================================================================
@@ -515,9 +577,12 @@ def admin():
             settings.history_max_markets = int(request.form.get('history_max_markets', 10))
             settings.probability_threshold = float(request.form.get('probability_threshold', 50.0))
             settings.best_pick_formula = request.form.get('best_pick_formula', 'hybrid')
-            settings.combo_min_legs = int(request.form.get('combo_min_legs', 3))
-            settings.combo_max_legs = int(request.form.get('combo_max_legs', 5))
-            settings.combo_min_leg_probability = float(request.form.get('combo_min_leg_probability', 70.0))
+            settings.combo_min_legs = int(request.form.get('combo_min_legs', 4))
+            settings.combo_max_legs = int(request.form.get('combo_max_legs', 4))
+            settings.combo_min_leg_probability = float(request.form.get('combo_min_leg_probability', 65.0))
+            settings.max_combos_per_day = int(request.form.get('max_combos_per_day', 50))
+            formula = request.form.get('combo_leg_formula', 'random_threshold')
+            settings.combo_leg_formula = formula if formula in FORMULA_CHOICES else 'random_threshold'
             db.session.commit()
             flash('Mipangilio imesasishwa.', 'success')
         elif action == 'update_api':
@@ -530,8 +595,17 @@ def admin():
         return redirect(url_for('admin'))
 
     days_left = api_config.days_until_expiry()
+
+    # Onyo la 'data staleness' - snapshot ya mwisho ilikuwa lini?
+    last_snapshot = DataSnapshot.query.order_by(DataSnapshot.snapshot_date.desc()).first()
+    hours_since_snapshot = None
+    if last_snapshot:
+        delta = datetime.utcnow() - datetime.combine(last_snapshot.snapshot_date, datetime.min.time())
+        hours_since_snapshot = round(delta.total_seconds() / 3600, 1)
+
     return render_template('admin.html', settings=settings, api_config=api_config,
-                           days_left=days_left, page='admin')
+                           days_left=days_left, hours_since_snapshot=hours_since_snapshot,
+                           formula_choices=FORMULA_CHOICES, page='admin')
 
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -562,6 +636,38 @@ def admin_refresh():
     return redirect(url_for('admin'))
 
 
+def snapshot_today():
+    """Nakili CSV za sasa kwenye data/history/YYYY-MM-DD/, andika DataSnapshot,
+    PredictionRecord mpya/kusasishwa (PENDING), na Combos za leo."""
+    today = date.today()
+    hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
+    os.makedirs(hist_folder, exist_ok=True)
+    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
+        path = os.path.join(DATA_DIR, fname)
+        if os.path.exists(path):
+            shutil.copy(path, os.path.join(hist_folder, fname))
+
+    existing = DataSnapshot.query.filter_by(snapshot_date=today).first()
+    if not existing:
+        snap = DataSnapshot(
+            snapshot_date=today,
+            predictions_path=os.path.join(hist_folder, 'predictions.csv'),
+            value_bets_path=os.path.join(hist_folder, 'value_bets.csv'),
+            combos_path=os.path.join(hist_folder, 'combos.csv')
+        )
+        db.session.add(snap)
+        db.session.commit()
+    else:
+        existing.snapshot_date = today  # gusa 'updated' kwa staleness check
+
+    record_predictions_pending()
+    generate_daily_combos()
+
+
+# ================================================================
+# API — inatumiwa na GitHub Actions/hourly_catchup.py. Uthibitisho ni
+# header ya siri (X-Refresh-Secret), SI cookie ya admin.
+# ================================================================
 @app.route('/api/refresh', methods=['POST'])
 def api_refresh():
     if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
@@ -578,7 +684,16 @@ def api_refresh():
     }), 200
 
 
-# ================================================================
+@app.route('/api/config/allsportsapi-key', methods=['GET'])
+def api_config_key():
+    """Job A (hourly_catchup.py) inaomba key kutoka hapa badala ya
+    GitHub Secret moja kwa moja - Admin ndiyo chanzo cha ukweli."""
+    if not REFRESH_SECRET or request.headers.get('X-Refresh-Secret') != REFRESH_SECRET:
+        return jsonify({'error': 'unauthorized'}), 401
+    cfg = ApiConfig.get()
+    return jsonify({'api_key': cfg.api_key}), 200
+
+
 with app.app_context():
     db.create_all()
 
