@@ -60,7 +60,6 @@
     <h3 style="margin-top:20px;">Mipangilio ya Combos</h3>
     <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
       Kila combo inachukua legs kutoka MECHI TOFAUTI (hakuna mechi mbili kwenye combo moja).
-      Formula huamua ni soko gani litumike kwa kila mechi.
     </p>
     <div class="form-group">
       <label>Combo Leg Formula</label>
@@ -85,8 +84,12 @@
       <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10">
     </div>
     <div class="form-group">
-      <label>Minimum probability (%) kwa LEG moja kuingia kwenye combo</label>
+      <label>Minimum probability (%) kwa LEG MOJA kuingia kwenye combo</label>
       <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Minimum probability (%) kwa COMBO NZIMA (zidisho la legs zote)</label>
+      <input type="number" step="0.1" name="combo_min_combined_probability" value="{{ settings.combo_min_combined_probability }}" min="0" max="100">
     </div>
     <div class="form-group">
       <label>Idadi ya juu ya combos kwa siku (max_combos_per_day)</label>
