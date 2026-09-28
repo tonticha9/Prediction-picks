@@ -2,6 +2,12 @@
 {% block content %}
 <h2 style="margin-bottom:16px;">🎯 Combos — Leo</h2>
 
+{% if combo_note %}
+  <div style="font-size:13px; color:var(--text-dim); margin-bottom:14px; padding:10px 12px; border:1px solid var(--border, #333); border-radius:10px;">
+    ℹ️ {{ combo_note }}
+  </div>
+{% endif %}
+
 {% if not combos %}
   <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
