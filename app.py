@@ -5,6 +5,7 @@ Dashboard ya predictions za kila siku + Value Bets + Combos + History + Zijazo +
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import pandas as pd
 import os
+import re
 import shutil
 import random
 from datetime import datetime, date, timedelta
@@ -80,9 +81,32 @@ def today_predictions_survivors(settings):
     return out
 
 
+# ================================================================
+# SHERIA YA KUDUMU YA MASOKO - inatumika pia kwa COMBOS
+# (goals_*_05/_45, home/away_goals_under_*, na masoko ya '_and_...under').
+# Combos hazipiti kwenye select_markets(), kwa hiyo lazima tuichuje hapa.
+# ================================================================
+def _fallback_market_rule(market):
+    m = str(market)
+    if re.match(r'^goals_.*_(05|45)$', m):
+        return False
+    if m.startswith(('home_goals_under_', 'away_goals_under_')):
+        return False
+    if '_and_' in m and 'under' in m:
+        return False
+    return True
+
+
+def combo_market_allowed(market):
+    try:
+        return bool(is_market_allowed(market))
+    except TypeError:
+        return _fallback_market_rule(market)
+
+
 def all_matches_market_pool():
     """Mechi ZOTE za LEO + ZIJAZO, kila mechi ikiwa na ORODHA KAMILI ya
-    masoko yake (bila kuchujwa na select_markets())."""
+    masoko yake yanayoruhusiwa (bila kuchujwa na select_markets())."""
     df = get_data()['predictions'].copy()
     today = date.today()
     df = df[df['match_date'].dt.date >= today]
@@ -93,8 +117,9 @@ def all_matches_market_pool():
             'market': row['market'], 'probability': row['probability_%'],
             'real_odds': row['real_odds'] if pd.notna(row.get('real_odds')) else None,
             'pro_tier': row.get('pro_tier'),
-        } for _, row in grp.iterrows()]
-        pool.append({'home': home, 'away': away, 'match_date': mdate, 'markets': markets})
+        } for _, row in grp.iterrows() if combo_market_allowed(row['market'])]
+        if markets:
+            pool.append({'home': home, 'away': away, 'match_date': mdate, 'markets': markets})
     return pool
 
 
@@ -193,6 +218,8 @@ def generate_daily_combos():
 
 
 def market_pool_asof(target_date, section='prediction'):
+    """Masoko yaliyokuwepo kufikia tarehe hii (thamani za SIKU YA KWANZA,
+    fallback: za sasa kwa rekodi za kale), yanayoruhusiwa pekee."""
     day_start = datetime.combine(target_date, datetime.min.time())
     records = PredictionRecord.query.filter(
         PredictionRecord.section == section,
@@ -202,6 +229,8 @@ def market_pool_asof(target_date, section='prediction'):
 
     groups = {}
     for r in records:
+        if not combo_market_allowed(r.market):
+            continue
         key = (r.home_team, r.away_team, r.match_date)
         groups.setdefault(key, []).append(r)
 
@@ -218,9 +247,12 @@ def market_pool_asof(target_date, section='prediction'):
     return pool
 
 
-def simulate_combos_for_date(target_date, formula, settings):
+def simulate_combos_for_date(target_date, formula, settings, stats=None):
     pool = market_pool_asof(target_date)
     if not pool:
+        if stats is not None:
+            stats.update({'eligible_matches': 0, 'generated': 0,
+                          'below_combined_threshold': 0, 'duplicates': 0})
         return []
     seed = (f"{target_date.isoformat()}|{formula}|{settings.combo_min_legs}|"
             f"{settings.combo_max_legs}|{settings.combo_min_leg_probability}|"
@@ -230,11 +262,45 @@ def simulate_combos_for_date(target_date, formula, settings):
         pool, min_legs=settings.combo_min_legs, max_legs=settings.combo_max_legs,
         min_leg_probability=settings.combo_min_leg_probability,
         min_combined_probability=settings.combo_min_combined_probability,
-        formula=formula, max_combos=settings.max_combos_per_day, rng=rng,
+        formula=formula, max_combos=settings.max_combos_per_day, rng=rng, stats=stats,
     )
     for c in combos:
         c['result'] = combo_result_from_legs(c['legs'])
     return combos
+
+
+def explain_combos(stats, settings, formula):
+    """Maelezo ya wazi kwa nini combos ni sifuri au chache - ili '0 WON 0 LOST'
+    isibaki fumbo. Inarudisha None ikiwa kila kitu kiko kawaida."""
+    n = stats.get('eligible_matches', 0)
+    generated = stats.get('generated', 0)
+    need = settings.combo_min_legs
+
+    if n < need:
+        extra = ''
+        if formula in ('ev_odds_only', 'highest_probability_odds_only'):
+            extra = (" Formula hii inatumia mechi zenye odds pekee "
+                     "(corners/kadi/SOT hazina odds, kwa hiyo hazihesabiwi hapa).")
+        return (f"Mechi zinazostahili ni {n} tu (kila leg lazima iwe angalau "
+                f"{settings.combo_min_leg_probability}%), lakini kila combo inahitaji legs "
+                f"{need} kutoka mechi tofauti.{extra} Punguza 'Minimum probability kwa LEG', "
+                f"punguza idadi ya legs, au jaribu formula nyingine.")
+
+    if generated == 0 and stats.get('below_combined_threshold', 0) > 0:
+        return (f"Combos {stats['below_combined_threshold']} zilijaribiwa lakini zote zilikataliwa: "
+                f"probability ya combo nzima (zidisho la legs) ilikuwa chini ya "
+                f"{settings.combo_min_combined_probability}%. Kumbuka: legs 4 za 80% kila moja = "
+                f"41% tu. Punguza 'Minimum probability kwa COMBO NZIMA'.")
+
+    if 0 < generated < settings.max_combos_per_day:
+        why = []
+        if stats.get('below_combined_threshold', 0) > 0:
+            why.append(f"{stats['below_combined_threshold']} zilikataliwa na kizingiti cha combo nzima")
+        why.append(f"mechi zinazostahili ni {n} tu (michanganyiko ya mechi/masoko imeisha)")
+        return (f"Combos {generated} pekee zinawezekana kwa mipangilio hii (kikomo ni "
+                f"{settings.max_combos_per_day}): " + "; ".join(why) + ". Hii si hitilafu.")
+
+    return None
 
 
 TIER_LABELS = {
@@ -372,6 +438,7 @@ def value_bets():
 
 @app.route('/combos')
 def combos():
+    settings = Settings.get()
     today = date.today()
     records = ComboRecord.query.filter_by(shown_date=today).all()
 
@@ -384,8 +451,24 @@ def combos():
                     for l in rec.legs],
         })
 
+    combo_note = None
+    if not combo_list:
+        stats = {}
+        dry = build_daily_combos(
+            all_matches_market_pool(), min_legs=settings.combo_min_legs,
+            max_legs=settings.combo_max_legs, min_leg_probability=settings.combo_min_leg_probability,
+            min_combined_probability=settings.combo_min_combined_probability,
+            formula=settings.combo_leg_formula, max_combos=settings.max_combos_per_day, stats=stats,
+        )
+        if dry:
+            combo_note = ("Combos za leo bado hazijatengenezwa (hutengenezwa data inaposasishwa). "
+                          "Bonyeza 'Refresh Data' kwenye Admin.")
+        else:
+            combo_note = explain_combos(stats, settings, settings.combo_leg_formula)
+
     empty_message = 'NO PICK TODAY' if not combo_list else None
-    return render_template('combos.html', combos=combo_list, empty_message=empty_message, page='combos')
+    return render_template('combos.html', combos=combo_list, empty_message=empty_message,
+                           combo_note=combo_note, page='combos')
 
 
 TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet'}
@@ -401,6 +484,7 @@ def history():
     value_bets_list = []
     combos_list = []
     summary = None
+    combo_note = None
 
     if tier == 'combos':
         available_dates = sorted(
@@ -424,8 +508,14 @@ def history():
                                  'has_odds': l.real_odds is not None, 'result': l.result}
                                 for l in rec.legs],
                     })
+                if not combos_list:
+                    combo_note = ("Hakuna combos zilizohifadhiwa kwa tarehe hii. 'random_threshold' "
+                                  "inaonyesha combos HALISI zilizotengenezwa siku hiyo (haisimulishwi). "
+                                  "Kwa siku za kabla ya mfumo huu mpya, chagua formula nyingine "
+                                  "kwenye Admin kuona simulation.")
             else:
-                simulated = simulate_combos_for_date(day, formula, settings)
+                stats = {}
+                simulated = simulate_combos_for_date(day, formula, settings, stats)
                 for c in simulated:
                     combos_list.append({
                         'combined_probability': c['combined_probability'], 'result': c['result'],
@@ -434,17 +524,19 @@ def history():
                                  'has_odds': l['real_odds'] is not None, 'result': l.get('result')}
                                 for l in c['legs']],
                     })
+                combo_note = explain_combos(stats, settings, formula)
 
             won = sum(1 for c in combos_list if c['result'] == 'WON')
             lost = sum(1 for c in combos_list if c['result'] == 'LOST')
             void = sum(1 for c in combos_list if c['result'] == 'VOID')
-            summary = {'won': won, 'lost': lost, 'void': void,
+            pending = sum(1 for c in combos_list if c['result'] == 'PENDING')
+            summary = {'won': won, 'lost': lost, 'void': void, 'pending': pending,
                        'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
 
         return render_template('history.html', tier=tier, available_dates=available_dates,
                                selected_date=selected_date, matches=matches,
                                value_bets_list=value_bets_list, combos_list=combos_list,
-                               summary=summary, combos_message=None,
+                               summary=summary, combos_message=None, combo_note=combo_note,
                                combo_formula=settings.combo_leg_formula, page='history')
 
     section = TIER_TO_SECTION.get(tier, 'prediction')
@@ -506,7 +598,7 @@ def history():
     return render_template('history.html', tier=tier, available_dates=available_dates,
                            selected_date=selected_date, matches=matches,
                            value_bets_list=value_bets_list, combos_list=combos_list,
-                           summary=summary, combos_message=None,
+                           summary=summary, combos_message=None, combo_note=combo_note,
                            combo_formula=settings.combo_leg_formula, page='history')
 
 
