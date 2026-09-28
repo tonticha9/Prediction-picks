@@ -1,5 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Excelsior vs Groningen: dc_12 @1.28 + Man United vs Tottenham: dc_12 @1.25,1.6,67.5
-3,3,Man United vs Tottenham: dc_12 @1.25 + Union Berlin vs Elversberg: dc_12 @1.30 + Kifisia vs Aris: dc_1x @1.53,2.49,45.2
-5,6,Brest vs Angers: dc_1x @1.22 + Udinese vs Lecce: dc_1x @1.22 + Charlton vs Bristol City: dc_12 @1.33 + Levante vs Ath Bilbao: dc_x2 @1.30 + Brighton vs Crystal Palace: dc_1x @1.17 + Lorient vs Monaco: dc_x2 @1.33,4.0,25.8
-7,6,Levante vs Sevilla: dc_12 @1.33 + Aston Villa vs Brentford: dc_12 @1.30 + Swansea vs Norwich: dc_12 @1.30 + Watford vs Burnley: dc_12 @1.30 + Lorient vs Paris FC: dc_12 @1.30 + Kifisia vs Aris: dc_1x @1.53,5.81,16.8
+2,2,Bolton vs Stoke: dc_12 @1.30 + Man United vs Tottenham: dc_12 @1.25,1.62,66.7
+3,2,Derby vs Wrexham: dc_12 @1.36 + Monza vs Cagliari: goals_under_25 @1.80,2.45,47.2
+5,4,Cercle Brugge vs Anderlecht: dc_12 @1.30 + Hull vs Everton: dc_12 @1.30 + Monza vs Cagliari: goals_under_25 @1.80 + Preston vs Millwall: dc_12 @1.33,4.05,30.5
+7,6,M'Gladbach vs Hoffenheim: dc_12 @1.25 + Charlton vs Bristol City: dc_12 @1.33 + West Ham vs QPR: dc_12 @1.22 + Monza vs Cagliari: goals_under_25 @1.80 + Troyes vs Lens: dc_x2 @1.25 + Watford vs Burnley: dc_12 @1.30,5.93,20.8
+10,6,Monza vs Cagliari: goals_under_25 @1.80 + Derby vs Wrexham: dc_12 @1.36 + Lorient vs Paris FC: dc_12 @1.30 + Udinese vs Lecce: goals_under_25 @1.91 + Genoa vs Fiorentina: dc_12 @1.33 + Sociedad vs La Coruna: dc_1x @1.20,9.7,13.3
