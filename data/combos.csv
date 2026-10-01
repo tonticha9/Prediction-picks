@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Charlton vs Bristol City: dc_12 @1.33 + Leverkusen vs Freiburg: dc_12 @1.22,1.62,65.9
-3,3,Watford vs Burnley: dc_12 @1.30 + Olympiakos vs Panathinaikos: dc_12 @1.36 + Parma vs Torino: dc_12 @1.36,2.4,44.0
-5,6,Lens vs Lyon: dc_12 @1.28 + Fiorentina vs Como: dc_x2 @1.28 + Blackburn vs Cardiff: dc_12 @1.28 + PSV vs Heerenveen: dc_1x @1.07 + Genoa vs Fiorentina: dc_12 @1.33 + Parma vs Torino: dc_12 @1.36,4.06,25.7
-7,6,Lorient vs Monaco: dc_x2 @1.33 + Malaga vs Espanol: dc_12 @1.36 + Watford vs Burnley: dc_12 @1.30 + Genclerbirligi vs Amedspor: dc_12 @1.33 + Fiorentina vs Como: dc_x2 @1.28 + Zwolle vs Go Ahead Eagles: dc_x2 @1.40,5.6,16.5
+2,2,Charlton vs Bristol City: dc_12 @1.33 + Leverkusen vs Freiburg: dc_12 @1.22,1.62,66.6
+3,3,Cercle Brugge vs Anderlecht: dc_12 @1.30 + Betis vs Osasuna: dc_1x @1.18 + Kalamata vs Ofi Crete: dc_x2 @1.57,2.41,47.0
+5,5,Cercle Brugge vs Anderlecht: dc_12 @1.30 + Waregem vs Gent: dc_12 @1.33 + Ein Frankfurt vs Fc Koln: dc_1x @1.33 + Feyenoord vs Az Alkmaar: dc_1x @1.28 + Parma vs Torino: dc_12 @1.36,4.0,26.8
+7,6,Malaga vs Espanol: dc_12 @1.36 + Bolton vs Stoke: dc_12 @1.30 + Liverpool vs Man City: dc_12 @1.28 + Waregem vs Gent: dc_12 @1.33 + Hull vs Everton: dc_12 @1.30 + Getafe vs Vallecano: dc_x2 @1.44,5.63,18.6
