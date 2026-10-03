@@ -1,59 +1,64 @@
-{% extends 'simple_base.html' %}
-{% block title %}{{ 'Sera ya Faragha' if page_key == 'privacy' else 'Kuhusu App' }} — Braiton Picks{% endblock %}
+{% extends 'base.html' %}
 {% block content %}
-<div class="card prose">
+<style>
+  .info-text h3 { margin-top: 20px; }
+  .info-text p, .info-text li { font-size: 14px; line-height: 1.65; }
+  .info-text ul { padding-left: 20px; }
+</style>
 
 {% if page_key == 'privacy' %}
-  <h2>Sera ya Faragha</h2>
-  <p class="muted">Imesasishwa: Oktoba 2026</p>
+  <h2 style="margin-bottom:16px;">🔒 Sera ya Faragha</h2>
+  <div class="admin-section info-text">
+    <p style="color:var(--text-dim);">Imesasishwa: Oktoba 2026</p>
 
-  <h3>Taarifa tunazokusanya</h3>
-  <ul>
-    <li>Email yako na password uliyochagua ulipojisajili.</li>
-    <li>Tarehe ya kujisajili na mara ya mwisho uliyotumia app.</li>
-  </ul>
+    <h3>Taarifa tunazokusanya</h3>
+    <ul>
+      <li>Email yako na password uliyochagua ulipojisajili.</li>
+      <li>Tarehe ya kujisajili na mara ya mwisho uliyotumia app.</li>
+    </ul>
 
-  <h3>Password yako</h3>
-  <p>Password haihifadhiwi kama ilivyo. Inahifadhiwa kwa njia ya kificho (hash) isiyoweza kusomeka, hata na mwenye app.</p>
+    <h3>Password yako</h3>
+    <p>Password haihifadhiwi kama ilivyo. Inahifadhiwa kwa njia ya kificho (hash) isiyoweza kusomeka, hata na mwenye app.</p>
 
-  <h3>Cookies</h3>
-  <p>Tunatumia cookie moja ya kikao (session) ili kukuweka umeingia kwenye akaunti yako. Hatutumii cookies za matangazo.</p>
+    <h3>Cookies</h3>
+    <p>Tunatumia cookie moja ya kikao (session) ili kukuweka umeingia kwenye akaunti yako. Hatutumii cookies za matangazo.</p>
 
-  <h3>Matumizi ya taarifa zako</h3>
-  <p>Tunatumia email yako kwa ajili ya akaunti yako na usalama wa app pekee. Hatuuzi wala hatushiriki taarifa zako na watu wengine.</p>
+    <h3>Matumizi ya taarifa zako</h3>
+    <p>Tunatumia email yako kwa ajili ya akaunti yako na usalama wa app pekee. Hatuuzi wala hatushiriki taarifa zako na watu wengine.</p>
 
-  <h3>Kufuta akaunti</h3>
-  <p>Unaweza kuomba akaunti yako na taarifa zako zote zifutwe wakati wowote, kwa kuwasiliana nasi.
-    {% if contact_email %}Tuandikie: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.{% endif %}</p>
+    <h3>Kufuta akaunti</h3>
+    <p>Unaweza kuomba akaunti yako na taarifa zako zote zifutwe wakati wowote, kwa kuwasiliana nasi.
+      {% if contact_email %}Tuandikie: <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.{% endif %}</p>
 
-  <h3>Tahadhari muhimu</h3>
-  <p>Utabiri unaoonekana kwenye app ni makadirio ya kitakwimu, si ahadi ya matokeo wala ushauri wa kifedha. Hakuna utabiri unaohakikisha ushindi. Kamari ni kwa watu wenye umri wa miaka 18 na zaidi; cheza kwa kuwajibika na kamwe usiweke dau ambalo huwezi kumudu kupoteza.</p>
+    <h3>Tahadhari muhimu</h3>
+    <p>Utabiri unaoonekana kwenye app ni makadirio ya kitakwimu, si ahadi ya matokeo wala ushauri wa kifedha. Hakuna utabiri unaohakikisha ushindi. Kamari ni kwa watu wenye umri wa miaka 18 na zaidi; cheza kwa kuwajibika na kamwe usiweke dau ambalo huwezi kumudu kupoteza.</p>
 
-  <h3>Mabadiliko ya sera</h3>
-  <p>Tukibadilisha sera hii, toleo jipya litawekwa hapa pamoja na tarehe ya marekebisho.</p>
+    <h3>Mabadiliko ya sera</h3>
+    <p>Tukibadilisha sera hii, toleo jipya litawekwa hapa pamoja na tarehe ya marekebisho.</p>
+  </div>
 
 {% else %}
-  <h2>Kuhusu Braiton Picks</h2>
-  <p>Braiton Picks ni mfumo wa utabiri wa mechi za mpira wa miguu, uliotengenezwa na <strong>Braiton</strong>. Lengo lake ni kukupa makadirio ya wazi na ya kitakwimu ya masoko mbalimbali ya kila mechi, na kuonyesha kwa uwazi jinsi utabiri huo ulivyofanya baadaye.</p>
+  <h2 style="margin-bottom:16px;">ℹ️ Kuhusu Braiton Picks</h2>
+  <div class="admin-section info-text">
+    <p>Braiton Picks ni mfumo wa utabiri wa mechi za mpira wa miguu, uliotengenezwa na <strong>Braiton</strong>. Lengo lake ni kukupa makadirio ya wazi na ya kitakwimu ya masoko mbalimbali ya kila mechi, na kuonyesha kwa uwazi jinsi utabiri huo ulivyofanya baadaye.</p>
 
-  <h3>Unachopata</h3>
-  <ul>
-    <li><strong>Leo</strong>: mechi za leo pamoja na masoko yenye uwezekano mkubwa zaidi.</li>
-    <li><strong>Zijazo</strong>: utabiri wa mechi za siku zinazofuata.</li>
-    <li><strong>Value Bets</strong>: masoko ambapo makadirio yetu ni makubwa kuliko yanavyoonyesha odds za soko.</li>
-    <li><strong>Combos</strong>: mchanganyiko wa masoko kadhaa kutoka mechi tofauti.</li>
-    <li><strong>History</strong>: kumbukumbu ya utabiri wa nyuma na matokeo yake halisi (WON / LOST).</li>
-  </ul>
+    <h3>Unachopata</h3>
+    <ul>
+      <li><strong>Predictions</strong>: mechi za leo pamoja na masoko yenye uwezekano mkubwa zaidi.</li>
+      <li><strong>Zijazo</strong>: utabiri wa mechi za siku zinazofuata.</li>
+      <li><strong>Value Bets</strong>: masoko ambapo makadirio yetu ni makubwa kuliko yanavyoonyesha odds za soko.</li>
+      <li><strong>Combos</strong>: mchanganyiko wa masoko kadhaa kutoka mechi tofauti.</li>
+      <li><strong>History</strong>: kumbukumbu ya utabiri wa nyuma na matokeo yake halisi (WON / LOST).</li>
+    </ul>
 
-  <h3>Jinsi inavyofanya kazi</h3>
-  <p>Mfumo unachambua matokeo na takwimu za mechi zilizopita kwa kutumia modeli za takwimu, kisha kutoa asilimia ya uwezekano (probability) kwa kila soko. Odds za soko zinatumika kutafuta mahali ambapo kuna thamani (value).</p>
+    <h3>Jinsi inavyofanya kazi</h3>
+    <p>Mfumo unachambua matokeo na takwimu za mechi zilizopita kwa kutumia modeli za takwimu, kisha kutoa asilimia ya uwezekano (probability) kwa kila soko. Odds za soko zinatumika kutafuta mahali ambapo kuna thamani (value).</p>
 
-  <h3>Tahadhari</h3>
-  <p>Utabiri ni makadirio, si uhakika. Matokeo ya michezo hayatabiriki kikamilifu. Tumia taarifa hizi kwa busara na kwa kuwajibika. Kamari ni kwa wenye umri wa miaka 18 na zaidi.</p>
+    <h3>Tahadhari</h3>
+    <p>Utabiri ni makadirio, si uhakika. Matokeo ya michezo hayatabiriki kikamilifu. Tumia taarifa hizi kwa busara na kwa kuwajibika. Kamari ni kwa wenye umri wa miaka 18 na zaidi.</p>
 
-  <h3>Mawasiliano</h3>
-  <p>Una maoni au swali? Wasiliana na Braiton{% if contact_email %} kupitia <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}.</p>
+    <h3>Mawasiliano</h3>
+    <p>Una maoni au swali? Wasiliana na Braiton{% if contact_email %} kupitia <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% endif %}.</p>
+  </div>
 {% endif %}
-
-</div>
 {% endblock %}
