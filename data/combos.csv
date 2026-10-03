@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Excelsior vs Groningen: dc_12 @1.28 + Man United vs Tottenham: dc_12 @1.25,1.6,67.2
+2,2,West Ham vs QPR: dc_12 @1.22 + Gaziantep vs Corum: dc_12 @1.33,1.62,67.2
 3,4,Hearts vs St Mirren: dc_1x @1.11 + Charlton vs Bristol City: dc_12 @1.33 + Hull vs Everton: dc_12 @1.30 + Watford vs Burnley: dc_12 @1.30,2.49,45.3
-5,5,Kilmarnock vs Motherwell: dc_12 @1.28 + Waregem vs Gent: dc_12 @1.33 + Derby vs Wrexham: dc_12 @1.36 + Kifisia vs Aris: dc_12 @1.36 + Watford vs Burnley: dc_12 @1.30,4.09,27.0
-7,6,Lorient vs Monaco: dc_x2 @1.33 + Malaga vs Espanol: dc_12 @1.36 + Watford vs Burnley: dc_12 @1.30 + Genclerbirligi vs Amedspor: dc_12 @1.33 + Fiorentina vs Como: dc_x2 @1.28 + Zwolle vs Go Ahead Eagles: dc_x2 @1.40,5.6,17.7
+5,5,Kilmarnock vs Motherwell: dc_12 @1.28 + Waregem vs Gent: dc_12 @1.30 + Derby vs Wrexham: dc_12 @1.36 + Kifisia vs Aris: dc_12 @1.36 + Watford vs Burnley: dc_12 @1.30,4.0,26.7
+7,6,Gaziantep vs Corum: dc_12 @1.33 + Asteras Tripolis vs Atromitos: dc_12 @1.36 + Iraklis vs Levadeiakos: dc_12 @1.36 + Swansea vs Norwich: dc_12 @1.30 + Kalamata vs Ofi Crete: dc_1x @1.36 + Valencia vs Ath Bilbao: dc_12 @1.30,5.65,13.8
