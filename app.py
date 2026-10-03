@@ -47,8 +47,6 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # ================================================================
 # USALAMA WA SESSION
-# SECRET_KEY ikikosekana, tunatengeneza ya nasibu (salama, ila kila restart
-# watumiaji wanatolewa). Haitumiki tena ile ya 'badilisha-hii' inayojulikana.
 # ================================================================
 _secret = os.environ.get('SECRET_KEY')
 SECRET_KEY_MISSING = not _secret
@@ -297,26 +295,78 @@ def all_matches_market_pool():
     return pool
 
 
+# ================================================================
+# HELPERS ZA KUSAFISHA THAMANI (NaN -> None, Timestamp -> datetime)
+# ================================================================
+def _clean_num(v):
+    try:
+        if v is None or pd.isna(v):
+            return None
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean_str(v):
+    if v is None:
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return str(v)
+
+
+def _to_dt(v):
+    ts = pd.Timestamp(v)
+    if ts.tzinfo is not None:
+        ts = ts.tz_localize(None)
+    return ts.to_pydatetime()
+
+
 def record_predictions_pending():
+    """
+    TOLEO LA HARAKA: query MOJA ya rekodi zilizopo (kwa kila section),
+    hesabu zote ndani ya memory, na commit MOJA mwishoni.
+    (Toleo la zamani lilifanya query moja kwa kila soko -> maelfu ya safari
+    za mtandao kwenda Neon -> timeout.)
+    """
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
+    today = today_eat()
     new_count = 0
     updated_count = 0
-    today = today_eat()
+
     for cache_key, section in section_map.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
             continue
-        for _, row in df.iterrows():
-            prob = row.get('probability_%')
-            odds = row.get('real_odds') if pd.notna(row.get('real_odds')) else None
-            tier = row.get('pro_tier')
 
-            existing = PredictionRecord.query.filter_by(
-                match_date=row['match_date'], home_team=row['HomeTeam'],
-                away_team=row['AwayTeam'], market=row['market'], section=section
-            ).first()
+        rows = df.to_dict('records')
+        min_date = _to_dt(df['match_date'].min())
 
-            if existing:
+        existing_map = {}
+        existing_q = PredictionRecord.query.filter(
+            PredictionRecord.section == section,
+            PredictionRecord.match_date >= min_date
+        ).all()
+        for rec in existing_q:
+            existing_map[(rec.match_date, rec.home_team, rec.away_team, rec.market)] = rec
+
+        new_objs = []
+        for row in rows:
+            mdate = _to_dt(row['match_date'])
+            home = row['HomeTeam']
+            away = row['AwayTeam']
+            market = row['market']
+            key = (mdate, home, away, market)
+
+            prob = _clean_num(row.get('probability_%'))
+            odds = _clean_num(row.get('real_odds'))
+            tier = _clean_str(row.get('pro_tier'))
+
+            existing = existing_map.get(key)
+            if existing is not None:
                 if existing.result == 'PENDING':
                     existing.probability = prob
                     existing.real_odds = odds
@@ -329,28 +379,63 @@ def record_predictions_pending():
                 continue
 
             rec = PredictionRecord(
-                match_date=row['match_date'], home_team=row['HomeTeam'],
-                away_team=row['AwayTeam'], market=row['market'], section=section,
+                match_date=mdate, home_team=home, away_team=away,
+                market=market, section=section,
                 probability=prob, first_probability=prob,
                 real_odds=odds, first_real_odds=odds,
                 pro_tier=tier, first_pro_tier=tier,
                 result='PENDING', shown_date=today,
             )
-            db.session.add(rec)
+            new_objs.append(rec)
+            existing_map[key] = rec
             new_count += 1
+
+        if new_objs:
+            db.session.add_all(new_objs)
 
     if new_count or updated_count:
         db.session.commit()
     return new_count
 
 
+# ================================================================
+# MSHALE (DELTA): probability ya sasa - probability ya mara ya kwanza.
+# Inapakia first_probability MARA MOJA kwa kila ombi (si query kwa kila soko).
+# ================================================================
+def _first_prob_map():
+    cached = getattr(g, '_first_prob_map', None)
+    if cached is not None:
+        return cached
+    today_start = datetime.combine(today_eat(), datetime.min.time())
+    rows = db.session.query(
+        PredictionRecord.match_date, PredictionRecord.home_team,
+        PredictionRecord.away_team, PredictionRecord.market,
+        PredictionRecord.first_probability
+    ).filter(
+        PredictionRecord.section == 'prediction',
+        PredictionRecord.match_date >= today_start
+    ).all()
+    fmap = {(r[0], r[1], r[2], r[3]): r[4] for r in rows}
+    g._first_prob_map = fmap
+    return fmap
+
+
 def calc_delta(current_prob, home, away, mdate, market, section='prediction'):
-    rec = PredictionRecord.query.filter_by(
-        home_team=home, away_team=away, match_date=mdate, market=market, section=section
-    ).first()
-    if not rec or rec.first_probability is None or current_prob is None:
+    if current_prob is None:
         return None
-    return round(current_prob - rec.first_probability, 1)
+    if section == 'prediction':
+        try:
+            first = _first_prob_map().get((_to_dt(mdate), home, away, market))
+        except Exception:
+            first = None
+    else:
+        rec = PredictionRecord.query.filter_by(
+            home_team=home, away_team=away, match_date=mdate, market=market, section=section
+        ).first()
+        first = rec.first_probability if rec else None
+    if first is None:
+        return None
+    return round(float(current_prob) - float(first), 1)
 
 
 def generate_daily_combos():
@@ -1171,9 +1256,13 @@ def admin_logout():
 @app.route('/admin/refresh', methods=['POST'])
 @admin_only
 def admin_refresh():
-    load_live_data()
-    snapshot_today()
-    flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
+    try:
+        load_live_data()
+        snapshot_today()
+        flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Refresh imeshindwa: {type(e).__name__}: {str(e)[:300]}', 'error')
     return redirect(url_for('admin'))
 
 
@@ -1211,6 +1300,7 @@ def api_refresh():
         load_live_data()
         snapshot_today()
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
     return jsonify({
         'status': 'ok',
