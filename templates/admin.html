@@ -3,32 +3,32 @@
 <h2 style="margin-bottom:16px;">⚙️ Admin Panel</h2>
 
 <div class="admin-section">
-  <h3>⚠️ Warnings</h3>
-  {% if days_left is not none %}
-    {% if days_left < 0 %}
-      <div class="expiry-warning expiry-critical">⚠️ API key IMEISHA MUDA siku {{ -days_left }} zilizopita!</div>
-    {% elif days_left <= 7 %}
-      <div class="expiry-warning expiry-critical">⏰ Zimebaki siku {{ days_left }} tu kabla API key haijaisha!</div>
-    {% elif days_left <= 14 %}
-      <div class="expiry-warning expiry-soon">⏰ Zimebaki siku {{ days_left }} kabla ya kuisha.</div>
-    {% else %}
-      <div class="expiry-warning expiry-ok">✅ API key iko sawa — zimebaki siku {{ days_left }}.</div>
-    {% endif %}
-  {% else %}
-    <div class="expiry-warning expiry-critical">⚠️ Hakuna tarehe ya kuisha ya API key iliyowekwa.</div>
-  {% endif %}
+  <h3>
+    {% if health_summary.level == 'ok' %}✔️{% elif health_summary.level == 'warn' %}⚠️{% else %}❌{% endif %}
+    Hali ya Mfumo
+  </h3>
 
-  {% if hours_since_snapshot is not none %}
-    {% if hours_since_snapshot > 30 %}
-      <div class="expiry-warning expiry-critical">⚠️ Data haijasasishwa kwa masaa {{ hours_since_snapshot }} — angalia automation (GitHub Actions/Kaggle).</div>
-    {% elif hours_since_snapshot > 26 %}
-      <div class="expiry-warning expiry-soon">⏰ Data ina masaa {{ hours_since_snapshot }} tangu kusasishwa mara ya mwisho.</div>
-    {% else %}
-      <div class="expiry-warning expiry-ok">✅ Data ilisasishwa masaa {{ hours_since_snapshot }} yaliyopita.</div>
-    {% endif %}
-  {% else %}
-    <div class="expiry-warning expiry-critical">⚠️ Hakuna snapshot ya data iliyowahi kuhifadhiwa.</div>
-  {% endif %}
+  <div class="expiry-warning {{ 'expiry-ok' if health_summary.level == 'ok' else ('expiry-soon' if health_summary.level == 'warn' else 'expiry-critical') }}"
+       style="font-weight:700;">
+    {{ health_summary.text }} — ukaguzi {{ health_summary.ok }} kati ya {{ health|length }} ni sawa.
+  </div>
+
+  {% for c in health %}
+    <div class="expiry-warning {{ 'expiry-ok' if c.status == 'ok' else ('expiry-soon' if c.status == 'warn' else 'expiry-critical') }}">
+      {% if c.status == 'ok' %}✔️{% elif c.status == 'warn' %}⚠️{% else %}❌{% endif %}
+      <strong>{{ c.name }}</strong><br>
+      <span style="font-size:13px; opacity:.9;">{{ c.detail }}</span>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="admin-section">
+  <h3>👥 Watumiaji</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Akaunti zilizosajiliwa: {{ users_total }}. Angalia orodha kamili, idadi, na uondoe mtumiaji.
+  </p>
+  <a href="{{ url_for('admin_users') }}" class="btn btn-secondary"
+     style="display:inline-block; text-decoration:none; text-align:center;">Fungua orodha ya watumiaji</a>
 </div>
 
 <div class="admin-section">
@@ -132,6 +132,6 @@
 </div>
 
 <div class="admin-section">
-  <a href="{{ url_for('admin_logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
+  <a href="{{ url_for('logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
 </div>
 {% endblock %}
