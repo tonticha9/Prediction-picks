@@ -18,12 +18,34 @@
   <div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
   <div class="nav-drawer" id="navDrawer">
     <div class="close-btn" onclick="toggleNav()">✕</div>
+
     <a href="{{ url_for('dashboard') }}" class="{{ 'active' if page=='dashboard' else '' }}">📊 Predictions</a>
     <a href="{{ url_for('upcoming') }}" class="{{ 'active' if page=='upcoming' else '' }}">📅 Zijazo</a>
     <a href="{{ url_for('value_bets') }}" class="{{ 'active' if page=='value_bets' else '' }}">💰 Value Bets</a>
     <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
     <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
-    <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' else '' }}">⚙️ Admin</a>
+
+    {# Kitufe cha Admin kinaonekana kwa akaunti ya admin PEKEE #}
+    {% if is_admin %}
+      <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' else '' }}">⚙️ Admin</a>
+    {% endif %}
+
+    <div style="border-top:1px solid rgba(255,255,255,.12); margin:12px 0;"></div>
+
+    {% if current_user %}
+      <div style="font-size:12px; opacity:.65; padding:4px 16px 8px; word-break:break-all;">
+        👤 {{ current_user.email }}
+      </div>
+      <a href="{{ url_for('logout') }}">🚪 Toka</a>
+    {% else %}
+      <a href="{{ url_for('login') }}" class="{{ 'active' if page=='login' else '' }}">🔑 Ingia</a>
+      <a href="{{ url_for('register') }}" class="{{ 'active' if page=='register' else '' }}">📝 Jisajili</a>
+    {% endif %}
+
+    <div style="border-top:1px solid rgba(255,255,255,.12); margin:12px 0;"></div>
+
+    <a href="{{ url_for('about') }}" class="{{ 'active' if page=='about' else '' }}">ℹ️ Kuhusu App</a>
+    <a href="{{ url_for('privacy') }}" class="{{ 'active' if page=='privacy' else '' }}">🔒 Faragha</a>
   </div>
 
   <div class="container">
@@ -36,6 +58,12 @@
     {% endwith %}
 
     {% block content %}{% endblock %}
+
+    <div style="text-align:center; font-size:12px; opacity:.55; margin:28px 0 12px;">
+      © 2026 Braiton ·
+      <a href="{{ url_for('about') }}" style="color:inherit;">Kuhusu</a> ·
+      <a href="{{ url_for('privacy') }}" style="color:inherit;">Faragha</a>
+    </div>
   </div>
 
   <script>
