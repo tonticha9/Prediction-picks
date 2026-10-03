@@ -8,7 +8,7 @@ import os
 import re
 import shutil
 import random
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
 from market_selection import is_market_allowed, select_markets
@@ -17,6 +17,24 @@ from combo_builder import build_daily_combos, combo_result_from_legs
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 HISTORY_DIR = os.path.join(DATA_DIR, 'history')
+
+# ================================================================
+# SAA ZA AFRIKA MASHARIKI (EAT = UTC+3, Tanzania haina DST)
+# "Leo" inahesabiwa kwa saa za Tanzania, SI UTC. Hii ni muhimu kwa sababu
+# nightly job inaendeshwa 01:00 EAT (= 22:00 UTC ya jana).
+# ================================================================
+EAT = timezone(timedelta(hours=3))
+
+
+def now_eat():
+    """Muda wa sasa Tanzania (naive datetime, tayari kwa EAT)."""
+    return datetime.now(EAT).replace(tzinfo=None)
+
+
+def today_eat():
+    """Tarehe ya leo kwa saa za Tanzania."""
+    return now_eat().date()
+
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-production')
@@ -66,7 +84,7 @@ def get_data():
 def today_predictions_survivors(settings):
     data = get_data()
     df = data['predictions'].copy()
-    today_str = date.today().strftime('%Y-%m-%d')
+    today_str = today_eat().strftime('%Y-%m-%d')
     df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
 
     out = []
@@ -108,7 +126,7 @@ def all_matches_market_pool():
     """Mechi ZOTE za LEO + ZIJAZO, kila mechi ikiwa na ORODHA KAMILI ya
     masoko yake yanayoruhusiwa (bila kuchujwa na select_markets())."""
     df = get_data()['predictions'].copy()
-    today = date.today()
+    today = today_eat()
     df = df[df['match_date'].dt.date >= today]
 
     pool = []
@@ -127,6 +145,7 @@ def record_predictions_pending():
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     new_count = 0
     updated_count = 0
+    today = today_eat()
     for cache_key, section in section_map.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
@@ -159,7 +178,7 @@ def record_predictions_pending():
                 probability=prob, first_probability=prob,
                 real_odds=odds, first_real_odds=odds,
                 pro_tier=tier, first_pro_tier=tier,
-                result='PENDING', shown_date=date.today(),
+                result='PENDING', shown_date=today,
             )
             db.session.add(rec)
             new_count += 1
@@ -179,7 +198,7 @@ def calc_delta(current_prob, home, away, mdate, market, section='prediction'):
 
 
 def generate_daily_combos():
-    today = date.today()
+    today = today_eat()
     already = ComboRecord.query.filter_by(shown_date=today).first()
     if already:
         return 0
@@ -369,7 +388,7 @@ def dashboard():
 def upcoming():
     settings = Settings.get()
     df = get_data()['predictions'].copy()
-    today = date.today()
+    today = today_eat()
 
     future_dates = sorted(df.loc[df['match_date'].dt.date > today, 'match_date']
                           .dt.strftime('%Y-%m-%d').unique().tolist())
@@ -417,7 +436,7 @@ def upcoming():
 @app.route('/value-bets')
 def value_bets():
     df = get_data()['value_bets'].copy()
-    today_str = date.today().strftime('%Y-%m-%d')
+    today_str = today_eat().strftime('%Y-%m-%d')
     df = df[df['match_date'].dt.strftime('%Y-%m-%d') == today_str]
     df = df.sort_values('ev_%', ascending=False)
 
@@ -439,7 +458,7 @@ def value_bets():
 @app.route('/combos')
 def combos():
     settings = Settings.get()
-    today = date.today()
+    today = today_eat()
     records = ComboRecord.query.filter_by(shown_date=today).all()
 
     combo_list = []
@@ -644,7 +663,7 @@ def admin():
     last_snapshot = DataSnapshot.query.order_by(DataSnapshot.snapshot_date.desc()).first()
     hours_since_snapshot = None
     if last_snapshot:
-        delta = datetime.utcnow() - datetime.combine(last_snapshot.snapshot_date, datetime.min.time())
+        delta = now_eat() - datetime.combine(last_snapshot.snapshot_date, datetime.min.time())
         hours_since_snapshot = round(delta.total_seconds() / 3600, 1)
 
     return render_template('admin.html', settings=settings, api_config=api_config,
@@ -681,7 +700,7 @@ def admin_refresh():
 
 
 def snapshot_today():
-    today = date.today()
+    today = today_eat()
     hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
     os.makedirs(hist_folder, exist_ok=True)
     for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
@@ -718,7 +737,7 @@ def api_refresh():
     return jsonify({
         'status': 'ok',
         'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
-        'refreshed_at': datetime.utcnow().isoformat()
+        'refreshed_at': now_eat().isoformat() + '+03:00'
     }), 200
 
 
