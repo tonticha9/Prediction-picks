@@ -11,11 +11,20 @@
   </select>
 </div>
 
+{# Mshale: ▲ kijani = imepanda, ▼ nyekundu = imeshuka, ▬ kijivu = haijabadilika, hakuna = hakuna rekodi ya kulinganisha #}
 {% macro delta_badge(delta) %}
-  {% if delta is not none and delta != 0 %}
-    <span style="font-size:0.72em; font-weight:600; margin-left:6px;
-                 color:{{ 'seagreen' if delta > 0 else 'crimson' }}; white-space:nowrap;">
-      {{ '▲' if delta > 0 else '▼' }} {{ '+%.1f'|format(delta) if delta > 0 else '%.1f'|format(delta) }}
+  {% if delta is none %}
+  {% elif delta > 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:seagreen; white-space:nowrap;">
+      ▲ {{ '+%.1f'|format(delta) }}
+    </span>
+  {% elif delta < 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:crimson; white-space:nowrap;">
+      ▼ {{ '%.1f'|format(delta) }}
+    </span>
+  {% else %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:gray; white-space:nowrap;">
+      ▬ 0.0
     </span>
   {% endif %}
 {% endmacro %}
