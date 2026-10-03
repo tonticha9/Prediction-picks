@@ -1,16 +1,26 @@
 """
 Braiton Picks — Flask app
-Dashboard ya predictions za kila siku + Value Bets + Combos + History + Zijazo + Admin.
+Dashboard ya predictions za kila siku + Value Bets + Combos + History + Zijazo
++ Akaunti za watumiaji + Admin + Health checks.
 """
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import (Flask, render_template, request, redirect, url_for, flash,
+                   jsonify, session, g, abort)
 import pandas as pd
 import os
 import re
 import shutil
 import random
+import secrets
+import time
+from functools import wraps
 from datetime import datetime, date, timedelta, timezone
 
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
+from user_model import AppUser
 from market_selection import is_market_allowed, select_markets
 from combo_builder import build_daily_combos, combo_result_from_legs
 
@@ -20,24 +30,36 @@ HISTORY_DIR = os.path.join(DATA_DIR, 'history')
 
 # ================================================================
 # SAA ZA AFRIKA MASHARIKI (EAT = UTC+3, Tanzania haina DST)
-# "Leo" inahesabiwa kwa saa za Tanzania, SI UTC. Hii ni muhimu kwa sababu
-# nightly job inaendeshwa 01:00 EAT (= 22:00 UTC ya jana).
 # ================================================================
 EAT = timezone(timedelta(hours=3))
 
 
 def now_eat():
-    """Muda wa sasa Tanzania (naive datetime, tayari kwa EAT)."""
     return datetime.now(EAT).replace(tzinfo=None)
 
 
 def today_eat():
-    """Tarehe ya leo kwa saa za Tanzania."""
     return now_eat().date()
 
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'badilisha-hii-kwenye-production')
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+# ================================================================
+# USALAMA WA SESSION
+# SECRET_KEY ikikosekana, tunatengeneza ya nasibu (salama, ila kila restart
+# watumiaji wanatolewa). Haitumiki tena ile ya 'badilisha-hii' inayojulikana.
+# ================================================================
+_secret = os.environ.get('SECRET_KEY')
+SECRET_KEY_MISSING = not _secret
+app.config['SECRET_KEY'] = _secret or secrets.token_hex(32)
+COOKIE_SECURE = os.environ.get('COOKIE_SECURE', '1') == '1'
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=COOKIE_SECURE,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
 
 _database_url = os.environ.get('DATABASE_URL')
 if _database_url:
@@ -53,14 +75,150 @@ else:
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'badilisha-hii')
+ADMIN_EMAIL = (os.environ.get('ADMIN_EMAIL') or '').strip().lower()
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD') or ''
 REFRESH_SECRET = os.environ.get('REFRESH_SECRET')
+CONTACT_EMAIL = (os.environ.get('CONTACT_EMAIL') or '').strip()
+REQUIRE_LOGIN = os.environ.get('REQUIRE_LOGIN', '0') == '1'
+
+WEAK_ADMIN_PASSWORDS = {'badilisha-hii', 'password', 'admin', 'admin123', '12345678', '123456789'}
+EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 FORMULA_CHOICES = ['random_threshold', 'ev_odds_only', 'highest_probability', 'highest_probability_odds_only']
 
 _cache = {}
 
 
+# ================================================================
+# AKAUNTI: helpers
+# ================================================================
+_rate_store = {}
+
+
+def _rate_limited(bucket, key, limit, window):
+    now = time.time()
+    k = (bucket, key)
+    hits = [t for t in _rate_store.get(k, []) if now - t < window]
+    _rate_store[k] = hits
+    return len(hits) >= limit
+
+
+def _rate_hit(bucket, key):
+    _rate_store.setdefault((bucket, key), []).append(time.time())
+
+
+def _rate_clear(bucket, key):
+    _rate_store.pop((bucket, key), None)
+
+
+def _client_ip():
+    return request.remote_addr or 'unknown'
+
+
+def _safe_next(target):
+    """Ruhusu redirect za ndani ya app pekee."""
+    if target and target.startswith('/') and not target.startswith('//') and '\\' not in target:
+        return target
+    return None
+
+
+def _touch_last_seen(user):
+    now = datetime.utcnow()
+    if user.last_seen is None or (now - user.last_seen) > timedelta(minutes=10):
+        try:
+            user.last_seen = now
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
+def get_current_user():
+    if 'user' in g:
+        return g.user
+    g.user = None
+    uid = session.get('uid')
+    if uid:
+        try:
+            user = db.session.get(AppUser, uid)
+            if user:
+                g.user = user
+                _touch_last_seen(user)
+            else:
+                session.pop('uid', None)   # mtumiaji ameondolewa
+        except Exception:
+            db.session.rollback()
+    return g.user
+
+
+def _login_session(user):
+    session.clear()
+    session['uid'] = user.id
+    session.permanent = True
+
+
+def admin_only(f):
+    """Ukurasa wa admin: asiye admin anaona 404 (hajui kama upo)."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        user = get_current_user()
+        if not user:
+            return redirect(url_for('login', next=request.path))
+        if not user.is_admin:
+            abort(404)
+        return f(*args, **kwargs)
+    return wrapper
+
+
+def ensure_admin_user():
+    """Tengeneza/sawazisha akaunti ya admin kutoka ADMIN_EMAIL + ADMIN_PASSWORD."""
+    if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+        print('[WARN] ADMIN_EMAIL/ADMIN_PASSWORD hazijawekwa - hakuna admin.')
+        return
+    user = AppUser.query.filter_by(email=ADMIN_EMAIL).first()
+    if not user:
+        user = AppUser(email=ADMIN_EMAIL, is_admin=True)
+        user.set_password(ADMIN_PASSWORD)
+        db.session.add(user)
+    else:
+        user.is_admin = True
+        if not user.check_password(ADMIN_PASSWORD):
+            user.set_password(ADMIN_PASSWORD)
+    db.session.commit()
+
+
+PUBLIC_ENDPOINTS = {'login', 'register', 'logout', 'privacy', 'about', 'static',
+                    'api_refresh', 'api_config_key', 'admin_login', 'admin_logout'}
+
+
+@app.before_request
+def require_login_gate():
+    if not REQUIRE_LOGIN:
+        return None
+    if request.endpoint is None or request.endpoint in PUBLIC_ENDPOINTS:
+        return None
+    if not get_current_user():
+        return redirect(url_for('login', next=request.path))
+    return None
+
+
+@app.context_processor
+def inject_globals():
+    user = get_current_user()
+    return {'current_user': user, 'is_admin': bool(user and user.is_admin),
+            'contact_email': CONTACT_EMAIL}
+
+
+@app.template_filter('eat')
+def eat_filter(dt, fmt='%d %b %Y %H:%M'):
+    """Badilisha muda wa UTC (uliohifadhiwa) kuwa saa za Tanzania."""
+    if not dt:
+        return '—'
+    return (dt + timedelta(hours=3)).strftime(fmt)
+
+
+# ================================================================
+# DATA
+# ================================================================
 def load_live_data():
     global _cache
     predictions = pd.read_csv(os.path.join(DATA_DIR, 'predictions.csv'))
@@ -101,8 +259,6 @@ def today_predictions_survivors(settings):
 
 # ================================================================
 # SHERIA YA KUDUMU YA MASOKO - inatumika pia kwa COMBOS
-# (goals_*_05/_45, home/away_goals_under_*, na masoko ya '_and_...under').
-# Combos hazipiti kwenye select_markets(), kwa hiyo lazima tuichuje hapa.
 # ================================================================
 def _fallback_market_rule(market):
     m = str(market)
@@ -289,8 +445,7 @@ def simulate_combos_for_date(target_date, formula, settings, stats=None):
 
 
 def explain_combos(stats, settings, formula):
-    """Maelezo ya wazi kwa nini combos ni sifuri au chache - ili '0 WON 0 LOST'
-    isibaki fumbo. Inarudisha None ikiwa kila kitu kiko kawaida."""
+    """Maelezo ya wazi kwa nini combos ni sifuri au chache."""
     n = stats.get('eligible_matches', 0)
     generated = stats.get('generated', 0)
     need = settings.combo_min_legs
@@ -345,6 +500,303 @@ def calc_ev(probability, real_odds):
     return round(((probability or 0) / 100 * real_odds - 1) * 100, 1)
 
 
+# ================================================================
+# HEALTH CHECKS (kwa seemu ya ⚠️ / ✔️ kwenye Admin)
+# status: 'ok' = ✔️ | 'warn' = ⚠️ | 'error' = ❌
+# ================================================================
+def run_health_checks():
+    checks = []
+    today = today_eat()
+    now = now_eat()
+
+    def check(name, fn):
+        try:
+            status, detail = fn()
+        except Exception as e:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
+            status, detail = 'error', f'Ukaguzi umeshindwa: {str(e)[:120]}'
+        checks.append({'name': name, 'status': status, 'detail': detail})
+
+    def c_db():
+        db.session.execute(text('SELECT 1'))
+        if not _database_url:
+            return 'warn', ('Unatumia SQLite ya muda. History na watumiaji vinaweza kupotea '
+                            'kwenye redeploy - weka DATABASE_URL (Neon).')
+        return 'ok', 'PostgreSQL imeunganishwa vizuri.'
+
+    def c_api():
+        cfg = ApiConfig.get()
+        if not cfg.api_key:
+            return 'error', 'API key ya AllSportsAPI haijawekwa.'
+        days = cfg.days_until_expiry()
+        if days is None:
+            return 'warn', 'Tarehe ya kuisha kwa API key haijawekwa.'
+        if days < 0:
+            return 'error', f'API key iliisha muda siku {abs(days)} zilizopita.'
+        if days <= 7:
+            return 'warn', f'API key inaisha baada ya siku {days}.'
+        return 'ok', f'API key ni nzuri (siku {days} zimebaki).'
+
+    def c_snapshot():
+        last = DataSnapshot.query.order_by(DataSnapshot.snapshot_date.desc()).first()
+        if not last:
+            return 'error', 'Hakuna snapshot hata moja - bonyeza Refresh Data.'
+        age = (today - last.snapshot_date).days
+        if age <= 0:
+            return 'ok', f'Data ilisasishwa leo ({last.snapshot_date}).'
+        if age == 1 and now.hour < 4:
+            return 'ok', 'Data ni ya jana; usasishaji wa usiku (01:00 EAT) unatarajiwa.'
+        if age == 1:
+            return 'warn', 'Usasishaji wa usiku haujafanyika leo - angalia GitHub Actions (Job B).'
+        if age <= 6:
+            return 'warn', (f'Data haijasasishwa kwa siku {age}. Ikiwa ni international break ni '
+                            f'kawaida; vinginevyo angalia GitHub Actions.')
+        return 'error', f'Data haijasasishwa kwa siku {age} - mfumo huenda umekwama.'
+
+    def c_files():
+        names = ('predictions.csv', 'value_bets.csv', 'combos.csv')
+        paths = {n: os.path.join(DATA_DIR, n) for n in names}
+        missing = [n for n, p in paths.items() if not os.path.exists(p)]
+        if missing:
+            return 'error', 'Faili hazipo: ' + ', '.join(missing)
+        empty = [n for n, p in paths.items() if os.path.getsize(p) < 20]
+        if empty:
+            return 'warn', 'Faili tupu: ' + ', '.join(empty)
+        return 'ok', 'Faili zote 3 za data zipo.'
+
+    def c_matches():
+        df = get_data()['predictions']
+        if len(df) == 0:
+            return 'error', 'predictions.csv haina safu yoyote.'
+        dates = df['match_date'].dt.date
+        latest = dates.max()
+        if latest < today:
+            return 'error', f'Mechi zote ni za zamani (ya mwisho: {latest}).'
+        key = ['HomeTeam', 'AwayTeam', 'match_date']
+        today_n = df[dates == today][key].drop_duplicates().shape[0]
+        future_n = df[dates > today][key].drop_duplicates().shape[0]
+        return 'ok', f'Mechi za leo: {today_n}, mechi zijazo: {future_n}.'
+
+    def c_quality():
+        df = get_data()['predictions']
+        required = {'HomeTeam', 'AwayTeam', 'match_date', 'market', 'probability_%'}
+        miss = required - set(df.columns)
+        if miss:
+            return 'error', 'Columns hazipo: ' + ', '.join(sorted(miss))
+        problems = []
+        prob = pd.to_numeric(df['probability_%'], errors='coerce')
+        bad_prob = int(((prob < 0) | (prob > 100) | prob.isna()).sum())
+        if bad_prob:
+            problems.append(f'probability zisizo sahihi: {bad_prob}')
+        dups = int(df.duplicated(subset=['HomeTeam', 'AwayTeam', 'match_date', 'market']).sum())
+        if dups:
+            problems.append(f'safu zilizojirudia: {dups}')
+        if 'real_odds' in df.columns:
+            odds = pd.to_numeric(df['real_odds'], errors='coerce')
+            bad_odds = int((odds.notna() & (odds <= 1.0)).sum())
+            if bad_odds:
+                problems.append(f'odds zisizo sahihi (<=1.0): {bad_odds}')
+        if problems:
+            return 'warn', '; '.join(problems)
+        return 'ok', f'Safu {len(df)} zote za predictions ni sahihi.'
+
+    def c_combos():
+        n = ComboRecord.query.filter_by(shown_date=today).count()
+        if n:
+            return 'ok', f'Combos {n} za leo zimetengenezwa.'
+        return 'warn', ('Combos za leo hazijatengenezwa (refresh haijaendeshwa, au mechi '
+                        'hazitoshi kwa mipangilio ya sasa).')
+
+    def c_pending():
+        cutoff = now - timedelta(days=3)
+        stuck = PredictionRecord.query.filter(
+            PredictionRecord.result == 'PENDING',
+            PredictionRecord.match_date < cutoff).count()
+        stuck_combos = ComboRecord.query.filter(
+            ComboRecord.result == 'PENDING',
+            ComboRecord.shown_date < today - timedelta(days=3)).count()
+        if not stuck and not stuck_combos:
+            return 'ok', 'Hakuna rekodi za zamani zilizokwama kwenye PENDING.'
+        status = 'error' if (stuck > 100 or stuck_combos > 20) else 'warn'
+        return status, (f'Predictions {stuck} na combos {stuck_combos} za zaidi ya siku 3 bado '
+                        f'PENDING - angalia Job A (settlement).')
+
+    def c_settings():
+        s = Settings.get()
+        if s.combo_min_legs > s.combo_max_legs:
+            return 'error', 'Min legs ya combo ni kubwa kuliko Max legs - combos hazitatengenezwa.'
+        problems = []
+        if not (0 <= s.probability_threshold <= 100):
+            problems.append('probability threshold iko nje ya 0-100')
+        if s.max_combos_per_day < 1:
+            problems.append('max combos kwa siku ni chini ya 1')
+        if problems:
+            return 'warn', '; '.join(problems)
+        return 'ok', 'Mipangilio ya picks na combos ni sahihi.'
+
+    def c_admin():
+        if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+            return 'error', 'ADMIN_EMAIL / ADMIN_PASSWORD hazijawekwa kwenye environment.'
+        if len(ADMIN_PASSWORD) < 10 or ADMIN_PASSWORD.lower() in WEAK_ADMIN_PASSWORDS:
+            return 'warn', 'Password ya admin ni dhaifu - tumia angalau herufi 10 zisizo rahisi kukisia.'
+        if AppUser.query.filter_by(is_admin=True).count() == 0:
+            return 'error', 'Hakuna akaunti ya admin kwenye database.'
+        return 'ok', 'Akaunti ya admin ipo na password ni imara.'
+
+    def c_secret():
+        if SECRET_KEY_MISSING:
+            return 'error', ('SECRET_KEY haijawekwa - kila app ikiwaka upya watumiaji wote '
+                             'wanatolewa. Iweke kwenye Render.')
+        if len(os.environ.get('SECRET_KEY', '')) < 24:
+            return 'warn', 'SECRET_KEY ni fupi - tumia angalau herufi 32.'
+        return 'ok', 'SECRET_KEY imewekwa vizuri.'
+
+    def c_refresh_secret():
+        if not REFRESH_SECRET:
+            return 'warn', 'REFRESH_SECRET haijawekwa - /api/refresh (usasishaji wa kiotomatiki) imezimwa.'
+        if len(REFRESH_SECRET) < 16:
+            return 'warn', 'REFRESH_SECRET ni fupi - tumia angalau herufi 16.'
+        return 'ok', 'REFRESH_SECRET imewekwa.'
+
+    def c_cookie():
+        if not COOKIE_SECURE:
+            return 'warn', 'Cookie za session hazijawekwa "Secure" (COOKIE_SECURE=0).'
+        return 'ok', 'Cookie za session ni salama (HTTPS tu).'
+
+    check('Database', c_db)
+    check('AllSportsAPI key', c_api)
+    check('Usasishaji wa data', c_snapshot)
+    check('Faili za data', c_files)
+    check('Mechi za leo na zijazo', c_matches)
+    check('Ubora wa data', c_quality)
+    check('Combos za leo', c_combos)
+    check('Matokeo yaliyokwama (PENDING)', c_pending)
+    check('Mipangilio', c_settings)
+    check('Akaunti ya admin', c_admin)
+    check('SECRET_KEY', c_secret)
+    check('REFRESH_SECRET', c_refresh_secret)
+    check('Cookie za session', c_cookie)
+
+    errors = sum(1 for c in checks if c['status'] == 'error')
+    warns = sum(1 for c in checks if c['status'] == 'warn')
+    if errors:
+        level = 'error'
+        msg = f'Matatizo {errors} yanahitaji hatua' + (f', maonyo {warns}' if warns else '')
+    elif warns:
+        level = 'warn'
+        msg = f'Maonyo {warns} ya kuangalia'
+    else:
+        level = 'ok'
+        msg = 'Kila kitu kiko sawa'
+    summary = {'level': level, 'text': msg, 'errors': errors, 'warnings': warns,
+               'ok': len(checks) - errors - warns}
+    return checks, summary
+
+
+# ================================================================
+# AKAUNTI: login / register / logout
+# ================================================================
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    next_url = _safe_next(request.values.get('next'))
+    if get_current_user():
+        return redirect(next_url or url_for('dashboard'))
+
+    email = ''
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        confirm = request.form.get('confirm') or ''
+        agree = request.form.get('agree')
+        ip = _client_ip()
+
+        error = None
+        if _rate_limited('register', ip, 10, 3600):
+            error = 'Majaribio mengi sana. Jaribu tena baada ya saa moja.'
+        else:
+            _rate_hit('register', ip)
+            if not EMAIL_RE.match(email) or len(email) > 254:
+                error = 'Email si sahihi.'
+            elif len(password) < 8:
+                error = 'Password lazima iwe na angalau herufi 8.'
+            elif len(password) > 128:
+                error = 'Password ni ndefu mno.'
+            elif password != confirm:
+                error = 'Password mbili hazifanani.'
+            elif not agree:
+                error = 'Lazima ukubali Sera ya Faragha na uthibitishe umri wa miaka 18+.'
+            elif email == ADMIN_EMAIL or AppUser.query.filter_by(email=email).first():
+                error = 'Email hii tayari imesajiliwa.'
+
+        if not error:
+            user = AppUser(email=email, is_admin=False, last_seen=datetime.utcnow())
+            user.set_password(password)
+            db.session.add(user)
+            try:
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                error = 'Email hii tayari imesajiliwa.'
+            else:
+                _login_session(user)
+                flash('Karibu! Akaunti yako imeundwa.', 'success')
+                return redirect(next_url or url_for('dashboard'))
+
+        flash(error, 'error')
+
+    return render_template('auth.html', mode='register', email=email, next=next_url, page='register')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    next_url = _safe_next(request.values.get('next'))
+    if get_current_user():
+        return redirect(next_url or url_for('dashboard'))
+
+    email = ''
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        key = f'{_client_ip()}|{email}'
+
+        if _rate_limited('login', key, 5, 600):
+            flash('Majaribio mengi sana yaliyoshindwa. Subiri dakika 10 ujaribu tena.', 'error')
+        else:
+            user = AppUser.query.filter_by(email=email).first() if email else None
+            if user and user.check_password(password):
+                _rate_clear('login', key)
+                _login_session(user)
+                _touch_last_seen(user)
+                return redirect(next_url or url_for('dashboard'))
+            _rate_hit('login', key)
+            flash('Email au password si sahihi.', 'error')
+
+    return render_template('auth.html', mode='login', email=email, next=next_url, page='login')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('Umetoka kwenye akaunti.', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/privacy')
+def privacy():
+    return render_template('info.html', page_key='privacy', page='privacy')
+
+
+@app.route('/about')
+def about():
+    return render_template('info.html', page_key='about', page='about')
+
+
+# ================================================================
+# KURASA ZA PREDICTIONS
+# ================================================================
 @app.route('/')
 def dashboard():
     settings = Settings.get()
@@ -621,15 +1073,12 @@ def history():
                            combo_formula=settings.combo_leg_formula, page='history')
 
 
-def admin_required():
-    return request.cookies.get('is_admin') == 'yes'
-
-
+# ================================================================
+# ADMIN (inahitaji akaunti ya admin; wengine wanaona 404)
+# ================================================================
 @app.route('/admin', methods=['GET', 'POST'])
+@admin_only
 def admin():
-    if not admin_required():
-        return redirect(url_for('admin_login'))
-
     settings = Settings.get()
     api_config = ApiConfig.get()
 
@@ -666,33 +1115,62 @@ def admin():
         delta = now_eat() - datetime.combine(last_snapshot.snapshot_date, datetime.min.time())
         hours_since_snapshot = round(delta.total_seconds() / 3600, 1)
 
+    health, health_summary = run_health_checks()
+    users_total = AppUser.query.count()
+
     return render_template('admin.html', settings=settings, api_config=api_config,
                            days_left=days_left, hours_since_snapshot=hours_since_snapshot,
-                           formula_choices=FORMULA_CHOICES, page='admin')
+                           formula_choices=FORMULA_CHOICES, health=health,
+                           health_summary=health_summary, users_total=users_total,
+                           page='admin')
 
 
-@app.route('/admin/login', methods=['GET', 'POST'])
+@app.route('/admin/users')
+@admin_only
+def admin_users():
+    now = datetime.utcnow()
+    week_ago = now - timedelta(days=7)
+    users = AppUser.query.order_by(AppUser.created_at.desc()).limit(1000).all()
+    stats = {
+        'total': AppUser.query.count(),
+        'regular': AppUser.query.filter_by(is_admin=False).count(),
+        'new_7d': AppUser.query.filter(AppUser.created_at >= week_ago).count(),
+        'active_7d': AppUser.query.filter(AppUser.last_seen >= week_ago).count(),
+    }
+    return render_template('admin_users.html', users=users, stats=stats, page='admin')
+
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@admin_only
+def admin_delete_user(user_id):
+    target = db.session.get(AppUser, user_id)
+    me = get_current_user()
+    if not target:
+        flash('Mtumiaji hapatikani.', 'error')
+    elif target.is_admin or target.id == me.id:
+        flash('Huwezi kuondoa akaunti ya admin.', 'error')
+    else:
+        email = target.email
+        db.session.delete(target)
+        db.session.commit()
+        flash(f'Mtumiaji {email} ameondolewa.', 'success')
+    return redirect(url_for('admin_users'))
+
+
+# Endpoint za zamani zinabaki ili templates zisivunjike
+@app.route('/admin/login')
 def admin_login():
-    if request.method == 'POST':
-        if request.form.get('password') == ADMIN_PASSWORD:
-            resp = redirect(url_for('admin'))
-            resp.set_cookie('is_admin', 'yes', max_age=60 * 60 * 24 * 7)
-            return resp
-        flash('Password si sahihi.', 'error')
-    return render_template('admin_login.html')
+    return redirect(url_for('login', next=url_for('admin')))
 
 
 @app.route('/admin/logout')
 def admin_logout():
-    resp = redirect(url_for('dashboard'))
-    resp.delete_cookie('is_admin')
-    return resp
+    return redirect(url_for('logout'))
 
 
 @app.route('/admin/refresh', methods=['POST'])
+@admin_only
 def admin_refresh():
-    if not admin_required():
-        return redirect(url_for('admin_login'))
     load_live_data()
     snapshot_today()
     flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
@@ -751,6 +1229,11 @@ def api_config_key():
 
 with app.app_context():
     db.create_all()
+    try:
+        ensure_admin_user()
+    except Exception as e:
+        db.session.rollback()
+        print(f'[WARN] ensure_admin_user imeshindwa: {e}')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
