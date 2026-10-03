@@ -10,7 +10,8 @@ name: Nightly Predictions Update
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # Kila siku saa 2 usiku (UTC) - badilisha kama unataka saa tofauti
+    # 22:00 UTC = 01:00 usiku (saa 7 usiku) Afrika Mashariki (EAT = UTC+3)
+    - cron: '0 22 * * *'
   workflow_dispatch:        # Inaruhusu ku-trigger kwa mkono (kwa jaribio la kwanza)
 
 jobs:
