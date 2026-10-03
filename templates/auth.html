@@ -1,0 +1,39 @@
+{% extends 'simple_base.html' %}
+{% block title %}{{ 'Ingia' if mode == 'login' else 'Jisajili' }} — Braiton Picks{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>{{ 'Ingia kwenye akaunti' if mode == 'login' else 'Fungua akaunti' }}</h2>
+  <form method="post" autocomplete="on">
+    <input type="hidden" name="next" value="{{ next or '' }}">
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" value="{{ email or '' }}" required autocomplete="email" inputmode="email">
+
+    <label for="password">Password</label>
+    <input type="password" id="password" name="password" required
+           autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}"
+           {% if mode == 'register' %}minlength="8"{% endif %}>
+
+    {% if mode == 'register' %}
+      <label for="confirm">Rudia password</label>
+      <input type="password" id="confirm" name="confirm" required minlength="8" autocomplete="new-password">
+
+      <label class="check">
+        <input type="checkbox" name="agree" required>
+        <span>Nina umri wa miaka 18 au zaidi, na nimesoma na kukubali
+          <a href="{{ url_for('privacy') }}" target="_blank">Sera ya Faragha</a>.</span>
+      </label>
+    {% endif %}
+
+    <button type="submit" class="btn">{{ 'Ingia' if mode == 'login' else 'Jisajili' }}</button>
+  </form>
+
+  <p class="muted" style="margin-top:16px;text-align:center">
+    {% if mode == 'login' %}
+      Huna akaunti? <a href="{{ url_for('register', next=next) }}">Jisajili hapa</a>
+    {% else %}
+      Tayari una akaunti? <a href="{{ url_for('login', next=next) }}">Ingia hapa</a>
+    {% endif %}
+  </p>
+</div>
+{% endblock %}
