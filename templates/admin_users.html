@@ -1,46 +1,137 @@
-{% extends 'simple_base.html' %}
-{% block title %}Watumiaji — Admin{% endblock %}
+{% extends 'base.html' %}
 {% block content %}
-<h2>Watumiaji wa app</h2>
+<h2 style="margin-bottom:16px;">⚙️ Admin Panel</h2>
 
-<div class="stats">
-  <div class="stat"><b>{{ stats.regular }}</b>Watumiaji wa kawaida</div>
-  <div class="stat"><b>{{ stats.total }}</b>Akaunti zote (pamoja na admin)</div>
-  <div class="stat"><b>{{ stats.new_7d }}</b>Wapya (siku 7)</div>
-  <div class="stat"><b>{{ stats.active_7d }}</b>Walioonekana (siku 7)</div>
-</div>
+<div class="admin-section">
+  <h3>
+    {% if health_summary.level == 'ok' %}✔️{% elif health_summary.level == 'warn' %}⚠️{% else %}❌{% endif %}
+    Hali ya Mfumo
+  </h3>
 
-<div class="card">
-  {% if users %}
-  <div class="tablewrap">
-    <table>
-      <thead>
-        <tr><th>Email</th><th>Alijisajili</th><th>Alionekana mwisho</th><th>Hali</th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        <tr>
-          <td>{{ u.email }}</td>
-          <td>{{ u.created_at|eat('%d %b %Y') }}</td>
-          <td>{{ u.last_seen|eat }}</td>
-          <td>{% if u.is_admin %}<span class="badge admin">Admin</span>{% else %}<span class="badge">Mtumiaji</span>{% endif %}</td>
-          <td>
-            {% if not u.is_admin %}
-            <form method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
-                  onsubmit="return confirm('Una uhakika unataka kumwondoa mtumiaji huyu?')">
-              <button type="submit" class="btn btn-sm btn-danger">Ondoa</button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div class="expiry-warning {{ 'expiry-ok' if health_summary.level == 'ok' else ('expiry-soon' if health_summary.level == 'warn' else 'expiry-critical') }}"
+       style="font-weight:700;">
+    {{ health_summary.text }} — ukaguzi {{ health_summary.ok }} kati ya {{ health|length }} ni sawa.
   </div>
-  {% else %}
-    <p class="muted">Bado hakuna mtumiaji aliyejisajili.</p>
-  {% endif %}
+
+  {% for c in health %}
+    <div class="expiry-warning {{ 'expiry-ok' if c.status == 'ok' else ('expiry-soon' if c.status == 'warn' else 'expiry-critical') }}">
+      {% if c.status == 'ok' %}✔️{% elif c.status == 'warn' %}⚠️{% else %}❌{% endif %}
+      <strong>{{ c.name }}</strong><br>
+      <span style="font-size:13px; opacity:.9;">{{ c.detail }}</span>
+    </div>
+  {% endfor %}
 </div>
 
-<p><a href="{{ url_for('admin') }}">← Rudi Admin</a></p>
+<div class="admin-section">
+  <h3>👥 Watumiaji</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Akaunti zilizosajiliwa: {{ users_total }}. Angalia orodha kamili, idadi, na uondoe mtumiaji.
+  </p>
+  <a href="{{ url_for('admin_users') }}" class="btn btn-secondary"
+     style="display:inline-block; text-decoration:none; text-align:center;">Fungua orodha ya watumiaji</a>
+</div>
+
+<div class="admin-section">
+  <h3>Mipangilio ya Predictions</h3>
+  <form method="POST">
+    <input type="hidden" name="action" value="update_settings">
+
+    <div class="form-group">
+      <label>Number of markets - Dashboard (Other Picks)</label>
+      <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0" max="20">
+    </div>
+    <div class="form-group">
+      <label>Number of markets - History (Other Picks)</label>
+      <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0" max="30">
+    </div>
+    <div class="form-group">
+      <label>Probability Threshold (%) — soko chini ya hii halionekani kabisa</label>
+      <input type="number" step="0.1" name="probability_threshold" value="{{ settings.probability_threshold }}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Best Pick Formula (Dashboard/Zijazo/History za predictions)</label>
+      <select name="best_pick_formula">
+        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability)</option>
+        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (+ pro_tier tiebreaker)</option>
+        <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee</option>
+      </select>
+    </div>
+
+    <h3 style="margin-top:20px;">Mipangilio ya Combos</h3>
+    <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+      Kila combo inachukua legs kutoka MECHI TOFAUTI (hakuna mechi mbili kwenye combo moja).
+    </p>
+    <div class="form-group">
+      <label>Combo Leg Formula</label>
+      <select name="combo_leg_formula">
+        {% for f in formula_choices %}
+          <option value="{{ f }}" {{ 'selected' if settings.combo_leg_formula==f else '' }}>
+            {% if f == 'random_threshold' %}Random (soko lolote &ge; kiwango cha chini)
+            {% elif f == 'ev_odds_only' %}EV ya juu zaidi (mechi zenye odds pekee)
+            {% elif f == 'highest_probability' %}Probability ya juu zaidi (yoyote)
+            {% elif f == 'highest_probability_odds_only' %}Probability ya juu zaidi (mechi zenye odds pekee)
+            {% endif %}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Minimum legs kwa combo moja</label>
+      <input type="number" name="combo_min_legs" value="{{ settings.combo_min_legs }}" min="1" max="10">
+    </div>
+    <div class="form-group">
+      <label>Maximum legs kwa combo moja</label>
+      <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10">
+    </div>
+    <div class="form-group">
+      <label>Minimum probability (%) kwa LEG MOJA kuingia kwenye combo</label>
+      <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Minimum probability (%) kwa COMBO NZIMA (zidisho la legs zote)</label>
+      <input type="number" step="0.1" name="combo_min_combined_probability" value="{{ settings.combo_min_combined_probability }}" min="0" max="100">
+    </div>
+    <div class="form-group">
+      <label>Idadi ya juu ya combos kwa siku (max_combos_per_day)</label>
+      <input type="number" name="max_combos_per_day" value="{{ settings.max_combos_per_day }}" min="1" max="500">
+    </div>
+
+    <button class="btn" type="submit">Hifadhi Mipangilio</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h3>AllSportsAPI Key</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Key hii inatumiwa na Job A (hourly_catchup.py) kupitia endpoint ya siri.
+    Kaggle (Job B / notebook ya predictions) ina key yake YENYEWE kwenye
+    Kaggle Secrets - badilisha huko pia ukibadilisha hapa.
+  </p>
+  <form method="POST">
+    <input type="hidden" name="action" value="update_api">
+    <div class="form-group">
+      <label>AllSportsAPI Key</label>
+      <input type="text" name="api_key" placeholder="{{ '••••••••' + api_config.api_key[-4:] if api_config.api_key else 'Weka API key' }}">
+    </div>
+    <div class="form-group">
+      <label>Tarehe ya Kuisha</label>
+      <input type="date" name="expiry_date" value="{{ api_config.expiry_date.strftime('%Y-%m-%d') if api_config.expiry_date else '' }}">
+    </div>
+    <button class="btn" type="submit">Sasisha API Key</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <h3>Data</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Baada ya kupakia faili mpya za CSV kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).
+  </p>
+  <form method="POST" action="{{ url_for('admin_refresh') }}">
+    <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
+  </form>
+</div>
+
+<div class="admin-section">
+  <a href="{{ url_for('logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
+</div>
 {% endblock %}
