@@ -1,0 +1,46 @@
+{% extends 'simple_base.html' %}
+{% block title %}Watumiaji — Admin{% endblock %}
+{% block content %}
+<h2>Watumiaji wa app</h2>
+
+<div class="stats">
+  <div class="stat"><b>{{ stats.regular }}</b>Watumiaji wa kawaida</div>
+  <div class="stat"><b>{{ stats.total }}</b>Akaunti zote (pamoja na admin)</div>
+  <div class="stat"><b>{{ stats.new_7d }}</b>Wapya (siku 7)</div>
+  <div class="stat"><b>{{ stats.active_7d }}</b>Walioonekana (siku 7)</div>
+</div>
+
+<div class="card">
+  {% if users %}
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Email</th><th>Alijisajili</th><th>Alionekana mwisho</th><th>Hali</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.email }}</td>
+          <td>{{ u.created_at|eat('%d %b %Y') }}</td>
+          <td>{{ u.last_seen|eat }}</td>
+          <td>{% if u.is_admin %}<span class="badge admin">Admin</span>{% else %}<span class="badge">Mtumiaji</span>{% endif %}</td>
+          <td>
+            {% if not u.is_admin %}
+            <form method="post" action="{{ url_for('admin_delete_user', user_id=u.id) }}"
+                  onsubmit="return confirm('Una uhakika unataka kumwondoa mtumiaji huyu?')">
+              <button type="submit" class="btn btn-sm btn-danger">Ondoa</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="muted">Bado hakuna mtumiaji aliyejisajili.</p>
+  {% endif %}
+</div>
+
+<p><a href="{{ url_for('admin') }}">← Rudi Admin</a></p>
+{% endblock %}
