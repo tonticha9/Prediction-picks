@@ -1,6 +1,24 @@
 {% extends 'base.html' %}
 {% block content %}
 
+{# Mshale: ▲ kijani = imepanda, ▼ nyekundu = imeshuka, ▬ kijivu = haijabadilika, hakuna = hakuna rekodi ya kulinganisha #}
+{% macro delta_badge(delta) %}
+  {% if delta is none %}
+  {% elif delta > 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:seagreen; white-space:nowrap;">
+      ▲ {{ '+%.1f'|format(delta) }}
+    </span>
+  {% elif delta < 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:crimson; white-space:nowrap;">
+      ▼ {{ '%.1f'|format(delta) }}
+    </span>
+  {% else %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:gray; white-space:nowrap;">
+      ▬ 0.0
+    </span>
+  {% endif %}
+{% endmacro %}
+
 {% if not matches %}
   <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
@@ -16,7 +34,9 @@
     <div class="best-pick-label">Best Pick</div>
     <div class="best-pick-row">
       <div class="best-pick-market">{{ m.best_pick.market }}</div>
-      <div class="best-pick-prob">{{ m.best_pick.probability }}%</div>
+      <div class="best-pick-prob">
+        {{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}
+      </div>
     </div>
     <div style="margin-top:8px;">
       <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
@@ -38,6 +58,7 @@
       <div style="display:flex; align-items:center; gap:10px;">
         {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
         <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
+        {{ delta_badge(p.delta) }}
       </div>
     </div>
     {% endfor %}
