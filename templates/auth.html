@@ -1,34 +1,59 @@
-{% extends 'simple_base.html' %}
-{% block title %}{{ 'Ingia' if mode == 'login' else 'Jisajili' }} — Braiton Picks{% endblock %}
+{% extends 'base.html' %}
 {% block content %}
-<div class="card">
-  <h2>{{ 'Ingia kwenye akaunti' if mode == 'login' else 'Fungua akaunti' }}</h2>
-  <form method="post" autocomplete="on">
+<style>
+  .auth-form input[type=email],
+  .auth-form input[type=password] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.2);
+    background: transparent;
+    color: inherit;
+    font-size: 15px;
+  }
+  .auth-form input:focus { outline: 2px solid #22c55e; }
+  .auth-check { display:flex; gap:8px; align-items:flex-start; font-size:13px; margin:14px 0; }
+  .auth-check input { margin-top:3px; }
+</style>
+
+<h2 style="margin-bottom:16px;">{{ '🔑 Ingia' if mode == 'login' else '📝 Fungua Akaunti' }}</h2>
+
+<div class="admin-section">
+  <form method="POST" class="auth-form" autocomplete="on">
     <input type="hidden" name="next" value="{{ next or '' }}">
 
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="{{ email or '' }}" required autocomplete="email" inputmode="email">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" name="email" value="{{ email or '' }}" required
+             autocomplete="email" inputmode="email">
+    </div>
 
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" required
-           autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}"
-           {% if mode == 'register' %}minlength="8"{% endif %}>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" name="password" required
+             autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}"
+             {% if mode == 'register' %}minlength="8"{% endif %}>
+    </div>
 
     {% if mode == 'register' %}
-      <label for="confirm">Rudia password</label>
-      <input type="password" id="confirm" name="confirm" required minlength="8" autocomplete="new-password">
+      <div class="form-group">
+        <label>Rudia Password</label>
+        <input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+      </div>
 
-      <label class="check">
+      <label class="auth-check">
         <input type="checkbox" name="agree" required>
         <span>Nina umri wa miaka 18 au zaidi, na nimesoma na kukubali
           <a href="{{ url_for('privacy') }}" target="_blank">Sera ya Faragha</a>.</span>
       </label>
     {% endif %}
 
-    <button type="submit" class="btn">{{ 'Ingia' if mode == 'login' else 'Jisajili' }}</button>
+    <button class="btn" type="submit" style="width:100%;">
+      {{ 'Ingia' if mode == 'login' else 'Jisajili' }}
+    </button>
   </form>
 
-  <p class="muted" style="margin-top:16px;text-align:center">
+  <p style="font-size:13px; color:var(--text-dim); margin-top:16px; text-align:center;">
     {% if mode == 'login' %}
       Huna akaunti? <a href="{{ url_for('register', next=next) }}">Jisajili hapa</a>
     {% else %}
