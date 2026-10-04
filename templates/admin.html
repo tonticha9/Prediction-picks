@@ -37,12 +37,12 @@
     <input type="hidden" name="action" value="update_settings">
 
     <div class="form-group">
-      <label>Number of markets - Dashboard (Other Picks)</label>
-      <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0" max="90">
+      <label>Number of markets - Dashboard/Zijazo (Other Picks) — weka namba yoyote, 0 = hakuna</label>
+      <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0">
     </div>
     <div class="form-group">
-      <label>Number of markets - History (Other Picks)</label>
-      <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0" max="90">
+      <label>Number of markets - History (Other Picks) — weka namba yoyote, 0 = hakuna</label>
+      <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0">
     </div>
     <div class="form-group">
       <label>Probability Threshold (%) — soko chini ya hii halionekani kabisa</label>
@@ -51,9 +51,10 @@
     <div class="form-group">
       <label>Best Pick Formula (Dashboard/Zijazo/History za predictions)</label>
       <select name="best_pick_formula">
-        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability)</option>
-        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (+ pro_tier tiebreaker)</option>
-        <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee</option>
+        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability, masoko yote)</option>
+        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (+ pro_tier tiebreaker, masoko yote)</option>
+        <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee — masoko yenye odds TU (yasiyo na odds yanafichwa)</option>
+        <option value="no_odds" {{ 'selected' if settings.best_pick_formula=='no_odds' else '' }}>Masoko yasiyo na odds TU, kwa probability (yenye odds yanafichwa)</option>
       </select>
     </div>
 
