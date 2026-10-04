@@ -86,6 +86,7 @@ WEAK_ADMIN_PASSWORDS = {'badilisha-hii', 'password', 'admin', 'admin123', '12345
 EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 FORMULA_CHOICES = ['random_threshold', 'ev_odds_only', 'highest_probability', 'highest_probability_odds_only']
+PICK_FORMULA_CHOICES = ['hybrid', 'probability', 'ev', 'no_odds']
 
 _cache = {}
 
@@ -309,6 +310,50 @@ def all_matches_market_pool():
 
 
 # ================================================================
+# MAKUNDI YA MASOKO (kwa "Other Picks"): kila soko linapewa kundi
+# ================================================================
+MARKET_GROUPS = [
+    ('result', '🏆', 'Matokeo'),
+    ('goals', '⚽', 'Magoli'),
+    ('combo', '🧩', 'Mchanganyiko'),
+    ('corners', '🚩', 'Corners'),
+    ('sot', '🎯', 'Shots on Target'),
+    ('cards', '🟨', 'Kadi'),
+    ('other', '📌', 'Mengineyo'),
+]
+
+
+def market_group_key(market):
+    m = str(market)
+    if '_and_' in m:
+        return 'combo'
+    if m.startswith('corners'):
+        return 'corners'
+    if m.startswith('sot'):
+        return 'sot'
+    if m.startswith(('yellows', 'cards', 'both_teams_carded', 'reds', 'booking')):
+        return 'cards'
+    if 'goals' in m or m.startswith('btts') or m.startswith('both_teams_score'):
+        return 'goals'
+    if m.startswith(('home_win', 'away_win', 'draw', 'dc_')) or 'half' in m:
+        return 'result'
+    return 'other'
+
+
+def group_picks(picks):
+    """picks: orodha ya dict zenye 'market'. Inarudisha makundi kwa mpangilio
+    uliowekwa; ndani ya kundi mpangilio wa formula unabaki."""
+    buckets = {}
+    for p in picks:
+        buckets.setdefault(market_group_key(p['market']), []).append(p)
+    groups = []
+    for key, icon, label in MARKET_GROUPS:
+        if key in buckets:
+            groups.append({'key': key, 'icon': icon, 'label': label, 'picks': buckets[key]})
+    return groups
+
+
+# ================================================================
 # HELPERS ZA KUSAFISHA THAMANI (NaN -> None, Timestamp -> datetime)
 # ================================================================
 def _clean_num(v):
@@ -338,6 +383,10 @@ def _to_dt(v):
     return ts.to_pydatetime()
 
 
+# cache_key (kwenye _cache) -> section (kwenye database)
+SECTION_MAP = {'predictions': 'prediction', 'value_bets': 'value_bet'}
+
+
 def record_predictions_pending():
     """
     Query MOJA ya rekodi zilizopo (kwa kila section), hesabu zote ndani ya
@@ -346,13 +395,12 @@ def record_predictions_pending():
     Mechi zenye tarehe ya KABLA ya leo (zilizokwisha) HAZIANDIKWI kama
     predictions mpya (zilichafua History hapo awali).
     """
-    section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     today = today_eat()
     new_count = 0
     updated_count = 0
     skipped_past = 0
 
-    for cache_key, section in section_map.items():
+    for cache_key, section in SECTION_MAP.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
             continue
@@ -428,12 +476,11 @@ def record_predictions_pending():
 # Refresh ikiendeshwa mara nyingi siku moja, ya mwisho ya siku inashinda.
 # ================================================================
 def record_daily_snapshot():
-    section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     today = today_eat()
     new_count = 0
     updated_count = 0
 
-    for cache_key, section in section_map.items():
+    for cache_key, section in SECTION_MAP.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
             continue
@@ -1057,6 +1104,7 @@ def dashboard():
             'date': m['match_date'].strftime('%d %b %Y'),
             'time_eat': m['match_date'].strftime('%H:%M') if m['match_date'].hour or m['match_date'].minute else None,
             'best_pick': best_pick, 'other_picks': other_picks,
+            'other_groups': group_picks(other_picks),
         })
 
     matches.sort(key=lambda m: m.get('time_eat') or '')
@@ -1100,12 +1148,14 @@ def upcoming():
                     'delta': calc_delta(r['probability_%'], home, away, mdate, r['market']),
                 }
 
+            other_list = [with_delta(r) for r in others]
             matches.append({
                 'home': home, 'away': away,
                 'date': mdate.strftime('%d %b %Y'),
                 'time_eat': mdate.strftime('%H:%M') if mdate.hour or mdate.minute else None,
                 'best_pick': with_delta(best),
-                'other_picks': [with_delta(r) for r in others],
+                'other_picks': other_list,
+                'other_groups': group_picks(other_list),
             })
 
     matches.sort(key=lambda m: m.get('time_eat') or '')
@@ -1310,10 +1360,11 @@ def admin():
     if request.method == 'POST':
         action = request.form.get('action')
         if action == 'update_settings':
-            settings.max_markets_per_match = int(request.form.get('max_markets', 5))
-            settings.history_max_markets = int(request.form.get('history_max_markets', 10))
+            settings.max_markets_per_match = max(0, int(request.form.get('max_markets', 5)))
+            settings.history_max_markets = max(0, int(request.form.get('history_max_markets', 10)))
             settings.probability_threshold = float(request.form.get('probability_threshold', 50.0))
-            settings.best_pick_formula = request.form.get('best_pick_formula', 'hybrid')
+            pick_formula = request.form.get('best_pick_formula', 'hybrid')
+            settings.best_pick_formula = pick_formula if pick_formula in PICK_FORMULA_CHOICES else 'hybrid'
             settings.combo_min_legs = int(request.form.get('combo_min_legs', 4))
             settings.combo_max_legs = int(request.form.get('combo_max_legs', 4))
             settings.combo_min_leg_probability = float(request.form.get('combo_min_leg_probability', 65.0))
