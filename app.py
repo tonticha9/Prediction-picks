@@ -14,6 +14,7 @@ import secrets
 import threading
 import time
 from functools import wraps
+from types import SimpleNamespace
 from datetime import datetime, date, timedelta, timezone
 
 from sqlalchemy import text
@@ -21,6 +22,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
+from snapshot_model import PredictionDaily
 from user_model import AppUser
 from market_selection import is_market_allowed, select_markets
 from combo_builder import build_daily_combos, combo_result_from_legs
@@ -420,6 +422,105 @@ def record_predictions_pending():
 
 
 # ================================================================
+# PICHA YA KILA SIKU (DAILY SNAPSHOT) kwa ajili ya History.
+# Kila siku tunahifadhi NAKALA KAMILI ya kile model ilichoona siku hiyo
+# (mechi zote za leo + zijazo, na probability/odds/tier za siku hiyo).
+# Refresh ikiendeshwa mara nyingi siku moja, ya mwisho ya siku inashinda.
+# ================================================================
+def record_daily_snapshot():
+    section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
+    today = today_eat()
+    new_count = 0
+    updated_count = 0
+
+    for cache_key, section in section_map.items():
+        df = _cache.get(cache_key)
+        if df is None or len(df) == 0:
+            continue
+        df = df[df['match_date'].dt.date >= today]
+        if len(df) == 0:
+            continue
+
+        existing = {}
+        for r in PredictionDaily.query.filter_by(snap_date=today, section=section).all():
+            existing[(r.match_date, r.home_team, r.away_team, r.market)] = r
+
+        new_objs = []
+        for row in df.to_dict('records'):
+            key = (_to_dt(row['match_date']), row['HomeTeam'], row['AwayTeam'], row['market'])
+            prob = _clean_num(row.get('probability_%'))
+            odds = _clean_num(row.get('real_odds'))
+            tier = _clean_str(row.get('pro_tier'))
+
+            cur = existing.get(key)
+            if cur is not None:
+                cur.probability = prob
+                cur.real_odds = odds
+                cur.pro_tier = tier
+                updated_count += 1
+            else:
+                obj = PredictionDaily(
+                    snap_date=today, section=section, match_date=key[0],
+                    home_team=key[1], away_team=key[2], market=key[3],
+                    probability=prob, real_odds=odds, pro_tier=tier,
+                )
+                new_objs.append(obj)
+                existing[key] = obj
+                new_count += 1
+
+        if new_objs:
+            db.session.add_all(new_objs)
+
+    if new_count or updated_count:
+        db.session.commit()
+    print(f'[record_daily_snapshot] mpya={new_count} zilizosasishwa={updated_count}')
+    return new_count
+
+
+def _history_dates(section):
+    """Tarehe zote zenye picha ya siku, pamoja na tarehe za zamani (kabla ya picha)."""
+    d1 = {d[0] for d in db.session.query(PredictionDaily.snap_date)
+          .filter(PredictionDaily.section == section).distinct().all() if d[0]}
+    d2 = {d[0] for d in db.session.query(PredictionRecord.shown_date)
+          .filter(PredictionRecord.section == section).distinct().all() if d[0]}
+    return sorted({d.strftime('%Y-%m-%d') for d in (d1 | d2)}, reverse=True)
+
+
+def _history_rows(section, day):
+    """
+    Safu za History kwa siku moja.
+    - Kama kuna picha ya siku hiyo: tumia probability/odds/tier za SIKU HIYO,
+      na matokeo (WON/LOST/VOID) yanaunganishwa kutoka PredictionRecord.
+    - Kama hakuna (siku za zamani, mfano Sept 14-20): tumia njia ya zamani.
+    """
+    snaps = PredictionDaily.query.filter_by(snap_date=day, section=section).all()
+    if not snaps:
+        return PredictionRecord.query.filter_by(section=section, shown_date=day).all()
+
+    min_md = min(s.match_date for s in snaps)
+    res_map = {}
+    q = db.session.query(
+        PredictionRecord.match_date, PredictionRecord.home_team,
+        PredictionRecord.away_team, PredictionRecord.market, PredictionRecord.result
+    ).filter(
+        PredictionRecord.section == section,
+        PredictionRecord.match_date >= min_md
+    ).all()
+    for md, home, away, market, result in q:
+        res_map[(md, home, away, market)] = result
+
+    rows = []
+    for s in snaps:
+        rows.append(SimpleNamespace(
+            home_team=s.home_team, away_team=s.away_team, match_date=s.match_date,
+            market=s.market, probability=s.probability, real_odds=s.real_odds,
+            pro_tier=s.pro_tier,
+            result=res_map.get((s.match_date, s.home_team, s.away_team, s.market), 'PENDING'),
+        ))
+    return rows
+
+
+# ================================================================
 # MSHALE (DELTA): probability ya sasa - probability ya mara ya kwanza.
 # Inapakia first_probability MARA MOJA kwa kila ombi (si query kwa kila soko).
 # ================================================================
@@ -662,6 +763,12 @@ def run_health_checks():
                             f'kawaida; vinginevyo angalia GitHub Actions.')
         return 'error', f'Data haijasasishwa kwa siku {age} - mfumo huenda umekwama.'
 
+    def c_daily_snapshot():
+        n = PredictionDaily.query.filter_by(snap_date=today).count()
+        if n:
+            return 'ok', f'Picha ya History ya leo ipo (safu {n}).'
+        return 'warn', 'Picha ya History ya leo haijaandikwa - bonyeza Refresh Data.'
+
     def c_refresh_job():
         s = _refresh_state
         if s['running']:
@@ -790,6 +897,7 @@ def run_health_checks():
     check('Database', c_db)
     check('AllSportsAPI key', c_api)
     check('Usasishaji wa data', c_snapshot)
+    check('Picha ya History ya leo', c_daily_snapshot)
     check('Refresh ya mwisho', c_refresh_job)
     check('Faili za data', c_files)
     check('Mechi za leo na zijazo', c_matches)
@@ -1133,16 +1241,11 @@ def history():
                                combo_formula=settings.combo_leg_formula, page='history')
 
     section = TIER_TO_SECTION.get(tier, 'prediction')
-    available_dates = sorted(
-        {d[0].strftime('%Y-%m-%d') for d in
-         db.session.query(PredictionRecord.shown_date)
-         .filter(PredictionRecord.section == section).distinct().all()},
-        reverse=True
-    )
+    available_dates = _history_dates(section)
 
     if selected_date:
         day = datetime.strptime(selected_date, '%Y-%m-%d').date()
-        records = PredictionRecord.query.filter_by(section=section, shown_date=day).all()
+        records = _history_rows(section, day)
 
         if tier == 'predictions':
             groups = {}
@@ -1328,6 +1431,10 @@ def snapshot_today(steps=None):
     t = time.time()
     record_predictions_pending()
     mark('predictions', t)
+
+    t = time.time()
+    record_daily_snapshot()
+    mark('picha_ya_siku', t)
 
     t = time.time()
     n_combos = generate_daily_combos()
