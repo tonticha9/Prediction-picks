@@ -11,6 +11,7 @@ import re
 import shutil
 import random
 import secrets
+import threading
 import time
 from functools import wraps
 from datetime import datetime, date, timedelta, timezone
@@ -85,6 +86,16 @@ EMAIL_RE = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 FORMULA_CHOICES = ['random_threshold', 'ev_odds_only', 'highest_probability', 'highest_probability_odds_only']
 
 _cache = {}
+
+# ================================================================
+# REFRESH YA NYUMA (BACKGROUND): kazi nzito haifungwi kwenye ombi la
+# browser, kwa hiyo hakuna tena "timeout / Internal Server Error".
+# ================================================================
+_refresh_lock = threading.Lock()
+_refresh_state = {
+    'running': False, 'started_at': None, 'finished_at': None,
+    'ok': None, 'message': '', 'steps': '',
+}
 
 
 # ================================================================
@@ -327,12 +338,11 @@ def _to_dt(v):
 
 def record_predictions_pending():
     """
-    TOLEO LA HARAKA: query MOJA ya rekodi zilizopo (kwa kila section),
-    hesabu zote ndani ya memory, na commit MOJA mwishoni.
+    Query MOJA ya rekodi zilizopo (kwa kila section), hesabu zote ndani ya
+    memory, na commit MOJA mwishoni.
 
-    MUHIMU: mechi zenye tarehe ya KABLA ya leo (zilizokwisha) HAZIANDIKWI
-    kama predictions mpya. Zamani, mechi za zamani zilizobaki kwenye
-    predictions.csv ziliandikwa kama PENDING za siku mpya na kuchafua History.
+    Mechi zenye tarehe ya KABLA ya leo (zilizokwisha) HAZIANDIKWI kama
+    predictions mpya (zilichafua History hapo awali).
     """
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     today = today_eat()
@@ -345,7 +355,6 @@ def record_predictions_pending():
         if df is None or len(df) == 0:
             continue
 
-        # Ruka mechi za zamani
         total_rows = len(df)
         df = df[df['match_date'].dt.date >= today]
         skipped_past += total_rows - len(df)
@@ -653,6 +662,21 @@ def run_health_checks():
                             f'kawaida; vinginevyo angalia GitHub Actions.')
         return 'error', f'Data haijasasishwa kwa siku {age} - mfumo huenda umekwama.'
 
+    def c_refresh_job():
+        s = _refresh_state
+        if s['running']:
+            secs = int((now - s['started_at']).total_seconds()) if s['started_at'] else 0
+            if secs > 600:
+                return 'error', f'Refresh imekwama kwa zaidi ya dakika 10 ({secs}s) - angalia Render Logs.'
+            return 'warn', (f'Refresh inaendelea nyuma ({secs}s). Fungua ukurasa huu tena baada '
+                            f'ya dakika moja.')
+        if s['ok'] is None:
+            return 'ok', 'Hakuna refresh iliyoendeshwa tangu app iwake upya.'
+        when = s['finished_at'].strftime('%d %b %H:%M') if s['finished_at'] else '-'
+        if s['ok']:
+            return 'ok', f"Refresh ya mwisho ({when} EAT) imefanikiwa. {s['message']} [{s['steps']}]"
+        return 'error', f"Refresh ya mwisho ({when} EAT) imeshindwa: {s['message']} [{s['steps']}]"
+
     def c_files():
         names = ('predictions.csv', 'value_bets.csv', 'combos.csv')
         paths = {n: os.path.join(DATA_DIR, n) for n in names}
@@ -766,6 +790,7 @@ def run_health_checks():
     check('Database', c_db)
     check('AllSportsAPI key', c_api)
     check('Usasishaji wa data', c_snapshot)
+    check('Refresh ya mwisho', c_refresh_job)
     check('Faili za data', c_files)
     check('Mechi za leo na zijazo', c_matches)
     check('Ubora wa data', c_quality)
@@ -1265,21 +1290,20 @@ def admin_logout():
     return redirect(url_for('logout'))
 
 
-@app.route('/admin/refresh', methods=['POST'])
-@admin_only
-def admin_refresh():
-    try:
-        load_live_data()
-        snapshot_today()
-        flash('Data imesasishwa na kuhifadhiwa kwenye history.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Refresh imeshindwa: {type(e).__name__}: {str(e)[:300]}', 'error')
-    return redirect(url_for('admin'))
+# ================================================================
+# REFRESH: snapshot_today() + kazi ya nyuma (background)
+# ================================================================
+def snapshot_today(steps=None):
+    """steps: orodha ya kuandika muda wa kila hatua (kwa Admin + Render Logs)."""
+    def mark(label, t_start):
+        secs = round(time.time() - t_start, 1)
+        if steps is not None:
+            steps.append(f'{label} {secs}s')
+        print(f'[snapshot_today] {label}: {secs}s')
 
-
-def snapshot_today():
     today = today_eat()
+
+    t = time.time()
     hist_folder = os.path.join(HISTORY_DIR, today.strftime('%Y-%m-%d'))
     os.makedirs(hist_folder, exist_ok=True)
     for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
@@ -1299,9 +1323,63 @@ def snapshot_today():
         db.session.commit()
     else:
         existing.snapshot_date = today
+    mark('snapshot', t)
 
+    t = time.time()
     record_predictions_pending()
-    generate_daily_combos()
+    mark('predictions', t)
+
+    t = time.time()
+    n_combos = generate_daily_combos()
+    mark(f'combos({n_combos})', t)
+
+
+def _run_refresh_job():
+    """Inaendeshwa kwenye thread ya nyuma; haihusiani na ombi la browser."""
+    steps = []
+    t0 = time.time()
+    try:
+        with app.app_context():
+            try:
+                snapshot_today(steps)
+            except Exception:
+                db.session.rollback()
+                raise
+        total = round(time.time() - t0, 1)
+        _refresh_state.update(ok=True, message=f'Imekamilika kwa {total}s.')
+    except Exception as e:
+        print(f'[refresh_job] IMESHINDWA: {type(e).__name__}: {e}')
+        _refresh_state.update(ok=False, message=f'{type(e).__name__}: {str(e)[:300]}')
+    finally:
+        _refresh_state.update(running=False, finished_at=now_eat(), steps=' | '.join(steps))
+        _refresh_lock.release()
+
+
+def start_refresh_job():
+    """Anza refresh nyuma. Rudisha False ikiwa nyingine bado inaendelea."""
+    if not _refresh_lock.acquire(blocking=False):
+        return False
+    _refresh_state.update(running=True, started_at=now_eat(), finished_at=None,
+                          ok=None, message='Inaendelea...', steps='')
+    threading.Thread(target=_run_refresh_job, daemon=True).start()
+    return True
+
+
+@app.route('/admin/refresh', methods=['POST'])
+@admin_only
+def admin_refresh():
+    try:
+        load_live_data()
+    except Exception as e:
+        flash(f'Imeshindwa kusoma faili za data: {type(e).__name__}: {str(e)[:300]}', 'error')
+        return redirect(url_for('admin'))
+
+    if start_refresh_job():
+        flash('Refresh imeanza kwa nyuma. Subiri dakika 1-2, kisha fungua Admin tena na '
+              'uangalie "Refresh ya mwisho" kwenye Hali ya Mfumo.', 'success')
+    else:
+        flash('Refresh nyingine bado inaendelea. Subiri ikamilike.', 'error')
+    return redirect(url_for('admin'))
 
 
 @app.route('/api/refresh', methods=['POST'])
@@ -1310,12 +1388,13 @@ def api_refresh():
         return jsonify({'error': 'unauthorized'}), 401
     try:
         load_live_data()
-        snapshot_today()
     except Exception as e:
-        db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
+    started = start_refresh_job()
     return jsonify({
         'status': 'ok',
+        'refresh': 'started' if started else 'already_running',
         'matches': int(_cache['predictions'][['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]),
         'refreshed_at': now_eat().isoformat() + '+03:00'
     }), 200
