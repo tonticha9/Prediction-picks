@@ -329,17 +329,27 @@ def record_predictions_pending():
     """
     TOLEO LA HARAKA: query MOJA ya rekodi zilizopo (kwa kila section),
     hesabu zote ndani ya memory, na commit MOJA mwishoni.
-    (Toleo la zamani lilifanya query moja kwa kila soko -> maelfu ya safari
-    za mtandao kwenda Neon -> timeout.)
+
+    MUHIMU: mechi zenye tarehe ya KABLA ya leo (zilizokwisha) HAZIANDIKWI
+    kama predictions mpya. Zamani, mechi za zamani zilizobaki kwenye
+    predictions.csv ziliandikwa kama PENDING za siku mpya na kuchafua History.
     """
     section_map = {'predictions': 'prediction', 'value_bets': 'value_bet'}
     today = today_eat()
     new_count = 0
     updated_count = 0
+    skipped_past = 0
 
     for cache_key, section in section_map.items():
         df = _cache.get(cache_key)
         if df is None or len(df) == 0:
+            continue
+
+        # Ruka mechi za zamani
+        total_rows = len(df)
+        df = df[df['match_date'].dt.date >= today]
+        skipped_past += total_rows - len(df)
+        if len(df) == 0:
             continue
 
         rows = df.to_dict('records')
@@ -395,6 +405,8 @@ def record_predictions_pending():
 
     if new_count or updated_count:
         db.session.commit()
+    print(f'[record_predictions_pending] mpya={new_count} zilizosasishwa={updated_count} '
+          f'zilizorukwa(za zamani)={skipped_past}')
     return new_count
 
 
