@@ -57,6 +57,13 @@
         <option value="no_odds" {{ 'selected' if settings.best_pick_formula=='no_odds' else '' }}>Masoko yasiyo na odds TU, kwa probability (yenye odds yanafichwa)</option>
       </select>
     </div>
+    <div class="form-group">
+      <label>Double Chance (dc_1x, dc_x2) kuwa Best Pick — formula zote. dc_12 haiwi Best Pick kamwe. Zote zinaonekana Other Picks.</label>
+      <select name="allow_dc_best">
+        <option value="0" {{ 'selected' if not allow_dc_best else '' }}>Usiruhusu (chaguo-msingi)</option>
+        <option value="1" {{ 'selected' if allow_dc_best else '' }}>Ruhusu</option>
+      </select>
+    </div>
 
     <h3 style="margin-top:20px;">Mipangilio ya Combos</h3>
     <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
