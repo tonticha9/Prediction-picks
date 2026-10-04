@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,West Ham vs QPR: dc_12 @1.22 + Gaziantep vs Corum: dc_12 @1.33,1.62,67.2
-3,4,Hearts vs St Mirren: dc_1x @1.11 + Charlton vs Bristol City: dc_12 @1.33 + Hull vs Everton: dc_12 @1.30 + Watford vs Burnley: dc_12 @1.30,2.49,45.3
-5,5,Kilmarnock vs Motherwell: dc_12 @1.28 + Waregem vs Gent: dc_12 @1.30 + Derby vs Wrexham: dc_12 @1.36 + Kifisia vs Aris: dc_12 @1.36 + Watford vs Burnley: dc_12 @1.30,4.0,26.7
-7,6,Gaziantep vs Corum: dc_12 @1.33 + Asteras Tripolis vs Atromitos: dc_12 @1.36 + Iraklis vs Levadeiakos: dc_12 @1.36 + Swansea vs Norwich: dc_12 @1.30 + Kalamata vs Ofi Crete: dc_1x @1.36 + Valencia vs Ath Bilbao: dc_12 @1.30,5.65,13.8
+2,2,Bologna vs Inter: dc_x2 @1.18 + Charlton vs Bristol City: dc_12 @1.36,1.6,67.6
+3,3,Gaziantep vs Corum: dc_12 @1.33 + Betis vs Osasuna: dc_1x @1.18 + Asteras Tripolis vs Atromitos: dc_x2 @1.53,2.4,46.1
+5,5,Bournemouth vs Sunderland: dc_1x @1.28 + Kalamata vs Ofi Crete: dc_x2 @1.57 + Charlton vs Bristol City: dc_12 @1.36 + Groningen vs Ajax: dc_x2 @1.22 + Excelsior vs Groningen: dc_12 @1.28,4.27,26.9
+7,6,Mechelen vs St Truiden: dc_12 @1.28 + Parma vs Torino: dc_12 @1.36 + Excelsior vs Groningen: dc_12 @1.28 + Ipswich vs Fulham: dc_12 @1.30 + Como vs Roma: dc_12 @1.30 + Asteras Tripolis vs Atromitos: dc_x2 @1.53,5.76,17.9
