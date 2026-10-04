@@ -38,8 +38,12 @@ def _pair_key(market):
     return None
 
 
+def _has_odds(real_odds):
+    return real_odds is not None and real_odds == real_odds   # (NaN != NaN)
+
+
 def _ev(probability, real_odds):
-    if real_odds is None:
+    if not _has_odds(real_odds):
         return None
     return (probability or 0) / 100 * real_odds - 1
 
@@ -54,7 +58,7 @@ def _score_hybrid(probability, real_odds, pro_tier=None):
 
 
 def _score_probability(probability, real_odds, pro_tier=None):
-    """Probability formula - SASA inatumia pro_tier kwanza (kigezo cha
+    """Probability formula - inatumia pro_tier kwanza (kigezo cha
     Pro Confidence ya model) kama tiebreaker, kabla ya namba ya probability
     yenyewe - tofauti ndogo za point 1-2 hazitaamua peke yake."""
     return (TIER_RANK.get(pro_tier, 0), probability or 0)
@@ -69,12 +73,21 @@ FORMULA_SCORERS = {
     'probability': _score_probability,
     'ev': _score_ev,
     'hybrid': _score_hybrid,
+    # 'no_odds': masoko yasiyo na odds pekee, yanapangwa kwa probability (+ tier)
+    'no_odds': _score_probability,
 }
 
 
 def select_markets(entries, threshold_pct, formula='hybrid'):
     """entries: orodha ya tuple (market, probability, real_odds, pro_tier, original)
-    kwa MECHI MOJA pekee."""
+    kwa MECHI MOJA pekee.
+
+    Formula:
+      - 'hybrid'      : masoko yote (EV chanya kwanza, kisha yasiyo na odds, kisha EV hasi)
+      - 'probability' : masoko yote, kwa probability (+ tier)
+      - 'ev'          : MASOKO YENYE ODDS TU, kwa EV (yasiyo na odds yanafichwa)
+      - 'no_odds'     : MASOKO YASIYO NA ODDS TU, kwa probability (yenye odds yanafichwa)
+    """
     groups = {}
     passthrough = []
     for market, probability, real_odds, pro_tier, original in entries:
@@ -91,6 +104,11 @@ def select_markets(entries, threshold_pct, formula='hybrid'):
 
     survivors = [e for e in survivors if is_market_allowed(e[0])]
     survivors = [e for e in survivors if (e[1] or 0) >= threshold_pct]
+
+    if formula == 'ev':
+        survivors = [e for e in survivors if _has_odds(e[2])]
+    elif formula == 'no_odds':
+        survivors = [e for e in survivors if not _has_odds(e[2])]
 
     scorer = FORMULA_SCORERS.get(formula, _score_hybrid)
     survivors.sort(key=lambda e: scorer(e[1], e[2], e[3]), reverse=True)
