@@ -34,6 +34,7 @@
 {% endif %}
 
 {% for m in matches %}
+{% set mi = loop.index %}
 <div class="match-card">
   <div class="match-card-header">
     <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
@@ -59,17 +60,24 @@
   </div>
 
   {% if m.other_picks %}
-  <button class="toggle-picks" onclick="togglePicks('upcoming-picks-{{ loop.index }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
-  <div class="other-picks" id="upcoming-picks-{{ loop.index }}">
-    {% for p in m.other_picks %}
-    <div class="other-pick-row">
-      <div>{{ p.market }}</div>
-      <div style="display:flex; align-items:center; gap:10px;">
-        {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
-        <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
-        {{ delta_badge(p.delta) }}
+  <button class="toggle-picks" onclick="togglePicks('upcoming-picks-{{ mi }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <div class="other-picks" id="upcoming-picks-{{ mi }}">
+    {% for g in m.other_groups %}
+      <button class="toggle-picks" style="font-size:13px;" onclick="togglePicks('upcoming-picks-{{ mi }}-{{ g.key }}')">
+        {{ g.icon }} {{ g.label }} ({{ g.picks|length }}) ▾
+      </button>
+      <div class="other-picks" id="upcoming-picks-{{ mi }}-{{ g.key }}">
+        {% for p in g.picks %}
+        <div class="other-pick-row">
+          <div>{{ p.market }}</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
+            <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
+            {{ delta_badge(p.delta) }}
+          </div>
+        </div>
+        {% endfor %}
       </div>
-    </div>
     {% endfor %}
   </div>
   {% endif %}
