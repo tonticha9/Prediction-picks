@@ -23,6 +23,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, ComboRecord, ComboLeg
 from snapshot_model import PredictionDaily
+from flags_model import AppFlag
 from user_model import AppUser
 from market_selection import is_market_allowed, select_markets
 from combo_builder import build_daily_combos, combo_result_from_legs
@@ -229,6 +230,44 @@ def eat_filter(dt, fmt='%d %b %Y %H:%M'):
 
 
 # ================================================================
+# SWICHI ZA ADMIN (flags) + UCHAGUZI WA MASOKO KWA KUONYESHA
+# ================================================================
+def get_flag(key, default=''):
+    try:
+        f = db.session.get(AppFlag, key)
+        if f is not None and f.value is not None:
+            return f.value
+    except Exception:
+        db.session.rollback()
+    return default
+
+
+def set_flag(key, value):
+    f = db.session.get(AppFlag, key)
+    if f is None:
+        db.session.add(AppFlag(key=key, value=str(value)))
+    else:
+        f.value = str(value)
+    db.session.commit()
+
+
+def dc_best_allowed():
+    """Je, dc_1x / dc_x2 zinaruhusiwa kuwa Best Pick? (chaguo-msingi: hapana).
+    dc_12 haiwi Best Pick kamwe."""
+    cached = getattr(g, '_dc_best_allowed', None)
+    if cached is None:
+        cached = get_flag('allow_dc_best', '0') == '1'
+        g._dc_best_allowed = cached
+    return cached
+
+
+def pick_markets(entries, settings):
+    """Njia MOJA ya kuchagua masoko kwa Dashboard, Zijazo na History."""
+    return select_markets(entries, settings.probability_threshold,
+                          settings.best_pick_formula, allow_dc_best=dc_best_allowed())
+
+
+# ================================================================
 # DATA
 # ================================================================
 def load_live_data():
@@ -263,7 +302,7 @@ def today_predictions_survivors(settings):
                     row['real_odds'] if pd.notna(row.get('real_odds')) else None,
                     row.get('pro_tier'), row)
                    for _, row in grp.iterrows()]
-        survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+        survivors = pick_markets(entries, settings)
         if survivors:
             out.append({'home': home, 'away': away, 'match_date': mdate, 'survivors': survivors})
     return out
@@ -1134,7 +1173,7 @@ def upcoming():
                         row['real_odds'] if pd.notna(row.get('real_odds')) else None,
                         row.get('pro_tier'), row)
                        for _, row in grp.iterrows()]
-            survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+            survivors = pick_markets(entries, settings)
             if not survivors:
                 continue
             best = survivors[0]
@@ -1305,7 +1344,7 @@ def history():
 
             for (home, away, mdate), recs in groups.items():
                 entries = [(r.market, r.probability, r.real_odds, r.pro_tier, r) for r in recs]
-                survivors = select_markets(entries, settings.probability_threshold, settings.best_pick_formula)
+                survivors = pick_markets(entries, settings)
                 if not survivors:
                     continue
                 best = survivors[0]
@@ -1373,6 +1412,7 @@ def admin():
             formula = request.form.get('combo_leg_formula', 'random_threshold')
             settings.combo_leg_formula = formula if formula in FORMULA_CHOICES else 'random_threshold'
             db.session.commit()
+            set_flag('allow_dc_best', '1' if request.form.get('allow_dc_best') == '1' else '0')
             flash('Mipangilio imesasishwa.', 'success')
         elif action == 'update_api':
             api_config.api_key = request.form.get('api_key') or api_config.api_key
@@ -1398,7 +1438,7 @@ def admin():
                            days_left=days_left, hours_since_snapshot=hours_since_snapshot,
                            formula_choices=FORMULA_CHOICES, health=health,
                            health_summary=health_summary, users_total=users_total,
-                           page='admin')
+                           allow_dc_best=dc_best_allowed(), page='admin')
 
 
 @app.route('/admin/users')
