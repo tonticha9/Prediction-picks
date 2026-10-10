@@ -22,6 +22,17 @@
   {% endfor %}
 </div>
 
+{% if admin_tools_ok %}
+<div class="admin-section">
+  <h3>📈 Market Analysis</h3>
+  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
+    Markets zipi ziko imara, zipi dhaifu, na kwa nini: calibration, ROI, mwenendo, na uhakika wa sampuli.
+  </p>
+  <a href="{{ url_for('admin_markets') }}" class="btn btn-secondary"
+     style="display:inline-block; text-decoration:none; text-align:center;">Fungua Market Analysis</a>
+</div>
+{% endif %}
+
 <div class="admin-section">
   <h3>👥 Watumiaji</h3>
   <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
