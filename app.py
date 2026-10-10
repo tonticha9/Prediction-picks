@@ -1799,6 +1799,17 @@ def api_config_key():
     return jsonify({'api_key': cfg.api_key}), 200
 
 
+# ================================================================
+# ZANA ZA ADMIN (Market Analysis, Admin AI, Retraining...) - ziko kwenye
+# admin_tools.py. Zikipata kosa, tovuti inaendelea kufanya kazi.
+# ================================================================
+try:
+    from admin_tools import register_admin_tools
+    register_admin_tools(app, admin_only, globals())
+except Exception as e:
+    print(f'[WARN] admin_tools imeshindwa kupakia: {type(e).__name__}: {e}')
+
+
 with app.app_context():
     db.create_all()
     try:
