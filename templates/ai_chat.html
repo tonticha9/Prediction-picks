@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .ai-bar { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .ai-bar select { flex:1; min-width:0; }
+  .ai-badge { font-size:12px; padding:5px 10px; border-radius:999px; border:1px solid var(--border, #333); color:var(--text-dim); }
+  .ai-chat { border:1px solid var(--border, #333); border-radius:14px; padding:12px; min-height:240px; max-height:60vh; overflow-y:auto; margin-bottom:10px; background:rgba(255,255,255,.02); }
+  .ai-msg { margin:10px 0; display:flex; }
+  .ai-msg.user { justify-content:flex-end; }
+  .ai-bubble { max-width:94%; padding:10px 13px; border-radius:16px; font-size:14px; line-height:1.5; word-break:break-word; }
+  .ai-msg.user .ai-bubble { background:var(--indigo); color:#fff; border-bottom-right-radius:4px; }
+  .ai-msg.assistant .ai-bubble { border:1px solid var(--border, #333); border-bottom-left-radius:4px; background:rgba(255,255,255,.03); }
+  .ai-msg.error .ai-bubble { border:1px solid var(--red); color:var(--red); }
+  .ai-bubble p { margin:0 0 8px; }
+  .ai-bubble p:last-child { margin-bottom:0; }
+  .ai-bubble h3, .ai-bubble h4, .ai-bubble h5 { margin:10px 0 6px; font-size:15px; }
+  .ai-bubble ul, .ai-bubble ol { margin:6px 0 8px 20px; padding:0; }
+  .ai-bubble li { margin:3px 0; }
+  .ai-bubble code { background:rgba(127,127,127,.22); padding:1px 5px; border-radius:5px; font-size:13px; }
+  .ai-bubble blockquote { margin:8px 0; padding:6px 10px; border-left:3px solid var(--indigo); color:var(--text-dim); }
+  .ai-bubble hr { border:0; border-top:1px solid var(--border, #333); margin:10px 0; }
+  .ai-tablewrap { overflow-x:auto; margin:8px 0; }
+  .ai-bubble table { border-collapse:collapse; font-size:13px; min-width:100%; }
+  .ai-bubble th, .ai-bubble td { border:1px solid var(--border, #333); padding:5px 8px; text-align:left; white-space:nowrap; }
+  .ai-bubble th { background:rgba(127,127,127,.15); }
+  .ai-chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:6px; }
+  .ai-chip { flex:0 0 auto; padding:7px 12px; border-radius:999px; border:1px solid var(--border, #333); background:transparent; color:inherit; font-size:13px; cursor:pointer; }
+  .ai-input { display:flex; gap:8px; align-items:flex-end; }
+  .ai-input textarea { flex:1; min-width:0; resize:vertical; }
+  .ai-note { font-size:12px; color:var(--text-dim); margin-top:8px; }
+  .ai-empty { color:var(--text-dim); font-size:14px; text-align:center; padding:30px 10px; }
+</style>
+
+<a href="{{ back_url }}" style="font-size:13px; color:var(--text-dim); text-decoration:none;">← {{ back_label }}</a>
+<h2 style="margin:8px 0 12px;">🤖 {{ title }}</h2>
+
+{% if not ai_ready %}
+<div class="expiry-warning expiry-critical" style="margin-bottom:12px;">
+  <strong>AI haijawekwa.</strong><br>
+  <span style="font-size:13px;">
+    {% if mode == 'admin' %}Ongeza <code>AI_API_KEY</code>, <code>AI_BASE_URL</code> na <code>AI_MODEL</code> kwenye Render → Environment.{% else %}Msaidizi hajapatikana kwa sasa. Jaribu tena baadaye.{% endif %}
+  </span>
+</div>
+{% endif %}
+
+{% if mode == 'admin' %}
+<div class="ai-bar">
+  <select id="threadSel" onchange="goThread(this.value)">
+    <option value="">＋ Mazungumzo mapya</option>
+    {% for t in threads %}
+      <option value="{{ t.id }}" {{ 'selected' if thread and thread.id == t.id else '' }}>{{ t.title }}</option>
+    {% endfor %}
+  </select>
+  {% if thread %}
+  <form method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya kabisa?');">
+    <input type="hidden" name="thread_id" value="{{ thread.id }}">
+    <button class="btn btn-secondary" type="submit" style="padding:8px 12px;">🗑️</button>
+  </form>
+  {% endif %}
+</div>
+{% else %}
+<div class="ai-bar">
+  <span class="ai-badge" id="remainBadge">Umebakiza ujumbe {{ remaining }} / {{ limit }} leo</span>
+  <form method="POST" action="{{ url_for('user_ai_clear') }}" onsubmit="return confirm('Futa mazungumzo yako?');" style="margin-left:auto;">
+    <button class="btn btn-secondary" type="submit" style="padding:6px 12px;">🗑️ Futa</button>
+  </form>
+</div>
+{% endif %}
+
+<div id="chat" class="ai-chat"></div>
+<div class="ai-chips" id="chips"></div>
+
+<div class="ai-input">
+  <textarea id="msg" rows="2" placeholder="Uliza chochote, au piga story tu..."></textarea>
+  <button class="btn" id="sendBtn" type="button" onclick="sendMsg()">Tuma</button>
+</div>
+
+<div class="ai-note">
+  {% if mode == 'admin' %}
+    Modeli: {{ model }} · Utafutaji wa nje: {{ search or 'umezimwa' }} · Ana data ya sasa ya mfumo lakini hawezi kubadilisha chochote.
+  {% else %}
+    AI inaweza kukosea na si ushauri wa kifedha. Hakuna uhakika wa kushinda. Kamari ni kwa miaka 18+; tumia pesa unayoweza kupoteza tu.
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const MODE = {{ mode|tojson }};
+const STREAM_URL = {{ stream_url|tojson }};
+const SEND_URL = {{ send_url|tojson }};
+const BASE_URL = {{ (url_for('admin_ai') if mode == 'admin' else url_for('user_ai'))|tojson }};
+const SUGGESTIONS = {{ suggestions|tojson }};
+const INITIAL = {{ messages|tojson }};
+let threadId = {{ thread.id if thread else 'null' }};
+const chat = document.getElementById('chat');
+
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function inline(s) {
+  return s.replace(/`([^`]+)`/g, '<code>$1</code>')
+          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+          .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<i>$2</i>');
+}
+function cells(r) { return r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()); }
+function md(src) {
+  const lines = esc(src).split('\n');
+  const out = [];
+  let list = null, i = 0;
+  const close = () => { if (list) { out.push('</' + list + '>'); list = null; } };
+  while (i < lines.length) {
+    const ln = lines[i];
+    let m;
+    if (/^\s*$/.test(ln)) { close(); i++; continue; }
+    if ((m = ln.match(/^(#{1,4})\s+(.*)$/))) {
+      close(); const lv = Math.min(m[1].length + 2, 5);
+      out.push('<h' + lv + '>' + inline(m[2]) + '</h' + lv + '>'); i++; continue;
+    }
+    if (/^\s*([-*_])\1{2,}\s*$/.test(ln)) { close(); out.push('<hr>'); i++; continue; }
+    if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^[\s|:\-]+$/.test(lines[i + 1]) && lines[i + 1].includes('-')) {
+      close();
+      const head = cells(ln); i += 2;
+      let html = '<div class="ai-tablewrap"><table><thead><tr>' + head.map(c => '<th>' + inline(c) + '</th>').join('') + '</tr></thead><tbody>';
+      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
+        html += '<tr>' + cells(lines[i]).map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>'; i++;
+      }
+      out.push(html + '</tbody></table></div>'); continue;
+    }
+    if ((m = ln.match(/^\s*[-*•]\s+(.*)$/))) {
+      if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; }
+      out.push('<li>' + inline(m[1]) + '</li>'); i++; continue;
+    }
+    if ((m = ln.match(/^\s*\d+[.)]\s+(.*)$/))) {
+      if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; }
+      out.push('<li>' + inline(m[1]) + '</li>'); i++; continue;
+    }
+    if ((m = ln.match(/^&gt;\s?(.*)$/))) { close(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); i++; continue; }
+    close(); out.push('<p>' + inline(ln) + '</p>'); i++;
+  }
+  close();
+  return out.join('');
+}
+function addBubble(role, text, plain) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-msg ' + role;
+  const b = document.createElement('div');
+  b.className = 'ai-bubble';
+  if (role === 'assistant' && !plain) b.innerHTML = md(text); else b.textContent = text;
+  wrap.appendChild(b);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+  return b;
+}
+function setBusy(on) { document.getElementById('sendBtn').disabled = on; }
+function goThread(v) { window.location.href = v ? BASE_URL + '?t=' + v : BASE_URL + '?new=1'; }
+
+async function viaSend(text) {
+  const r = await fetch(SEND_URL, {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({thread_id: threadId, message: text})});
+  return await r.json();
+}
+function afterDone(meta) {
+  if (meta.thread_id) {
+    const first = (threadId === null);
+    threadId = meta.thread_id;
+    if (first) history.replaceState(null, '', BASE_URL + '?t=' + threadId);
+  }
+  if (meta.remaining !== undefined && meta.remaining !== null) {
+    const b = document.getElementById('remainBadge');
+    if (b) b.textContent = 'Umebakiza ujumbe ' + meta.remaining + ' / {{ limit }} leo';
+  }
+  if (meta.warning) addBubble('error', meta.warning, true);
+}
+
+async function sendMsg(preset) {
+  const ta = document.getElementById('msg');
+  const text = (preset || ta.value).trim();
+  if (!text) return;
+  const hint = document.getElementById('emptyHint'); if (hint) hint.remove();
+  const chips = document.getElementById('chips'); if (chips) chips.style.display = 'none';
+  addBubble('user', text);
+  ta.value = '';
+  setBusy(true);
+  const bubble = addBubble('assistant', '… nafikiri', true);
+  let acc = '', gotData = false;
+  try {
+    const resp = await fetch(STREAM_URL, {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({thread_id: threadId, message: text})});
+    if (!resp.ok || !resp.body) throw new Error('stream-unavailable');
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    while (true) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      gotData = true;
+      acc += dec.decode(value, {stream: true});
+      const cut = acc.indexOf('\n[[');
+      bubble.innerHTML = md(cut >= 0 ? acc.slice(0, cut) : acc);
+      chat.scrollTop = chat.scrollHeight;
+    }
+    const e = acc.indexOf('\n[[ERR]]');
+    const d = acc.indexOf('\n[[DONE]]');
+    if (e >= 0) {
+      const partial = acc.slice(0, e).trim();
+      if (partial) bubble.innerHTML = md(partial); else bubble.parentElement.remove();
+      addBubble('error', acc.slice(e + 8), true);
+      if (!partial) ta.value = text;
+    } else if (d >= 0) {
+      bubble.innerHTML = md(acc.slice(0, d));
+      try { afterDone(JSON.parse(acc.slice(d + 9) || '{}')); } catch (x) {}
+    }
+  } catch (err) {
+    if (!gotData) {
+      try {
+        const j = await viaSend(text);
+        if (j.ok) { bubble.innerHTML = md(j.reply); afterDone(j); }
+        else { bubble.parentElement.remove(); addBubble('error', j.error || 'Kosa lisilojulikana.', true); ta.value = text; }
+      } catch (e2) {
+        bubble.parentElement.remove();
+        addBubble('error', 'Mtandao umekatika au seva imechelewa.', true); ta.value = text;
+      }
+    } else {
+      addBubble('error', 'Mtandao ulikatika katikati ya jibu.', true);
+    }
+  }
+  setBusy(false);
+}
+
+(function init() {
+  const chips = document.getElementById('chips');
+  for (const s of SUGGESTIONS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'ai-chip'; b.textContent = s;
+    b.onclick = () => sendMsg(s.replace(/^[^\p{L}\p{N}]+/u, ''));
+    chips.appendChild(b);
+  }
+  if (INITIAL.length === 0) {
+    const d = document.createElement('div');
+    d.id = 'emptyHint'; d.className = 'ai-empty';
+    d.textContent = 'Karibu! Gusa pendekezo hapa chini au andika swali lako.';
+    chat.appendChild(d);
+  } else {
+    chips.style.display = 'none';
+    for (const m of INITIAL) addBubble(m.role, m.content);
+  }
+})();
+</script>
+{% endblock %}
