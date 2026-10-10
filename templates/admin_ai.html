@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .ai-bar { display:flex; gap:8px; align-items:center; margin-bottom:12px; }
+  .ai-bar select { flex:1; min-width:0; }
+  .ai-chat { border:1px solid var(--border, #333); border-radius:12px; padding:12px; min-height:240px; max-height:58vh; overflow-y:auto; margin-bottom:10px; }
+  .ai-msg { margin:8px 0; display:flex; }
+  .ai-msg.user { justify-content:flex-end; }
+  .ai-bubble { max-width:92%; padding:10px 12px; border-radius:14px; font-size:14px; line-height:1.45; word-break:break-word; }
+  .ai-msg.user .ai-bubble { background:var(--indigo); color:#fff; border-bottom-right-radius:4px; }
+  .ai-msg.assistant .ai-bubble { border:1px solid var(--border, #333); border-bottom-left-radius:4px; }
+  .ai-msg.error .ai-bubble { border:1px solid var(--red); color:var(--red); }
+  .ai-bubble ul { margin:6px 0 6px 18px; padding:0; }
+  .ai-bubble code { background:rgba(127,127,127,.2); padding:1px 5px; border-radius:5px; font-size:13px; }
+  .ai-input { display:flex; gap:8px; align-items:flex-end; }
+  .ai-input textarea { flex:1; min-width:0; resize:vertical; }
+  .ai-note { font-size:12px; color:var(--text-dim); margin-top:8px; }
+  .ai-empty { color:var(--text-dim); font-size:14px; text-align:center; padding:30px 10px; }
+</style>
+
+<a href="{{ url_for('admin') }}" style="font-size:13px; color:var(--text-dim); text-decoration:none;">← Admin</a>
+<h2 style="margin:8px 0 12px;">🤖 Admin AI</h2>
+
+{% if not ai_ready %}
+<div class="expiry-warning expiry-critical" style="margin-bottom:12px;">
+  <strong>AI haijawekwa.</strong><br>
+  <span style="font-size:13px;">Ongeza <code>AI_API_KEY</code> (na <code>AI_BASE_URL</code>, <code>AI_MODEL</code>) kwenye Render → Environment, kisha ufungue ukurasa huu tena.</span>
+</div>
+{% endif %}
+
+<div class="ai-bar">
+  <select id="threadSel" onchange="goThread(this.value)">
+    <option value="">＋ Mazungumzo mapya</option>
+    {% for t in threads %}
+      <option value="{{ t.id }}" {{ 'selected' if thread and thread.id == t.id else '' }}>{{ t.title }}</option>
+    {% endfor %}
+  </select>
+  {% if thread %}
+  <form method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya kabisa?');">
+    <input type="hidden" name="thread_id" value="{{ thread.id }}">
+    <button class="btn btn-secondary" type="submit" style="padding:8px 12px;">🗑️</button>
+  </form>
+  {% endif %}
+</div>
+
+<div id="chat" class="ai-chat"></div>
+
+<div class="ai-input">
+  <textarea id="msg" rows="2" placeholder="Uliza kuhusu mfumo, au piga story tu..."></textarea>
+  <button class="btn" id="sendBtn" type="button" onclick="sendMsg()">Tuma</button>
+</div>
+<div class="ai-note">Modeli: {{ model }} · Ana data ya sasa ya mfumo, lakini hawezi kubadilisha chochote. Mipaka ya bure ya Groq inatumika.</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let threadId = {{ thread.id if thread else 'null' }};
+const initial = {{ messages|tojson }};
+const chat = document.getElementById('chat');
+
+function esc(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function md(s) {
+  s = esc(s);
+  s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const lines = s.split('\n');
+  const out = [];
+  let inList = false;
+  for (const ln of lines) {
+    const m = ln.match(/^\s*[-*•]\s+(.*)$/);
+    if (m) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push('<li>' + m[1] + '</li>');
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(ln === '' ? '<br>' : ln + '<br>');
+    }
+  }
+  if (inList) out.push('</ul>');
+  return out.join('');
+}
+function addBubble(role, text, plain) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ai-msg ' + role;
+  const b = document.createElement('div');
+  b.className = 'ai-bubble';
+  if (role === 'assistant' && !plain) b.innerHTML = md(text);
+  else b.textContent = text;
+  wrap.appendChild(b);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+  return wrap;
+}
+function setBusy(on) {
+  document.getElementById('sendBtn').disabled = on;
+}
+function goThread(v) {
+  window.location.href = v ? "{{ url_for('admin_ai') }}?t=" + v : "{{ url_for('admin_ai') }}?new=1";
+}
+async function sendMsg() {
+  const ta = document.getElementById('msg');
+  const text = ta.value.trim();
+  if (!text) return;
+  const empty = document.getElementById('emptyHint');
+  if (empty) empty.remove();
+  addBubble('user', text);
+  ta.value = '';
+  setBusy(true);
+  const typing = addBubble('assistant', '… nafikiri', true);
+  try {
+    const r = await fetch("{{ url_for('admin_ai_send') }}", {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({thread_id: threadId, message: text})
+    });
+    const j = await r.json();
+    typing.remove();
+    if (j.ok) {
+      if (j.thread_id) {
+        const first = (threadId === null);
+        threadId = j.thread_id;
+        if (first) history.replaceState(null, '', "{{ url_for('admin_ai') }}?t=" + threadId);
+      }
+      addBubble('assistant', j.reply);
+      if (j.warning) addBubble('error', j.warning, true);
+    } else {
+      addBubble('error', j.error || 'Kosa lisilojulikana.', true);
+      ta.value = text;   // rudisha ujumbe ili ujaribu tena
+    }
+  } catch (e) {
+    typing.remove();
+    addBubble('error', 'Mtandao umekatika au seva imechelewa: ' + e, true);
+    ta.value = text;
+  }
+  setBusy(false);
+}
+
+if (initial.length === 0) {
+  const d = document.createElement('div');
+  d.id = 'emptyHint';
+  d.className = 'ai-empty';
+  d.textContent = 'Anza mazungumzo. Mfano: "Kwa nini picks za leo ni chache?" au "Niambie markets zipi ziko imara."';
+  chat.appendChild(d);
+} else {
+  for (const m of initial) addBubble(m.role, m.content);
+}
+</script>
+{% endblock %}
