@@ -464,7 +464,13 @@ def _llm_request(base, api_key, model, messages, max_tokens, temperature):
         payload['reasoning_effort'] = 'low'
     req = urllib.request.Request(
         base + '/chat/completions', data=json.dumps(payload).encode('utf-8'),
-        headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json'},
+        headers={
+            'Authorization': 'Bearer ' + api_key,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            # Cloudflare (ulinzi wa Groq) inakataa User-Agent ya chaguo-msingi ya Python-urllib (error 1010)
+            'User-Agent': 'BraitonPicks-AdminAI/1.0',
+        },
         method='POST')
     try:
         with urllib.request.urlopen(req, timeout=22) as resp:
@@ -512,6 +518,9 @@ def _friendly_error(r):
         return 'Kikomo cha maombi/tokens kwa dakika kimefikiwa.' + w
     if st == 401:
         return 'API key si sahihi (401). Angalia AI_API_KEY kwenye Render.'
+    if st == 403 and '1010' in err:
+        return ('Mtoa huduma (Cloudflare) amekataa ombi la seva (error 1010). '
+                'Nitumie ujumbe huu ili tubadilishe njia ya mawasiliano.')
     if st in (400, 404):
         return f'Ombi limekataliwa ({st}). Angalia AI_MODEL na AI_BASE_URL. {err[:200]}'
     return f'AI imeshindwa ({st}): {err[:200]}'
