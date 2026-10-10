@@ -25,6 +25,7 @@ from models import db, Settings, ApiConfig, DataSnapshot, PredictionRecord, Comb
 from snapshot_model import PredictionDaily
 from flags_model import AppFlag
 from user_model import AppUser
+from match_result_model import MatchResult
 from market_selection import is_market_allowed, select_markets
 from combo_builder import build_daily_combos, combo_result_from_legs
 
@@ -577,33 +578,173 @@ def _history_rows(section, day):
     Safu za History kwa siku moja.
     - Kama kuna picha ya siku hiyo: tumia probability/odds/tier za SIKU HIYO,
       na matokeo (WON/LOST/VOID) yanaunganishwa kutoka PredictionRecord.
+      Zinaonyeshwa MECHI ZA SIKU HIYO TU (match_date == day).
     - Kama hakuna (siku za zamani, mfano Sept 14-20): tumia njia ya zamani.
+    Kila safu ina first_probability (kwa mshale wa kupanda/kushuka).
     """
-    snaps = PredictionDaily.query.filter_by(snap_date=day, section=section).all()
-    if not snaps:
+    all_snaps = PredictionDaily.query.filter_by(snap_date=day, section=section).all()
+    if not all_snaps:
         return PredictionRecord.query.filter_by(section=section, shown_date=day).all()
 
+    snaps = [s for s in all_snaps if s.match_date.date() == day]
+    if not snaps:
+        return []
+
     min_md = min(s.match_date for s in snaps)
+    max_md = max(s.match_date for s in snaps)
     res_map = {}
     q = db.session.query(
         PredictionRecord.match_date, PredictionRecord.home_team,
-        PredictionRecord.away_team, PredictionRecord.market, PredictionRecord.result
+        PredictionRecord.away_team, PredictionRecord.market,
+        PredictionRecord.result, PredictionRecord.first_probability
     ).filter(
         PredictionRecord.section == section,
-        PredictionRecord.match_date >= min_md
+        PredictionRecord.match_date >= min_md,
+        PredictionRecord.match_date <= max_md
     ).all()
-    for md, home, away, market, result in q:
-        res_map[(md, home, away, market)] = result
+    for md, home, away, market, result, first_prob in q:
+        res_map[(md, home, away, market)] = (result, first_prob)
 
     rows = []
     for s in snaps:
+        result, first_prob = res_map.get(
+            (s.match_date, s.home_team, s.away_team, s.market), ('PENDING', None))
         rows.append(SimpleNamespace(
             home_team=s.home_team, away_team=s.away_team, match_date=s.match_date,
             market=s.market, probability=s.probability, real_odds=s.real_odds,
-            pro_tier=s.pro_tier,
-            result=res_map.get((s.match_date, s.home_team, s.away_team, s.market), 'PENDING'),
+            pro_tier=s.pro_tier, result=result, first_probability=first_prob,
         ))
     return rows
+
+
+# ================================================================
+# MATOKEO HALISI YA MECHI (kwa History): yanatoka jedwali la MatchResult
+# linalojazwa na Job A kila saa.
+# ================================================================
+def _team_key(name):
+    return str(name or '').strip().lower()
+
+
+def _as_date(v):
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    try:
+        return pd.Timestamp(v).date()
+    except Exception:
+        return None
+
+
+def load_match_results(day, span=1):
+    """Pakia matokeo ya mechi za (day-span .. day+span) kwa query MOJA:
+    {(home, away): [(tarehe, MatchResult), ...]}."""
+    out = {}
+    lo, hi = day - timedelta(days=span), day + timedelta(days=span)
+    try:
+        rows = MatchResult.query.filter(
+            MatchResult.match_date >= lo, MatchResult.match_date <= hi).all()
+    except Exception:
+        db.session.rollback()
+        return out
+    for r in rows:
+        out.setdefault((_team_key(r.home_team), _team_key(r.away_team)), []).append((r.match_date, r))
+    return out
+
+
+def find_match_result(results, home, away, mdate):
+    """Tafuta matokeo ya mechi (tofauti ya siku +/-1 inakubaliwa)."""
+    d = _as_date(mdate)
+    if d is None:
+        return None
+    best, best_diff = None, None
+    for rd, r in results.get((_team_key(home), _team_key(away)), []):
+        diff = abs((rd - d).days)
+        if diff <= 1 and (best_diff is None or diff < best_diff):
+            best, best_diff = r, diff
+    return best
+
+
+def _actual_text(m, mr):
+    if '_and_' in m:
+        base, _, second = m.partition('_and_')
+        parts = []
+        for p in (_actual_text(base, mr), _actual_text(second, mr)):
+            if p and p not in parts:
+                parts.append(p)
+        if any(p.startswith('Goals') for p in parts):
+            parts = [p for p in parts if not p.startswith('FT ')]
+        return ' · '.join(parts) or None
+
+    # Kadi (yellow + red kwa pamoja, kama market_evaluator)
+    if m == 'both_teams_carded' or m.startswith(('yellows', 'cards', 'reds', 'booking')):
+        if None in (mr.hy, mr.ay, mr.hr, mr.ar):
+            return None
+        home_c, away_c = mr.hy + mr.hr, mr.ay + mr.ar
+        if m == 'both_teams_carded':
+            return f'Cards {home_c}-{away_c}'
+        return f'Cards {home_c + away_c} ({home_c}-{away_c})'
+
+    if m.startswith('corners'):
+        if mr.hc is None or mr.ac is None:
+            return None
+        return f'Corners {mr.hc + mr.ac} ({mr.hc}-{mr.ac})'
+
+    if m.startswith('sot'):
+        if mr.hst is None or mr.ast is None:
+            return None
+        return f'SOT {mr.hst + mr.ast} ({mr.hst}-{mr.ast})'
+
+    fh, fa = mr.fthg, mr.ftag
+    if fh is None or fa is None:
+        return None
+
+    if any(t in m for t in ('_1h', '_2h', 'half')):
+        if mr.hthg is not None and mr.htag is not None:
+            return f'HT {mr.hthg}-{mr.htag} · FT {fh}-{fa}'
+        return f'FT {fh}-{fa}'
+
+    if m.startswith('home_goals'):
+        return f'Home goals {fh}'
+    if m.startswith('away_goals'):
+        return f'Away goals {fa}'
+    if m.startswith(('btts', 'both_teams_score')):
+        return f'FT {fh}-{fa}'
+    if 'goals' in m or m.startswith(('over', 'under')):
+        return f'Goals {fh + fa} ({fh}-{fa})'
+
+    return f'FT {fh}-{fa}'
+
+
+def actual_text(market, mr):
+    """Matokeo halisi yanayohusu soko hili kwa maandishi mafupi, mf:
+    'Corners 11 (6-5)', 'Goals 3 (2-1)', 'FT 2-1', 'Cards 4 (2-2)'.
+    None kama mechi haina matokeo bado au takwimu hazipo."""
+    if mr is None:
+        return None
+    try:
+        return _actual_text(str(market), mr)
+    except Exception:
+        return None
+
+
+def calc_hist_delta(current, first):
+    """Mshale kwa History: probability ya siku hiyo - ya mara ya kwanza."""
+    if current is None or first is None:
+        return None
+    try:
+        return round(float(current) - float(first), 1)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_day(value):
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (TypeError, ValueError):
+        return None
 
 
 # ================================================================
@@ -870,6 +1011,25 @@ def run_health_checks():
             return 'ok', f"Refresh ya mwisho ({when} EAT) imefanikiwa. {s['message']} [{s['steps']}]"
         return 'error', f"Refresh ya mwisho ({when} EAT) imeshindwa: {s['message']} [{s['steps']}]"
 
+    def c_job_a():
+        raw = get_flag('job_a_last_run', '')
+        if not raw:
+            return 'warn', ('Job A (hourly catchup) bado haijaripoti kuwa imeendeshwa - '
+                            'angalia GitHub Actions.')
+        parts = raw.split('|')
+        try:
+            last = datetime.fromisoformat(parts[0])
+        except ValueError:
+            return 'warn', 'Rekodi ya Job A haisomeki.'
+        age_h = (datetime.utcnow() - last).total_seconds() / 3600
+        extra = ' | '.join(parts[1:])
+        if age_h > 6:
+            return 'error', (f'Job A haijaendeshwa kwa masaa {age_h:.0f} - matokeo hayasettlewi. '
+                             f'Angalia GitHub Actions (Hourly Catchup).')
+        if age_h > 3:
+            return 'warn', f'Job A ya mwisho ilikuwa masaa {age_h:.1f} yaliyopita ({extra}).'
+        return 'ok', f'Job A iliendeshwa masaa {age_h:.1f} yaliyopita ({extra}).'
+
     def c_files():
         names = ('predictions.csv', 'value_bets.csv', 'combos.csv')
         paths = {n: os.path.join(DATA_DIR, n) for n in names}
@@ -925,18 +1085,22 @@ def run_health_checks():
                         'hazitoshi kwa mipangilio ya sasa).')
 
     def c_pending():
-        cutoff = now - timedelta(days=3)
-        stuck = PredictionRecord.query.filter(
+        cutoff = now - timedelta(hours=12)
+        stuck_matches = db.session.query(
+            PredictionRecord.home_team, PredictionRecord.away_team, PredictionRecord.match_date
+        ).filter(
             PredictionRecord.result == 'PENDING',
-            PredictionRecord.match_date < cutoff).count()
+            PredictionRecord.match_date < cutoff
+        ).distinct().count()
         stuck_combos = ComboRecord.query.filter(
             ComboRecord.result == 'PENDING',
             ComboRecord.shown_date < today - timedelta(days=3)).count()
-        if not stuck and not stuck_combos:
-            return 'ok', 'Hakuna rekodi za zamani zilizokwama kwenye PENDING.'
-        status = 'error' if (stuck > 100 or stuck_combos > 20) else 'warn'
-        return status, (f'Predictions {stuck} na combos {stuck_combos} za zaidi ya siku 3 bado '
-                        f'PENDING - angalia Job A (settlement).')
+        if not stuck_matches and not stuck_combos:
+            return 'ok', 'Hakuna mechi za zamani (zaidi ya masaa 12) zilizokwama kwenye PENDING.'
+        status = 'error' if (stuck_matches > 3 or stuck_combos > 20) else 'warn'
+        return status, (f'Mechi {stuck_matches} (zaidi ya masaa 12) na combos {stuck_combos} '
+                        f'(zaidi ya siku 3) bado PENDING - angalia log ya Job A (Hourly Catchup). '
+                        f'Mechi zilizoahirishwa pia huonekana hapa.')
 
     def c_settings():
         s = Settings.get()
@@ -985,6 +1149,7 @@ def run_health_checks():
     check('Usasishaji wa data', c_snapshot)
     check('Picha ya History ya leo', c_daily_snapshot)
     check('Refresh ya mwisho', c_refresh_job)
+    check('Job A (hourly catchup)', c_job_a)
     check('Faili za data', c_files)
     check('Mechi za leo na zijazo', c_matches)
     check('Ubora wa data', c_quality)
@@ -1267,8 +1432,21 @@ TIER_TO_SECTION = {'predictions': 'prediction', 'value_bets': 'value_bet'}
 @app.route('/history')
 def history():
     tier = request.args.get('tier', 'predictions')
-    selected_date = request.args.get('date')
+    if tier not in TIER_TO_SECTION and tier != 'combos':
+        tier = 'predictions'
     settings = Settings.get()
+    today_str = today_eat().strftime('%Y-%m-%d')
+
+    section = 'prediction' if tier == 'combos' else TIER_TO_SECTION[tier]
+    available_dates = _history_dates(section)
+
+    # Tarehe: ikikosekana (au si sahihi) fungua LEO; kama leo haina data, siku ya mwisho yenye data.
+    selected_date = request.args.get('date')
+    if _parse_day(selected_date) is None:
+        if today_str in available_dates:
+            selected_date = today_str
+        else:
+            selected_date = available_dates[0] if available_dates else None
 
     matches = []
     value_bets_list = []
@@ -1276,27 +1454,28 @@ def history():
     summary = None
     combo_note = None
 
-    if tier == 'combos':
-        available_dates = sorted(
-            {d[0].strftime('%Y-%m-%d') for d in
-             db.session.query(PredictionRecord.shown_date)
-             .filter(PredictionRecord.section == 'prediction').distinct().all()},
-            reverse=True
-        )
+    if selected_date:
+        day = _parse_day(selected_date)
 
-        if selected_date:
-            day = datetime.strptime(selected_date, '%Y-%m-%d').date()
+        # ---------------- COMBOS ----------------
+        if tier == 'combos':
+            results = load_match_results(day, span=5)
             formula = settings.combo_leg_formula
+
+            def leg_dict(home, away, mdate, market, prob, odds, result):
+                mr = find_match_result(results, home, away, mdate)
+                return {'home': home, 'away': away, 'market': market,
+                        'probability': prob, 'odds': odds, 'has_odds': odds is not None,
+                        'result': result, 'actual': actual_text(market, mr)}
 
             if formula == 'random_threshold':
                 records = ComboRecord.query.filter_by(shown_date=day).all()
                 for rec in records:
                     combos_list.append({
                         'combined_probability': rec.combined_probability, 'result': rec.result,
-                        'legs': [{'home': l.home_team, 'away': l.away_team, 'market': l.market,
-                                 'probability': l.probability, 'odds': l.real_odds,
-                                 'has_odds': l.real_odds is not None, 'result': l.result}
-                                for l in rec.legs],
+                        'legs': [leg_dict(l.home_team, l.away_team, l.match_date, l.market,
+                                          l.probability, l.real_odds, l.result)
+                                 for l in rec.legs],
                     })
                 if not combos_list:
                     combo_note = ("Hakuna combos zilizohifadhiwa kwa tarehe hii. 'random_threshold' "
@@ -1309,10 +1488,9 @@ def history():
                 for c in simulated:
                     combos_list.append({
                         'combined_probability': c['combined_probability'], 'result': c['result'],
-                        'legs': [{'home': l['home'], 'away': l['away'], 'market': l['market'],
-                                 'probability': l['probability'], 'odds': l['real_odds'],
-                                 'has_odds': l['real_odds'] is not None, 'result': l.get('result')}
-                                for l in c['legs']],
+                        'legs': [leg_dict(l['home'], l['away'], l['match_date'], l['market'],
+                                          l['probability'], l['real_odds'], l.get('result'))
+                                 for l in c['legs']],
                     })
                 combo_note = explain_combos(stats, settings, formula)
 
@@ -1323,65 +1501,80 @@ def history():
             summary = {'won': won, 'lost': lost, 'void': void, 'pending': pending,
                        'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
 
-        return render_template('history.html', tier=tier, available_dates=available_dates,
-                               selected_date=selected_date, matches=matches,
-                               value_bets_list=value_bets_list, combos_list=combos_list,
-                               summary=summary, combos_message=None, combo_note=combo_note,
-                               combo_formula=settings.combo_leg_formula, page='history')
+        # ---------------- PREDICTIONS / VALUE BETS ----------------
+        else:
+            records = _history_rows(section, day)
+            results = load_match_results(day)
 
-    section = TIER_TO_SECTION.get(tier, 'prediction')
-    available_dates = _history_dates(section)
+            if tier == 'predictions':
+                def to_pick(r, mr):
+                    return {
+                        'market': r.market, 'probability': r.probability, 'odds': r.real_odds,
+                        'result': r.result,
+                        'delta': calc_hist_delta(r.probability, getattr(r, 'first_probability', None)),
+                        'actual': actual_text(r.market, mr),
+                    }
 
-    if selected_date:
-        day = datetime.strptime(selected_date, '%Y-%m-%d').date()
-        records = _history_rows(section, day)
+                groups = {}
+                for rec in records:
+                    key = (rec.home_team, rec.away_team, rec.match_date)
+                    groups.setdefault(key, []).append(rec)
 
-        if tier == 'predictions':
-            groups = {}
-            for rec in records:
-                key = (rec.home_team, rec.away_team, rec.match_date)
-                groups.setdefault(key, []).append(rec)
+                built = []
+                for (home, away, mdate), recs in groups.items():
+                    entries = [(r.market, r.probability, r.real_odds, r.pro_tier, r) for r in recs]
+                    survivors = pick_markets(entries, settings)
+                    if not survivors:
+                        continue
+                    mr = find_match_result(results, home, away, mdate)
+                    best = survivors[0]
+                    others = survivors[1:1 + settings.history_max_markets]
+                    other_list = [to_pick(r, mr) for r in others]
+                    mdt = mdate if isinstance(mdate, datetime) else _to_dt(mdate)
+                    score = None
+                    if mr is not None and mr.fthg is not None and mr.ftag is not None:
+                        score = f'{mr.fthg}-{mr.ftag}'
+                    built.append((mdt, {
+                        'home': home, 'away': away,
+                        'date': mdt.strftime('%d %b %Y'),
+                        'time_eat': mdt.strftime('%H:%M') if (mdt.hour or mdt.minute) else None,
+                        'score': score,
+                        'best_pick': to_pick(best, mr),
+                        'other_picks': other_list,
+                        'other_groups': group_picks(other_list),
+                    }))
+                built.sort(key=lambda x: x[0])
+                matches = [b[1] for b in built]
 
-            for (home, away, mdate), recs in groups.items():
-                entries = [(r.market, r.probability, r.real_odds, r.pro_tier, r) for r in recs]
-                survivors = pick_markets(entries, settings)
-                if not survivors:
-                    continue
-                best = survivors[0]
-                others = survivors[1:1 + settings.history_max_markets]
-                matches.append({
-                    'home': home, 'away': away,
-                    'date': mdate.strftime('%d %b %Y'), 'date_iso': mdate.strftime('%Y-%m-%d'),
-                    'best_pick': {'market': best.market, 'probability': best.probability,
-                                  'odds': best.real_odds, 'result': best.result},
-                    'other_picks': [{'market': r.market, 'probability': r.probability,
-                                      'odds': r.real_odds, 'result': r.result} for r in others],
-                })
-            matches.sort(key=lambda m: m['date_iso'])
+                won = sum(1 for m in matches if m['best_pick']['result'] == 'WON')
+                lost = sum(1 for m in matches if m['best_pick']['result'] == 'LOST')
+                void = sum(1 for m in matches if m['best_pick']['result'] == 'VOID')
+                summary = {'won': won, 'lost': lost, 'void': void,
+                           'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
 
-            won = sum(1 for m in matches if m['best_pick']['result'] == 'WON')
-            lost = sum(1 for m in matches if m['best_pick']['result'] == 'LOST')
-            void = sum(1 for m in matches if m['best_pick']['result'] == 'VOID')
-            summary = {'won': won, 'lost': lost, 'void': void,
-                       'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
-
-        elif tier == 'value_bets':
-            for r in sorted(records, key=lambda r: -(r.probability or 0)):
-                value_bets_list.append({
-                    'home': r.home_team, 'away': r.away_team,
-                    'date': r.match_date.strftime('%d %b %Y'),
-                    'market': r.market, 'probability': r.probability,
-                    'odds': r.real_odds, 'ev': calc_ev(r.probability, r.real_odds),
-                    'edge': calc_edge(r.probability, r.real_odds), 'result': r.result,
-                })
-            won = sum(1 for r in value_bets_list if r['result'] == 'WON')
-            lost = sum(1 for r in value_bets_list if r['result'] == 'LOST')
-            void = sum(1 for r in value_bets_list if r['result'] == 'VOID')
-            summary = {'won': won, 'lost': lost, 'void': void,
-                       'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
+            elif tier == 'value_bets':
+                for r in sorted(records, key=lambda r: -(r.probability or 0)):
+                    mr = find_match_result(results, r.home_team, r.away_team, r.match_date)
+                    score = None
+                    if mr is not None and mr.fthg is not None and mr.ftag is not None:
+                        score = f'{mr.fthg}-{mr.ftag}'
+                    value_bets_list.append({
+                        'home': r.home_team, 'away': r.away_team,
+                        'date': r.match_date.strftime('%d %b %Y'),
+                        'market': r.market, 'probability': r.probability,
+                        'odds': r.real_odds, 'ev': calc_ev(r.probability, r.real_odds),
+                        'edge': calc_edge(r.probability, r.real_odds), 'result': r.result,
+                        'delta': calc_hist_delta(r.probability, getattr(r, 'first_probability', None)),
+                        'actual': actual_text(r.market, mr), 'score': score,
+                    })
+                won = sum(1 for r in value_bets_list if r['result'] == 'WON')
+                lost = sum(1 for r in value_bets_list if r['result'] == 'LOST')
+                void = sum(1 for r in value_bets_list if r['result'] == 'VOID')
+                summary = {'won': won, 'lost': lost, 'void': void,
+                           'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
 
     return render_template('history.html', tier=tier, available_dates=available_dates,
-                           selected_date=selected_date, matches=matches,
+                           selected_date=selected_date, today_iso=today_str, matches=matches,
                            value_bets_list=value_bets_list, combos_list=combos_list,
                            summary=summary, combos_message=None, combo_note=combo_note,
                            combo_formula=settings.combo_leg_formula, page='history')
