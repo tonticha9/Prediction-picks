@@ -6,12 +6,14 @@ kutoka AllSportsAPI, inaziongeza kwenye 'historical-complete-no-gap'
 dataset (Kaggle), na inapakia toleo JIPYA la dataset hiyo - ili Job B
 (usiku) ipate historia iliyosasika kila wakati, bila pengo kuunda tena.
 
-Inatathmini moja kwa moja PredictionRecord/ComboLeg za PENDING za mechi
-zilizoisha (kwa market_evaluator.py) - History inasasika kiotomatiki.
+UTATHMINI (MPYA - v2): PredictionRecord / ComboLeg / ComboRecord zote za
+PENDING zinatathminiwa KILA MZUNGUKO dhidi ya dataset NZIMA (si mechi mpya
+tu). Kwa hiyo hata kama mzunguko uliopita ulishindwa, mzunguko unaofuata
+unazirekebisha. Utathmini ukishindwa kuanza (DATABASE_URL haipo, import
+imeshindwa), job inakuwa NYEKUNDU (si kijani kimya kimya).
 
-MPYA: API_KEY sasa inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
-ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU (usalama, ikiwa
-Render iko chini au REFRESH_SECRET haipo).
+API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
+ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
 import os
 import sys
@@ -193,11 +195,15 @@ def fetch_recent_results(from_date, to_date):
     return df
 
 
-def run_kaggle_cmd(args):
+def run_kaggle_cmd(args, fatal=True):
+    """fatal=True: ikishindwa, job inasimama. fatal=False: inarudisha None
+    na job inaendelea (ili utathmini ufanyike hata kama upload imeshindwa)."""
     result = subprocess.run(['kaggle'] + args, capture_output=True, text=True)
     if result.returncode != 0:
         print(f"❌ Amri ya kaggle imeshindwa: {result.stderr}")
-        sys.exit(1)
+        if fatal:
+            sys.exit(1)
+        return None
     return result.stdout
 
 
@@ -246,97 +252,167 @@ def run_stuck_check(from_date, to_date):
         print("✅ Hakuna mechi zilizokwama - kila kitu kiko sawa.")
 
 
-def evaluate_pending_predictions(df_finished):
-    if len(df_finished) == 0:
-        return
+# ============================================================
+# UTATHMINI (SETTLEMENT) - v2
+# ============================================================
+
+def norm_team(name):
+    """Jina la timu lililosafishwa: trim + mapping ya API -> dataset + herufi ndogo.
+    Inatumika pande zote mbili (rekodi za DB na dataset) ili zilingane."""
+    n = str(name or '').strip()
+    n = TEAM_NAME_MAPPING.get(n, n)
+    return n.lower()
+
+
+def to_date(v):
+    """Badilisha datetime/date/string kuwa date. None ikishindikana."""
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    try:
+        return pd.Timestamp(v).date()
+    except Exception:
+        return None
+
+
+def build_results_index(df):
+    """(home, away) -> orodha ya (tarehe, row_dict) kutoka dataset nzima."""
+    index = {}
+    if df is None or len(df) == 0:
+        return index
+    for row in df.to_dict('records'):
+        d = to_date(row.get('Date'))
+        if d is None:
+            continue
+        key = (norm_team(row.get('HomeTeam')), norm_team(row.get('AwayTeam')))
+        index.setdefault(key, []).append((d, row))
+    return index
+
+
+def find_result(index, home, away, match_date):
+    """Tafuta matokeo ya mechi. Inakubali tofauti ya siku +/-1 (tofauti za
+    saa/timezone kati ya app na API)."""
+    if match_date is None:
+        return None
+    best, best_diff = None, None
+    for d, row in index.get((norm_team(home), norm_team(away)), []):
+        diff = abs((d - match_date).days)
+        if diff <= 1 and (best_diff is None or diff < best_diff):
+            best, best_diff = row, diff
+    return best
+
+
+def settle_pending(df_results):
+    """Tathmini PredictionRecord, ComboLeg na ComboRecord zote za PENDING
+    dhidi ya dataset nzima. Inarudisha True ikiwa kila kitu kiko sawa
+    (hata kama hakuna cha kutathmini), False ikiwa utathmini umeshindwa
+    kuanza au kuhifadhi."""
     if not os.environ.get('DATABASE_URL'):
-        print("\nℹ️ DATABASE_URL haipo - naruka utathmini wa PredictionRecord mzunguko huu.")
-        return
+        print("::error::DATABASE_URL haipo kwenye workflow - utathmini hauwezi kufanya kazi.")
+        return False
     try:
         from market_evaluator import evaluate_market, result_label
         from app import app
-        from models import db, PredictionRecord
+        from models import db, PredictionRecord, ComboLeg, ComboRecord
     except Exception as e:
-        print(f"\n⚠️ Imeshindwa kuunganisha na app/models/evaluator ({e}) - naruka utathmini.")
-        return
+        print(f"::error::Imeshindwa kuunganisha na app/models/market_evaluator: {e}")
+        return False
 
-    print(f"\n🧮 Kutathmini PredictionRecord za PENDING kwa mechi {len(df_finished)} zilizoisha...")
-    evaluated = 0
-    with app.app_context():
-        for _, r in df_finished.iterrows():
-            match_day = r['Date'].date()
-            records = PredictionRecord.query.filter_by(
-                home_team=r['HomeTeam'], away_team=r['AwayTeam'], result='PENDING'
-            ).filter(db.func.date(PredictionRecord.match_date) == match_day).all()
+    index = build_results_index(df_results)
+    today = date.today()
+    print(f"\n🧮 Kutathmini PENDING zote dhidi ya dataset ({len(df_results):,} mechi)...")
 
-            if not records:
-                continue
+    def settle_one(market, home, away, match_date):
+        """Rudisha (label, sababu). label None = bado haijaweza kutathminiwa."""
+        md = to_date(match_date)
+        row = find_result(index, home, away, md)
+        if row is None:
+            return None, 'no_match'
+        try:
+            val = evaluate_market(market, row)
+            label = result_label(val)
+        except Exception as e:
+            print(f"   ⚠️ evaluate_market imeshindwa kwa market '{market}' ({home} v {away}): {e}")
+            return None, 'error'
+        if label == 'PENDING' or label is None:
+            return None, 'unknown_market'
+        return label, 'ok'
 
-            result_row = r.to_dict()
-            for rec in records:
-                evaluated_val = evaluate_market(rec.market, result_row)
-                rec.result = result_label(evaluated_val)
-                rec.settled_at = datetime.utcnow()
-                evaluated += 1
+    stats = {'pred_total': 0, 'pred_settled': 0, 'leg_total': 0, 'leg_settled': 0,
+             'combos_settled': 0}
+    unmatched = []          # mechi zilizopita muda lakini hazina matokeo kwenye dataset
+    unknown_markets = set()  # markets ambazo evaluator haizielewi
 
-        if evaluated:
-            db.session.commit()
-
-    print(f"   ✅ PredictionRecord {evaluated} zimesasishwa na matokeo (WON/LOST/VOID).")
-
-
-def evaluate_pending_combo_legs(df_finished):
-    if len(df_finished) == 0:
-        return
-    if not os.environ.get('DATABASE_URL'):
-        return
     try:
-        from market_evaluator import evaluate_market, result_label
-        from app import app
-        from models import db, ComboLeg, ComboRecord
-    except Exception as e:
-        print(f"\n⚠️ Imeshindwa kuunganisha na app/models/evaluator kwa combos ({e}) - naruka.")
-        return
+        with app.app_context():
+            # --- PredictionRecord ---
+            preds = PredictionRecord.query.filter_by(result='PENDING').all()
+            stats['pred_total'] = len(preds)
+            for rec in preds:
+                label, why = settle_one(rec.market, rec.home_team, rec.away_team, rec.match_date)
+                if label:
+                    rec.result = label
+                    rec.settled_at = datetime.utcnow()
+                    stats['pred_settled'] += 1
+                elif why == 'unknown_market':
+                    unknown_markets.add(str(rec.market))
+                elif why == 'no_match':
+                    md = to_date(rec.match_date)
+                    if md is not None and md < today:
+                        unmatched.append((rec.home_team, rec.away_team, str(md), rec.market))
 
-    print(f"\n🧮 Kutathmini ComboLeg za PENDING kwa mechi {len(df_finished)} zilizoisha...")
-    legs_evaluated, combos_settled = 0, 0
-    with app.app_context():
-        touched_combo_ids = set()
-        for _, r in df_finished.iterrows():
-            match_day = r['Date'].date()
-            legs = ComboLeg.query.filter_by(
-                home_team=r['HomeTeam'], away_team=r['AwayTeam'], result='PENDING'
-            ).filter(db.func.date(ComboLeg.match_date) == match_day).all()
-
-            if not legs:
-                continue
-            result_row = r.to_dict()
+            # --- ComboLeg ---
+            legs = ComboLeg.query.filter_by(result='PENDING').all()
+            stats['leg_total'] = len(legs)
             for leg in legs:
-                evaluated_val = evaluate_market(leg.market, result_row)
-                leg.result = result_label(evaluated_val)
-                legs_evaluated += 1
-                touched_combo_ids.add(leg.combo_id)
+                label, why = settle_one(leg.market, leg.home_team, leg.away_team, leg.match_date)
+                if label:
+                    leg.result = label
+                    stats['leg_settled'] += 1
+                elif why == 'unknown_market':
+                    unknown_markets.add(str(leg.market))
+                elif why == 'no_match':
+                    md = to_date(leg.match_date)
+                    if md is not None and md < today:
+                        unmatched.append((leg.home_team, leg.away_team, str(md), leg.market))
 
-        for combo_id in touched_combo_ids:
-            combo = ComboRecord.query.get(combo_id)
-            if not combo or combo.result != 'PENDING':
-                continue
-            leg_results = [leg.result for leg in combo.legs]
-            if any(r == 'PENDING' for r in leg_results):
-                continue
-            if any(r == 'LOST' for r in leg_results):
-                combo.result = 'LOST'
-            elif any(r == 'VOID' for r in leg_results):
-                combo.result = 'VOID'
-            else:
-                combo.result = 'WON'
-            combo.settled_at = datetime.utcnow()
-            combos_settled += 1
+            # --- ComboRecord (zote za PENDING, hata za zamani) ---
+            for combo in ComboRecord.query.filter_by(result='PENDING').all():
+                leg_results = [lg.result for lg in combo.legs]
+                if not leg_results or any(x == 'PENDING' for x in leg_results):
+                    continue
+                if any(x == 'LOST' for x in leg_results):
+                    combo.result = 'LOST'
+                elif any(x == 'VOID' for x in leg_results):
+                    combo.result = 'VOID'
+                else:
+                    combo.result = 'WON'
+                combo.settled_at = datetime.utcnow()
+                stats['combos_settled'] += 1
 
-        if legs_evaluated:
-            db.session.commit()
+            if stats['pred_settled'] or stats['leg_settled'] or stats['combos_settled']:
+                db.session.commit()
+    except Exception as e:
+        print(f"::error::Utathmini umeshindwa wakati wa kuhifadhi: {e}")
+        return False
 
-    print(f"   ✅ ComboLeg {legs_evaluated} zimesasishwa, Combos {combos_settled} zimekamilika (WON/LOST/VOID).")
+    print(f"   Predictions: {stats['pred_settled']}/{stats['pred_total']} zimesettlewa")
+    print(f"   Combo legs : {stats['leg_settled']}/{stats['leg_total']} zimesettlewa")
+    print(f"   Combos     : {stats['combos_settled']} zimekamilika")
+
+    if unmatched:
+        print(f"\n⚠️ {len(unmatched)} PENDING zimepita muda lakini HAZIKUPATIKANA kwenye dataset "
+              f"(angalia majina ya timu/tarehe):")
+        for home, away, md, market in unmatched[:30]:
+            print(f"   • {home} vs {away} ({md}) [{market}]")
+        print(f"::warning::{len(unmatched)} PENDING hazikupatikana kwenye dataset - majina ya timu yanaweza kutofautiana")
+    if unknown_markets:
+        print(f"\n⚠️ Markets ambazo market_evaluator haizielewi: {sorted(unknown_markets)}")
+        print(f"::warning::Markets zisizoeleweka na evaluator: {sorted(unknown_markets)}")
+    return True
 
 
 def main():
@@ -351,48 +427,56 @@ def main():
         sys.exit(1)
     csv_path = os.path.join('kaggle_dataset', csv_files[0])
     df_existing = pd.read_csv(csv_path)
-    df_existing['Date'] = pd.to_datetime(df_existing['Date'])
+    df_existing['Date'] = pd.to_datetime(df_existing['Date'], format='mixed')
     print(f"   Historia ya sasa: {len(df_existing):,} mechi")
 
-    to_date = date.today().isoformat()
-    from_date = (date.today() - timedelta(days=2)).isoformat()
-    print(f"🔍 Kutafuta mechi zilizokwisha: {from_date} hadi {to_date}")
-    df_new = fetch_recent_results(from_date, to_date)
+    to_date_str = date.today().isoformat()
+    from_date_str = (date.today() - timedelta(days=2)).isoformat()
+    print(f"🔍 Kutafuta mechi zilizokwisha: {from_date_str} hadi {to_date_str}")
+    df_new = fetch_recent_results(from_date_str, to_date_str)
     print(f"   Jumla ya mechi mpya zilizopatikana: {len(df_new)}")
 
+    df_results = df_existing   # dataset itakayotumika kutathmini
+    upload_ok = True
+
     if len(df_new) == 0:
-        print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu. Hakuna kilichobadilika.")
-        run_stuck_check(from_date, to_date)
-        return
+        print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu.")
+    else:
+        key_cols = ['Date', 'HomeTeam', 'AwayTeam']
+        df_existing_keys = set(df_existing[key_cols].apply(tuple, axis=1))
+        df_new_unique = df_new[~df_new[key_cols].apply(tuple, axis=1).isin(df_existing_keys)]
+        print(f"   Mechi HALISI mpya (baada ya dedupe): {len(df_new_unique)}")
 
-    key_cols = ['Date', 'HomeTeam', 'AwayTeam']
-    df_existing_keys = set(df_existing[key_cols].apply(tuple, axis=1))
-    df_new_unique = df_new[~df_new[key_cols].apply(tuple, axis=1).isin(df_existing_keys)]
-    print(f"   Mechi HALISI mpya (baada ya dedupe): {len(df_new_unique)}")
+        if len(df_new_unique) == 0:
+            print("ℹ️ Mechi zote zilizopatikana tayari zipo kwenye historia.")
+        else:
+            df_combined = pd.concat([df_existing, df_new_unique], ignore_index=True)
+            df_combined = df_combined.sort_values('Date').reset_index(drop=True)
+            df_combined.to_csv(csv_path, index=False)
+            print(f"✅ Historia mpya: {len(df_combined):,} mechi (+{len(df_new_unique)})")
+            df_results = df_combined
 
-    if len(df_new_unique) == 0:
-        print("ℹ️ Mechi zote zilizopatikana tayari zipo kwenye historia. Hakuna kilichobadilika.")
-        run_stuck_check(from_date, to_date)
-        return
+            metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
+                        "licenses": [{"name": "CC0-1.0"}]}
+            with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
+                json.dump(metadata, f)
 
-    df_combined = pd.concat([df_existing, df_new_unique], ignore_index=True)
-    df_combined = df_combined.sort_values('Date').reset_index(drop=True)
-    df_combined.to_csv(csv_path, index=False)
-    print(f"✅ Historia mpya: {len(df_combined):,} mechi (+{len(df_new_unique)})")
+            print("📤 Kupakia toleo jipya la dataset...")
+            out = run_kaggle_cmd(['datasets', 'version', '-p', 'kaggle_dataset',
+                                   '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"],
+                                  fatal=False)
+            if out is None:
+                upload_ok = False
+                print("::error::Upload ya dataset imeshindwa - utathmini utaendelea na data ya mzunguko huu.")
+            else:
+                print("🎉 Dataset imesasishwa kikamilifu!")
 
-    metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
-                "licenses": [{"name": "CC0-1.0"}]}
-    with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
-        json.dump(metadata, f)
+    # Utathmini UNAFANYIKA KILA MZUNGUKO, bila kujali kama kuna mechi mpya.
+    settle_ok = settle_pending(df_results)
+    run_stuck_check(from_date_str, to_date_str)
 
-    print("📤 Kupakia toleo jipya la dataset...")
-    run_kaggle_cmd(['datasets', 'version', '-p', 'kaggle_dataset',
-                     '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"])
-    print("🎉 Dataset imesasishwa kikamilifu!")
-
-    evaluate_pending_predictions(df_new_unique)
-    evaluate_pending_combo_legs(df_new_unique)
-    run_stuck_check(from_date, to_date)
+    if not upload_ok or not settle_ok:
+        sys.exit(1)
 
 
 if __name__ == '__main__':
