@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .am-chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center; }
+  .am-chip { padding:6px 12px; border-radius:999px; border:1px solid var(--border, #333); color:var(--text-dim); text-decoration:none; font-size:13px; font-weight:600; }
+  .am-chip.active { background:var(--indigo); color:#fff; border-color:var(--indigo); }
+  .am-label { font-size:12px; color:var(--text-dim); margin-right:2px; }
+  .am-line { font-size:13px; margin-top:6px; }
+  .am-dim { color:var(--text-dim); }
+  .am-good { color:var(--emerald); font-weight:700; }
+  .am-bad { color:var(--red); font-weight:700; }
+  .am-b { display:inline-block; font-size:12px; padding:3px 8px; border:1px solid var(--border, #333); border-radius:8px; margin:4px 4px 0 0; }
+  .am-sec > summary { cursor:pointer; font-weight:700; font-size:15px; padding:10px 0; }
+  .am-help { font-size:13px; color:var(--text-dim); margin-bottom:14px; padding:10px 12px; border:1px solid var(--border, #333); border-radius:10px; }
+</style>
+
+<a href="{{ url_for('admin') }}" style="font-size:13px; color:var(--text-dim); text-decoration:none;">← Admin</a>
+<h2 style="margin:8px 0 14px;">📈 Market Analysis</h2>
+
+<div class="am-chips">
+  <span class="am-label">Aina:</span>
+  <a class="am-chip {{ 'active' if section=='prediction' else '' }}" href="{{ url_for('admin_markets', section='prediction', days=days, min_prob=min_prob) }}">Predictions</a>
+  <a class="am-chip {{ 'active' if section=='value_bet' else '' }}" href="{{ url_for('admin_markets', section='value_bet', days=days, min_prob=min_prob) }}">Value Bets</a>
+</div>
+<div class="am-chips">
+  <span class="am-label">Siku:</span>
+  {% for d, lbl in [(14,'14'),(30,'30'),(60,'60'),(90,'90'),(0,'Zote')] %}
+    <a class="am-chip {{ 'active' if days==d else '' }}" href="{{ url_for('admin_markets', section=section, days=d, min_prob=min_prob) }}">{{ lbl }}</a>
+  {% endfor %}
+</div>
+<div class="am-chips">
+  <span class="am-label">Probability ya chini:</span>
+  {% for pv in prob_options %}
+    <a class="am-chip {{ 'active' if pv == min_prob else '' }}" href="{{ url_for('admin_markets', section=section, days=days, min_prob=pv) }}">{{ '%g'|format(pv) }}%{% if pv == base_prob %} (threshold){% endif %}</a>
+  {% endfor %}
+</div>
+
+<details class="am-help">
+  <summary style="cursor:pointer; font-weight:600;">Jinsi ya kusoma ukurasa huu</summary>
+  <div style="margin-top:8px;">
+    Zinahesabiwa predictions zilizosettlewa tu (WON/LOST). <b>Pengo</b> = win rate halisi ukitoa probability ambayo model ilisema; hasi kubwa ina maana model inajiamini kupita kiasi.
+    <b>Uhakika 95%</b> ni mpaka wa chini-juu wa win rate halisi (sampuli ndogo = mpaka mpana).
+    <b>ROI</b> ni faida kwa stake ya 1 kwa markets zenye odds. 🟢 imara = calibration nzuri + sampuli 30+ + hakuna dalili za kushuka.
+  </div>
+</details>
+
+{% if not data.ok %}
+  <div class="empty-state">Hakuna predictions zilizosettlewa kwa vigezo hivi. Punguza probability ya chini, ongeza siku, au subiri Job A isettle mechi zaidi.</div>
+{% else %}
+
+  <div class="match-card" style="margin-bottom:14px;">
+    <div style="font-size:14px; font-weight:700;">Jumla: {{ data.overall.n }} predictions</div>
+    <div class="am-line">Win rate <b>{{ data.overall.win_rate }}%</b> · Model ilisema {{ data.overall.avg_prob }}% ·
+      pengo <span class="{{ 'am-bad' if data.overall.gap <= -5 else ('am-good' if data.overall.gap >= -2 else '') }}">{{ '%+.1f'|format(data.overall.gap) }} pts</span></div>
+    <div class="am-line">🟢 {{ data.counts.strong }} imara · 🟡 {{ data.counts.watch }} angalia · 🔴 {{ data.counts.weak }} dhaifu · ⚪ {{ data.counts.nodata }} data haitoshi</div>
+  </div>
+
+  <h3 style="margin:18px 0 8px;">Je, probability ikiwa juu hushinda zaidi?</h3>
+  {% for b in data.buckets %}
+  <div class="table-row">
+    <div style="font-size:13px;"><b>{{ b.label }}%</b> <span class="am-dim">· {{ b.n }} predictions</span>
+      <div class="am-dim" style="font-size:12px;">Model ilisema {{ b.avg_prob }}%</div></div>
+    <div style="text-align:right; font-size:13px;"><b>{{ b.win_rate }}%</b>
+      <div class="{{ 'am-bad' if b.gap <= -5 else ('am-good' if b.gap >= -2 else 'am-dim') }}" style="font-size:12px;">{{ '%+.1f'|format(b.gap) }} pts</div></div>
+  </div>
+  {% endfor %}
+
+  <h3 style="margin:18px 0 8px;">Makundi ya markets</h3>
+  {% for g in data.groups %}
+  <div class="table-row">
+    <div style="font-size:13px;"><b>{{ g.icon }} {{ g.label }}</b>
+      <div class="am-dim" style="font-size:12px;">{{ g.n }} predictions · markets {{ g.markets }} · 🟢 {{ g.strong }} · 🔴 {{ g.weak }}</div></div>
+    <div style="text-align:right; font-size:13px;"><b>{{ g.win_rate }}%</b>
+      <div class="{{ 'am-bad' if g.gap <= -5 else ('am-good' if g.gap >= -2 else 'am-dim') }}" style="font-size:12px;">{{ '%+.1f'|format(g.gap) }} pts</div></div>
+  </div>
+  {% endfor %}
+
+  <h3 style="margin:18px 0 4px;">Kila market</h3>
+  {% set sections = [('strong','🟢 Imara','open'), ('watch','🟡 Angalia',''), ('weak','🔴 Dhaifu','open'), ('nodata','⚪ Data haitoshi','')] %}
+  {% for key, title, op in sections %}
+    {% set lst = data.by_verdict[key] %}
+    {% if lst %}
+    <details class="am-sec" {{ op }}>
+      <summary>{{ title }} ({{ lst|length }})</summary>
+      {% for m in lst %}
+      <div class="match-card">
+        <div class="match-card-header">
+          <div class="match-teams" style="word-break:break-word;">{{ m.group_icon }} {{ m.market }}</div>
+          <div class="match-meta">{{ m.verdict_icon }}</div>
+        </div>
+        <div class="am-line"><b>{{ m.win_rate }}%</b> win ({{ m.wins }}/{{ m.n }}) · uhakika 95%: {{ m.wilson_low }}–{{ m.wilson_high }}%</div>
+        <div class="am-line">Model ilisema {{ m.avg_prob }}% · pengo
+          <span class="{{ 'am-bad' if m.gap <= -5 else ('am-good' if m.gap >= -2 else '') }}">{{ '%+.1f'|format(m.gap) }} pts</span>
+          · Brier {{ m.brier }}</div>
+        {% if m.roi is not none %}
+        <div class="am-line">ROI <span class="{{ 'am-bad' if m.roi < 0 else 'am-good' }}">{{ '%+.1f'|format(m.roi) }}%</span>
+          <span class="am-dim">(zenye odds: {{ m.n_odds }}{% if m.avg_ev is not none %} · EV iliyotarajiwa {{ '%+.1f'|format(m.avg_ev) }}%{% endif %})</span></div>
+        {% endif %}
+        {% if m.buckets %}
+        <div>{% for b in m.buckets %}<span class="am-b">{{ b.label }}: {{ b.win_rate }}% <span class="am-dim">({{ b.n }})</span></span>{% endfor %}</div>
+        {% endif %}
+        {% if m.trend %}
+        <div class="am-line">
+          {% if m.trend == 'down' %}<span class="am-bad">▼ Inashuka</span>{% elif m.trend == 'up' %}<span class="am-good">▲ Inapanda</span>{% else %}<span class="am-dim">• Imetulia</span>{% endif %}
+          <span class="am-dim">— siku 14 za mwisho {{ m.recent_wr }}% ({{ m.recent_n }}) dhidi ya {{ m.older_wr }}% ({{ m.older_n }})</span>
+        </div>
+        {% endif %}
+        <div class="am-line am-dim" style="font-size:12px;">{{ m.reasons|join(' · ') }}</div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{% endblock %}
