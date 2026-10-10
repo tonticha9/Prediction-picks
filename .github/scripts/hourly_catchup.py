@@ -6,7 +6,7 @@ kutoka AllSportsAPI, inaziongeza kwenye 'historical-complete-no-gap'
 dataset (Kaggle), na inapakia toleo JIPYA la dataset hiyo - ili Job B
 (usiku) ipate historia iliyosasika kila wakati, bila pengo kuunda tena.
 
-UTATHMINI (MPYA - v2): PredictionRecord / ComboLeg / ComboRecord zote za
+UTATHMINI (v2): PredictionRecord / ComboLeg / ComboRecord zote za
 PENDING zinatathminiwa KILA MZUNGUKO dhidi ya dataset NZIMA (si mechi mpya
 tu). Kwa hiyo hata kama mzunguko uliopita ulishindwa, mzunguko unaofuata
 unazirekebisha. Utathmini ukishindwa kuanza (DATABASE_URL haipo, import
@@ -23,6 +23,7 @@ import requests
 import pandas as pd
 import numpy as np
 import subprocess
+from collections import Counter
 from datetime import datetime, timedelta, date
 
 sys.path.insert(0, os.getcwd())
@@ -305,6 +306,12 @@ def find_result(index, home, away, match_date):
     return best
 
 
+def _stamp(obj):
+    """Weka settled_at kama model ina field hiyo."""
+    if hasattr(obj, 'settled_at'):
+        obj.settled_at = datetime.utcnow()
+
+
 def settle_pending(df_results):
     """Tathmini PredictionRecord, ComboLeg na ComboRecord zote za PENDING
     dhidi ya dataset nzima. Inarudisha True ikiwa kila kitu kiko sawa
@@ -332,19 +339,16 @@ def settle_pending(df_results):
         if row is None:
             return None, 'no_match'
         try:
-            val = evaluate_market(market, row)
-            label = result_label(val)
+            label = result_label(evaluate_market(market, row))
         except Exception as e:
             print(f"   ⚠️ evaluate_market imeshindwa kwa market '{market}' ({home} v {away}): {e}")
             return None, 'error'
-        if label == 'PENDING' or label is None:
-            return None, 'unknown_market'
         return label, 'ok'
 
     stats = {'pred_total': 0, 'pred_settled': 0, 'leg_total': 0, 'leg_settled': 0,
              'combos_settled': 0}
-    unmatched = []          # mechi zilizopita muda lakini hazina matokeo kwenye dataset
-    unknown_markets = set()  # markets ambazo evaluator haizielewi
+    unmatched = []            # mechi zilizopita muda lakini hazina matokeo kwenye dataset
+    void_markets = Counter()  # markets zilizosettlewa VOID (takwimu hazipo au soko halijulikani)
 
     try:
         with app.app_context():
@@ -355,10 +359,10 @@ def settle_pending(df_results):
                 label, why = settle_one(rec.market, rec.home_team, rec.away_team, rec.match_date)
                 if label:
                     rec.result = label
-                    rec.settled_at = datetime.utcnow()
+                    _stamp(rec)
                     stats['pred_settled'] += 1
-                elif why == 'unknown_market':
-                    unknown_markets.add(str(rec.market))
+                    if label == 'VOID':
+                        void_markets[str(rec.market)] += 1
                 elif why == 'no_match':
                     md = to_date(rec.match_date)
                     if md is not None and md < today:
@@ -372,8 +376,8 @@ def settle_pending(df_results):
                 if label:
                     leg.result = label
                     stats['leg_settled'] += 1
-                elif why == 'unknown_market':
-                    unknown_markets.add(str(leg.market))
+                    if label == 'VOID':
+                        void_markets[str(leg.market)] += 1
                 elif why == 'no_match':
                     md = to_date(leg.match_date)
                     if md is not None and md < today:
@@ -390,7 +394,7 @@ def settle_pending(df_results):
                     combo.result = 'VOID'
                 else:
                     combo.result = 'WON'
-                combo.settled_at = datetime.utcnow()
+                _stamp(combo)
                 stats['combos_settled'] += 1
 
             if stats['pred_settled'] or stats['leg_settled'] or stats['combos_settled']:
@@ -403,15 +407,16 @@ def settle_pending(df_results):
     print(f"   Combo legs : {stats['leg_settled']}/{stats['leg_total']} zimesettlewa")
     print(f"   Combos     : {stats['combos_settled']} zimekamilika")
 
+    if void_markets:
+        top = ', '.join(f"{m} x{n}" for m, n in void_markets.most_common(10))
+        print(f"\nℹ️ Zilizosettlewa kama VOID ({sum(void_markets.values())}) - takwimu hazipo "
+              f"au soko halijulikani: {top}")
     if unmatched:
         print(f"\n⚠️ {len(unmatched)} PENDING zimepita muda lakini HAZIKUPATIKANA kwenye dataset "
               f"(angalia majina ya timu/tarehe):")
         for home, away, md, market in unmatched[:30]:
             print(f"   • {home} vs {away} ({md}) [{market}]")
         print(f"::warning::{len(unmatched)} PENDING hazikupatikana kwenye dataset - majina ya timu yanaweza kutofautiana")
-    if unknown_markets:
-        print(f"\n⚠️ Markets ambazo market_evaluator haizielewi: {sorted(unknown_markets)}")
-        print(f"::warning::Markets zisizoeleweka na evaluator: {sorted(unknown_markets)}")
     return True
 
 
