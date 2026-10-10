@@ -1,6 +1,7 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Mainz vs Leverkusen: dc_12 @1.25 + Samsunspor vs Trabzonspor: dc_12 @1.28,1.6,66.6
-3,2,Samsunspor vs Trabzonspor: dc_12 @1.28 + Stoke vs Middlesbrough: away_win @1.94,2.48,45.1
-5,4,Charlton vs Bristol City: dc_12 @1.36 + Stoke vs Middlesbrough: away_win @1.94 + West Ham vs QPR: dc_12 @1.22 + Angers vs Marseille: dc_12 @1.28,4.12,28.5
-7,5,Mechelen vs St Truiden: dc_12 @1.28 + Bournemouth vs Sunderland: dc_1x @1.28 + Stoke vs Middlesbrough: away_win @1.94 + Real Madrid vs Villarreal: dc_1x @1.08 + Burnley vs Charlton: home_win @1.71,5.87,18.9
-10,6,Rio Ave vs Nacional: dc_x2 @1.62 + Schalke 04 vs Mainz: dc_12 @1.28 + Stoke vs Middlesbrough: away_win @1.94 + Cambuur vs Az Alkmaar: dc_x2 @1.10 + Arsenal vs Leeds: dc_1x @1.10 + Burnley vs Charlton: home_win @1.71,8.32,12.9
+2,2,Mainz vs Leverkusen: dc_12 @1.25 + Watford vs Burnley: dc_12 @1.30,1.62,67.3
+3,2,Stoke vs Middlesbrough: away_win @1.94 + Mainz vs Leverkusen: dc_12 @1.25,2.42,46.0
+5,3,Dundee United vs Hibernian: dc_12 @1.28 + Stoke vs Middlesbrough: away_win @1.94 + Rio Ave vs Nacional: dc_x2 @1.62,4.02,26.7
+7,5,Liverpool vs Man City: dc_12 @1.28 + Hull vs Everton: dc_12 @1.30 + Arsenal vs Leeds: dc_1x @1.10 + Stoke vs Middlesbrough: away_win @1.94 + Birmingham vs Preston: home_win @1.65,5.86,19.3
+10,6,Burnley vs Charlton: home_win @1.71 + Benfica vs Guimaraes: dc_1x @1.05 + Birmingham vs Preston: home_win @1.65 + Sunderland vs Brighton: dc_12 @1.30 + Rio Ave vs Nacional: dc_x2 @1.62 + Valencia vs Ath Bilbao: dc_x2 @1.33,8.3,13.9
+15,6,Burnley vs Charlton: home_win @1.71 + Leeds vs Man United: dc_12 @1.28 + Bolton vs Stoke: dc_12 @1.30 + Rio Ave vs Nacional: dc_x2 @1.62 + Kifisia vs Aris: dc_12 @1.36 + Stoke vs Middlesbrough: away_win @1.94,12.16,8.5
