@@ -1,165 +1,231 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 style="margin-bottom:16px;">⚙️ Admin Panel</h2>
+{% set ai = ai_info() if ai_info is defined else {} %}
+<style>
+  .ad-hero { border-radius:20px; padding:20px 18px; margin-bottom:16px; border:1px solid rgba(255,255,255,.1);
+             background:linear-gradient(135deg, rgba(99,102,241,.32), rgba(16,185,129,.2) 60%, rgba(14,165,233,.16)); }
+  .ad-hero h2 { margin:0 0 6px; font-size:22px; }
+  .ad-hero p { margin:0; font-size:13px; color:var(--text-dim); }
+  .ad-pill { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:700; border:1px solid rgba(255,255,255,.14); }
+  .ad-pill.ok { background:rgba(16,185,129,.18); color:var(--emerald); }
+  .ad-pill.warn { background:rgba(245,158,11,.18); color:#f59e0b; }
+  .ad-pill.error { background:rgba(239,68,68,.18); color:var(--red); }
+  .ad-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:16px; }
+  .ad-stat { padding:12px 10px; border-radius:14px; text-align:center; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+  .ad-stat b { display:block; font-size:20px; }
+  .ad-stat span { font-size:11px; color:var(--text-dim); }
+  .ad-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
+  .ad-tile { display:block; padding:14px 12px; border-radius:16px; text-decoration:none; color:inherit; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); }
+  .ad-tile:active { transform:scale(.98); }
+  .ad-tile .ic { font-size:24px; }
+  .ad-tile b { display:block; margin-top:6px; font-size:14px; }
+  .ad-tile small { color:var(--text-dim); font-size:12px; }
+  .ad-sec { margin-bottom:12px; border-radius:16px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.03); overflow:hidden; }
+  .ad-sec > summary { list-style:none; cursor:pointer; padding:14px 16px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
+  .ad-sec > summary::-webkit-details-marker { display:none; }
+  .ad-sec > summary::after { content:'▾'; margin-left:auto; color:var(--text-dim); transition:transform .2s; }
+  .ad-sec[open] > summary::after { transform:rotate(180deg); }
+  .ad-sec[open] > summary { border-bottom:1px solid rgba(255,255,255,.07); }
+  .ad-body { padding:14px 16px 16px; }
+  .ad-sub { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 8px; }
+  .ad-hint { font-size:12px; color:var(--text-dim); margin-top:4px; }
+  .ad-check { padding:10px 12px; border-radius:12px; margin-bottom:8px; font-size:13px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); }
+  .ad-check.ok { border-left:4px solid var(--emerald); }
+  .ad-check.warn { border-left:4px solid #f59e0b; }
+  .ad-check.error { border-left:4px solid var(--red); }
+  .ad-check small { display:block; opacity:.85; margin-top:3px; font-size:12px; }
+  .ad-switch { display:flex; align-items:center; gap:12px; padding:10px 0; cursor:pointer; position:relative; }
+  .ad-switch input { position:absolute; opacity:0; width:0; height:0; }
+  .ad-slider { flex:0 0 46px; height:26px; border-radius:999px; background:rgba(255,255,255,.18); position:relative; transition:background .2s; }
+  .ad-slider::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .2s; }
+  .ad-switch input:checked + .ad-slider { background:var(--emerald); }
+  .ad-switch input:checked + .ad-slider::after { transform:translateX(20px); }
+  .ad-switch-text { font-size:14px; }
+  .ad-savebar { position:sticky; bottom:10px; z-index:5; padding:10px; border-radius:16px; background:rgba(10,14,28,.92); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(8px); margin-top:6px; }
+  .ad-savebar .btn { width:100%; }
+  .ad-usage { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
+  .ad-usage div { padding:10px; border-radius:12px; background:rgba(255,255,255,.04); text-align:center; font-size:12px; color:var(--text-dim); }
+  .ad-usage b { display:block; font-size:18px; color:inherit; }
+</style>
 
-<div class="admin-section">
-  <h3>
+<div class="ad-hero">
+  <h2>⚙️ Admin Panel</h2>
+  <p>Dhibiti Braiton Picks: hali ya mfumo, mipangilio, AI na data.</p>
+  <span class="ad-pill {{ health_summary.level }}">
     {% if health_summary.level == 'ok' %}✔️{% elif health_summary.level == 'warn' %}⚠️{% else %}❌{% endif %}
-    Hali ya Mfumo
-  </h3>
-
-  <div class="expiry-warning {{ 'expiry-ok' if health_summary.level == 'ok' else ('expiry-soon' if health_summary.level == 'warn' else 'expiry-critical') }}"
-       style="font-weight:700;">
-    {{ health_summary.text }} — ukaguzi {{ health_summary.ok }} kati ya {{ health|length }} ni sawa.
-  </div>
-
-  {% for c in health %}
-    <div class="expiry-warning {{ 'expiry-ok' if c.status == 'ok' else ('expiry-soon' if c.status == 'warn' else 'expiry-critical') }}">
-      {% if c.status == 'ok' %}✔️{% elif c.status == 'warn' %}⚠️{% else %}❌{% endif %}
-      <strong>{{ c.name }}</strong><br>
-      <span style="font-size:13px; opacity:.9;">{{ c.detail }}</span>
-    </div>
-  {% endfor %}
+    {{ health_summary.text }}
+  </span>
 </div>
+
+<div class="ad-stats">
+  <div class="ad-stat"><b>{{ users_total }}</b><span>Watumiaji</span></div>
+  <div class="ad-stat"><b>{% if hours_since_snapshot is not none %}{{ hours_since_snapshot }}h{% else %}—{% endif %}</b><span>Data ya mwisho</span></div>
+  <div class="ad-stat"><b>{% if days_left is not none %}{{ days_left }}d{% else %}—{% endif %}</b><span>API key inaisha</span></div>
+</div>
+
+<div class="ad-grid">
+  {% if admin_tools_ok %}
+  <a class="ad-tile" href="{{ url_for('admin_ai') }}"><span class="ic">🤖</span><b>Admin AI</b><small>Mshauri wako wa mfumo</small></a>
+  <a class="ad-tile" href="{{ url_for('admin_markets') }}"><span class="ic">📈</span><b>Market Analysis</b><small>Markets imara na dhaifu</small></a>
+  {% endif %}
+  <a class="ad-tile" href="{{ url_for('admin_users') }}"><span class="ic">👥</span><b>Watumiaji</b><small>Orodha na usimamizi</small></a>
+  <form method="POST" action="{{ url_for('admin_refresh') }}" style="margin:0;">
+    <button type="submit" class="ad-tile" style="width:100%; text-align:left; cursor:pointer; font:inherit; color:inherit;">
+      <span class="ic">🔄</span><b>Refresh Data</b><small>Sasisha CSV na History</small>
+    </button>
+  </form>
+</div>
+
+<details class="ad-sec" id="health" {{ 'open' if health_summary.level != 'ok' else '' }}>
+  <summary>🩺 Hali ya Mfumo <small style="font-weight:400; color:var(--text-dim);">{{ health_summary.ok }}/{{ health|length }} sawa</small></summary>
+  <div class="ad-body">
+    {% for c in health %}
+      <div class="ad-check {{ c.status }}">
+        {% if c.status == 'ok' %}✔️{% elif c.status == 'warn' %}⚠️{% else %}❌{% endif %}
+        <strong>{{ c.name }}</strong>
+        <small>{{ c.detail }}</small>
+      </div>
+    {% endfor %}
+  </div>
+</details>
+
+<form method="POST" id="settingsForm">
+  <input type="hidden" name="action" value="update_settings">
+
+  <details class="ad-sec" id="picks">
+    <summary>🎯 Picks na Markets</summary>
+    <div class="ad-body">
+      <div class="form-group">
+        <label>Probability Threshold (%)</label>
+        <input type="number" step="0.1" name="probability_threshold" value="{{ settings.probability_threshold }}" min="0" max="100">
+        <div class="ad-hint">Soko chini ya hii halionekani kabisa.</div>
+      </div>
+      <div class="form-group">
+        <label>Best Pick Formula</label>
+        <select name="best_pick_formula">
+          <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV + probability)</option>
+          <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee</option>
+          <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee (yenye odds tu)</option>
+          <option value="no_odds" {{ 'selected' if settings.best_pick_formula=='no_odds' else '' }}>Yasiyo na odds tu</option>
+        </select>
+      </div>
+      <div class="ad-sub">Idadi ya markets</div>
+      <div class="form-group">
+        <label>Dashboard / Zijazo (Other Picks)</label>
+        <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0">
+      </div>
+      <div class="form-group">
+        <label>History (Other Picks)</label>
+        <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0">
+      </div>
+      <label class="ad-switch">
+        <input type="checkbox" name="allow_dc_best" value="1" {{ 'checked' if allow_dc_best else '' }}>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">Ruhusu dc_1x / dc_x2 kuwa Best Pick</span>
+      </label>
+      <div class="ad-hint">dc_12 haiwi Best Pick kamwe, na haitumiki kwenye Value Bets.</div>
+    </div>
+  </details>
+
+  <details class="ad-sec" id="combos">
+    <summary>🧩 Combos</summary>
+    <div class="ad-body">
+      <p class="ad-hint" style="margin:0 0 10px;">Kila combo inachukua legs kutoka MECHI TOFAUTI.</p>
+      <div class="form-group">
+        <label>Combo Leg Formula</label>
+        <select name="combo_leg_formula">
+          {% for f in formula_choices %}
+            <option value="{{ f }}" {{ 'selected' if settings.combo_leg_formula==f else '' }}>
+              {% if f == 'random_threshold' %}Random (soko lolote ≥ kiwango cha chini)
+              {% elif f == 'ev_odds_only' %}EV ya juu zaidi (mechi zenye odds)
+              {% elif f == 'highest_probability' %}Probability ya juu zaidi (yoyote)
+              {% elif f == 'highest_probability_odds_only' %}Probability ya juu zaidi (zenye odds)
+              {% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="ad-sub">Idadi ya legs</div>
+      <div class="form-group"><label>Minimum legs</label>
+        <input type="number" name="combo_min_legs" value="{{ settings.combo_min_legs }}" min="1" max="10"></div>
+      <div class="form-group"><label>Maximum legs</label>
+        <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10"></div>
+      <div class="ad-sub">Vizingiti</div>
+      <div class="form-group"><label>Probability ya chini kwa LEG (%)</label>
+        <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100"></div>
+      <div class="form-group"><label>Probability ya chini kwa COMBO NZIMA (%)</label>
+        <input type="number" step="0.1" name="combo_min_combined_probability" value="{{ settings.combo_min_combined_probability }}" min="0" max="100"></div>
+      <div class="form-group"><label>Combos za juu kwa siku</label>
+        <input type="number" name="max_combos_per_day" value="{{ settings.max_combos_per_day }}" min="1" max="500"></div>
+    </div>
+  </details>
+
+  <div class="ad-savebar"><button class="btn" type="submit">💾 Hifadhi Mipangilio ya Picks na Combos</button></div>
+</form>
 
 {% if admin_tools_ok %}
-<div class="admin-section">
-  <h3>🤖 Admin AI</h3>
-  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Piga story na msaidizi anayeelewa mfumo wako: kwa nini picks ni chache, Job A imefanya kazi, markets zipi ni imara, na mengineyo.
-  </p>
-  <a href="{{ url_for('admin_ai') }}" class="btn btn-secondary"
-     style="display:inline-block; text-decoration:none; text-align:center;">Fungua Admin AI</a>
-</div>
+<details class="ad-sec" id="ai" style="margin-top:16px;">
+  <summary>🤖 AI kwa Watumiaji</summary>
+  <div class="ad-body">
+    <form method="POST" action="{{ url_for('admin_ai_settings') }}">
+      <label class="ad-switch">
+        <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if ai.public_enabled else '' }}>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">Onyesha kitufe cha AI kwa watumiaji wote</span>
+      </label>
+      <div class="ad-hint">Kikizimwa, ni admin pekee anayeona kitufe cha AI (akiwa ameingia kwa email na password yake).</div>
 
-<div class="admin-section">
-  <h3>📈 Market Analysis</h3>
-  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Markets zipi ziko imara, zipi dhaifu, na kwa nini: calibration, ROI, mwenendo, na uhakika wa sampuli.
-  </p>
-  <a href="{{ url_for('admin_markets') }}" class="btn btn-secondary"
-     style="display:inline-block; text-decoration:none; text-align:center;">Fungua Market Analysis</a>
-</div>
+      <div class="ad-sub">Vikomo vya siku (huanza upya usiku wa manane EAT)</div>
+      <div class="form-group"><label>Ujumbe kwa kila mtumiaji kwa siku</label>
+        <input type="number" name="user_limit" value="{{ ai.user_limit }}" min="0" max="500"></div>
+      <div class="form-group"><label>Ujumbe wa jumla wa watumiaji wote kwa siku</label>
+        <input type="number" name="global_limit" value="{{ ai.global_limit }}" min="0" max="20000">
+        <div class="ad-hint">Linalinda kikomo cha bure cha mtoa huduma wa AI. Admin hana kikomo.</div></div>
+
+      <div class="ad-usage">
+        <div><b>{{ ai.used_global }}</b>ujumbe wa watumiaji leo</div>
+        <div><b>{{ ai.users_today }}</b>watumiaji walioutumia leo</div>
+      </div>
+      <div class="ad-hint" style="margin-bottom:10px;">
+        Modeli: {{ ai.model }} · Utafutaji wa nje: {{ ai.search or 'umezimwa' }} ·
+        Key: {{ 'imewekwa ✔️' if ai.ai_ready else 'haijawekwa ❌' }}
+      </div>
+      <button class="btn" type="submit">Hifadhi mipangilio ya AI</button>
+    </form>
+  </div>
+</details>
 {% endif %}
 
-<div class="admin-section">
-  <h3>👥 Watumiaji</h3>
-  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Akaunti zilizosajiliwa: {{ users_total }}. Angalia orodha kamili, idadi, na uondoe mtumiaji.
-  </p>
-  <a href="{{ url_for('admin_users') }}" class="btn btn-secondary"
-     style="display:inline-block; text-decoration:none; text-align:center;">Fungua orodha ya watumiaji</a>
-</div>
-
-<div class="admin-section">
-  <h3>Mipangilio ya Predictions</h3>
-  <form method="POST">
-    <input type="hidden" name="action" value="update_settings">
-
-    <div class="form-group">
-      <label>Number of markets - Dashboard/Zijazo (Other Picks) — weka namba yoyote, 0 = hakuna</label>
-      <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0">
-    </div>
-    <div class="form-group">
-      <label>Number of markets - History (Other Picks) — weka namba yoyote, 0 = hakuna</label>
-      <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0">
-    </div>
-    <div class="form-group">
-      <label>Probability Threshold (%) — soko chini ya hii halionekani kabisa</label>
-      <input type="number" step="0.1" name="probability_threshold" value="{{ settings.probability_threshold }}" min="0" max="100">
-    </div>
-    <div class="form-group">
-      <label>Best Pick Formula (Dashboard/Zijazo/History za predictions)</label>
-      <select name="best_pick_formula">
-        <option value="hybrid" {{ 'selected' if settings.best_pick_formula=='hybrid' else '' }}>Hybrid (EV+probability, masoko yote)</option>
-        <option value="probability" {{ 'selected' if settings.best_pick_formula=='probability' else '' }}>Probability pekee (+ pro_tier tiebreaker, masoko yote)</option>
-        <option value="ev" {{ 'selected' if settings.best_pick_formula=='ev' else '' }}>EV pekee — masoko yenye odds TU (yasiyo na odds yanafichwa)</option>
-        <option value="no_odds" {{ 'selected' if settings.best_pick_formula=='no_odds' else '' }}>Masoko yasiyo na odds TU, kwa probability (yenye odds yanafichwa)</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Double Chance (dc_1x, dc_x2) kuwa Best Pick — formula zote. dc_12 haiwi Best Pick kamwe. Zote zinaonekana Other Picks.</label>
-      <select name="allow_dc_best">
-        <option value="0" {{ 'selected' if not allow_dc_best else '' }}>Usiruhusu (chaguo-msingi)</option>
-        <option value="1" {{ 'selected' if allow_dc_best else '' }}>Ruhusu</option>
-      </select>
-    </div>
-
-    <h3 style="margin-top:20px;">Mipangilio ya Combos</h3>
-    <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-      Kila combo inachukua legs kutoka MECHI TOFAUTI (hakuna mechi mbili kwenye combo moja).
+<details class="ad-sec" id="api">
+  <summary>🔑 AllSportsAPI Key</summary>
+  <div class="ad-body">
+    <p class="ad-hint" style="margin:0 0 10px;">
+      Inatumiwa na Job A kupitia endpoint ya siri. Kaggle ina key yake kwenye Kaggle Secrets: ibadilishe huko pia.
     </p>
-    <div class="form-group">
-      <label>Combo Leg Formula</label>
-      <select name="combo_leg_formula">
-        {% for f in formula_choices %}
-          <option value="{{ f }}" {{ 'selected' if settings.combo_leg_formula==f else '' }}>
-            {% if f == 'random_threshold' %}Random (soko lolote &ge; kiwango cha chini)
-            {% elif f == 'ev_odds_only' %}EV ya juu zaidi (mechi zenye odds pekee)
-            {% elif f == 'highest_probability' %}Probability ya juu zaidi (yoyote)
-            {% elif f == 'highest_probability_odds_only' %}Probability ya juu zaidi (mechi zenye odds pekee)
-            {% endif %}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Minimum legs kwa combo moja</label>
-      <input type="number" name="combo_min_legs" value="{{ settings.combo_min_legs }}" min="1" max="10">
-    </div>
-    <div class="form-group">
-      <label>Maximum legs kwa combo moja</label>
-      <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10">
-    </div>
-    <div class="form-group">
-      <label>Minimum probability (%) kwa LEG MOJA kuingia kwenye combo</label>
-      <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100">
-    </div>
-    <div class="form-group">
-      <label>Minimum probability (%) kwa COMBO NZIMA (zidisho la legs zote)</label>
-      <input type="number" step="0.1" name="combo_min_combined_probability" value="{{ settings.combo_min_combined_probability }}" min="0" max="100">
-    </div>
-    <div class="form-group">
-      <label>Idadi ya juu ya combos kwa siku (max_combos_per_day)</label>
-      <input type="number" name="max_combos_per_day" value="{{ settings.max_combos_per_day }}" min="1" max="500">
-    </div>
+    <form method="POST">
+      <input type="hidden" name="action" value="update_api">
+      <div class="form-group"><label>AllSportsAPI Key</label>
+        <input type="text" name="api_key" placeholder="{{ '••••••••' + api_config.api_key[-4:] if api_config.api_key else 'Weka API key' }}"></div>
+      <div class="form-group"><label>Tarehe ya Kuisha</label>
+        <input type="date" name="expiry_date" value="{{ api_config.expiry_date.strftime('%Y-%m-%d') if api_config.expiry_date else '' }}"></div>
+      <button class="btn" type="submit">Sasisha API Key</button>
+    </form>
+  </div>
+</details>
 
-    <button class="btn" type="submit">Hifadhi Mipangilio</button>
-  </form>
-</div>
+<details class="ad-sec" id="data">
+  <summary>🗂️ Data</summary>
+  <div class="ad-body">
+    <p class="ad-hint" style="margin:0 0 10px;">
+      Baada ya kupakia CSV mpya kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).
+    </p>
+    <form method="POST" action="{{ url_for('admin_refresh') }}">
+      <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
+    </form>
+  </div>
+</details>
 
-<div class="admin-section">
-  <h3>AllSportsAPI Key</h3>
-  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Key hii inatumiwa na Job A (hourly_catchup.py) kupitia endpoint ya siri.
-    Kaggle (Job B / notebook ya predictions) ina key yake YENYEWE kwenye
-    Kaggle Secrets - badilisha huko pia ukibadilisha hapa.
-  </p>
-  <form method="POST">
-    <input type="hidden" name="action" value="update_api">
-    <div class="form-group">
-      <label>AllSportsAPI Key</label>
-      <input type="text" name="api_key" placeholder="{{ '••••••••' + api_config.api_key[-4:] if api_config.api_key else 'Weka API key' }}">
-    </div>
-    <div class="form-group">
-      <label>Tarehe ya Kuisha</label>
-      <input type="date" name="expiry_date" value="{{ api_config.expiry_date.strftime('%Y-%m-%d') if api_config.expiry_date else '' }}">
-    </div>
-    <button class="btn" type="submit">Sasisha API Key</button>
-  </form>
-</div>
-
-<div class="admin-section">
-  <h3>Data</h3>
-  <p style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">
-    Baada ya kupakia faili mpya za CSV kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).
-  </p>
-  <form method="POST" action="{{ url_for('admin_refresh') }}">
-    <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
-  </form>
-</div>
-
-<div class="admin-section">
+<div style="text-align:center; margin:18px 0 8px;">
   <a href="{{ url_for('logout') }}" style="color:var(--red); font-size:13px; font-weight:600; text-decoration:none;">Toka (Logout)</a>
 </div>
 {% endblock %}
