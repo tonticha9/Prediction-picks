@@ -1,7 +1,7 @@
 # .github/workflows/hourly_catchup.yml
 #
 # JOB A — Kila saa: inavuta mechi zilizokwisha, inasasisha dataset ya
-# Kaggle, na kusettle PENDING zote kwenye database.
+# Kaggle, inasettle PENDING zote, na kuandika matokeo halisi kwa History.
 
 name: Hourly Catchup
 
@@ -50,3 +50,9 @@ jobs:
           APP_URL: ${{ secrets.APP_URL }}
           REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
         run: python .github/scripts/hourly_catchup.py
+
+      - name: Sync match results to database (for History)
+        if: ${{ !cancelled() }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python .github/scripts/sync_match_results.py
