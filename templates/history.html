@@ -1,20 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2 style="margin-bottom:16px;">🕒 History</h2>
-
-<div class="filter-bar">
-  <select onchange="updateHistory()" id="tierSelect">
-    <option value="predictions" {{ 'selected' if tier=='predictions' else '' }}>Predictions</option>
-    <option value="value_bets" {{ 'selected' if tier=='value_bets' else '' }}>Value Bets</option>
-    <option value="combos" {{ 'selected' if tier=='combos' else '' }}>Combos</option>
-  </select>
-  <select onchange="updateHistory()" id="dateSelect">
-    <option value="">Chagua tarehe</option>
-    {% for d in available_dates %}
-      <option value="{{ d }}" {{ 'selected' if d==selected_date else '' }}>{{ d }}</option>
-    {% endfor %}
-  </select>
-</div>
+<style>
+  .hx-tabs { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .hx-tab { padding:8px 14px; border-radius:999px; border:1px solid var(--border, #333); color:var(--text-dim); text-decoration:none; font-size:14px; font-weight:600; }
+  .hx-tab.active { background:var(--indigo); color:#fff; border-color:var(--indigo); }
+  .hx-date { display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+  .hx-date select { flex:1; min-width:0; }
+  .hx-nav { padding:8px 12px; border:1px solid var(--border, #333); border-radius:10px; text-decoration:none; color:inherit; font-size:14px; }
+  .hx-nav.off { opacity:.35; pointer-events:none; }
+  .mk-main { min-width:0; }
+  .mk-name { word-break:break-word; }
+  .mk-sub { font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .mk-actual { font-size:12px; margin-top:3px; color:var(--text-dim); }
+  .grp-title { font-size:12px; font-weight:700; color:var(--text-dim); margin:12px 0 4px; text-transform:uppercase; letter-spacing:.04em; }
+  .dl-up { color:var(--emerald); font-weight:700; }
+  .dl-down { color:var(--red); font-weight:700; }
+</style>
 
 {% macro result_badge(result) %}
   {% if result == 'WON' %}<span style="color:var(--emerald); font-weight:700;">✅ WON</span>
@@ -24,8 +25,57 @@
   {% endif %}
 {% endmacro %}
 
+{% macro delta_badge(d) %}
+  {% if d is not none and d >= 0.1 %}<span class="dl-up">▲ +{{ d }}</span>
+  {% elif d is not none and d <= -0.1 %}<span class="dl-down">▼ {{ d }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro pick_row(p) %}
+<div class="other-pick-row">
+  <div class="mk-main">
+    <div class="mk-name">{{ p.market }}</div>
+    <div class="mk-sub">{{ p.probability }}%{% if p.odds %} · @{{ p.odds }}{% endif %} {{ delta_badge(p.delta) }}</div>
+    {% if p.actual %}<div class="mk-actual">📊 {{ p.actual }}</div>{% endif %}
+  </div>
+  <div>{{ result_badge(p.result) }}</div>
+</div>
+{% endmacro %}
+
+<h2 style="margin-bottom:12px;">🕒 History</h2>
+
+{% set ns = namespace(idx=-1) %}
+{% for d in available_dates %}{% if d == selected_date %}{% set ns.idx = loop.index0 %}{% endif %}{% endfor %}
+
+<div class="hx-tabs">
+  <a class="hx-tab {{ 'active' if tier=='predictions' else '' }}" href="{{ url_for('history', tier='predictions', date=selected_date) }}">Predictions</a>
+  <a class="hx-tab {{ 'active' if tier=='value_bets' else '' }}" href="{{ url_for('history', tier='value_bets', date=selected_date) }}">Value Bets</a>
+  <a class="hx-tab {{ 'active' if tier=='combos' else '' }}" href="{{ url_for('history', tier='combos', date=selected_date) }}">Combos</a>
+</div>
+
+<div class="hx-date">
+  {% if ns.idx >= 0 and ns.idx + 1 < available_dates|length %}
+    <a class="hx-nav" href="{{ url_for('history', tier=tier, date=available_dates[ns.idx + 1]) }}">◀</a>
+  {% else %}
+    <span class="hx-nav off">◀</span>
+  {% endif %}
+
+  <select id="dateSelect" onchange="goDate(this.value)">
+    {% if not selected_date %}<option value="">Chagua tarehe</option>{% endif %}
+    {% for d in available_dates %}
+      <option value="{{ d }}" {{ 'selected' if d==selected_date else '' }}>{{ d }}{% if d == today_iso %} • Leo{% endif %}</option>
+    {% endfor %}
+  </select>
+
+  {% if ns.idx > 0 %}
+    <a class="hx-nav" href="{{ url_for('history', tier=tier, date=available_dates[ns.idx - 1]) }}">▶</a>
+  {% else %}
+    <span class="hx-nav off">▶</span>
+  {% endif %}
+</div>
+
 {% if not selected_date %}
-  <div class="empty-state">Chagua tarehe kuona history ya siku hiyo.</div>
+  <div class="empty-state">Hakuna history bado.</div>
 
 {% elif tier == 'predictions' %}
   {% if summary %}
@@ -42,14 +92,15 @@
   <div class="match-card">
     <div class="match-card-header">
       <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
-      <div class="match-meta">{{ m.date }}</div>
+      <div class="match-meta">{% if m.score %}<b>{{ m.score }}</b> · {% endif %}{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }}{% endif %}</div>
     </div>
     <div class="best-pick">
       <div class="best-pick-label">Best Pick</div>
       <div class="best-pick-row">
         <div class="best-pick-market">{{ m.best_pick.market }}</div>
-        <div class="best-pick-prob">{{ m.best_pick.probability }}%</div>
+        <div class="best-pick-prob">{{ m.best_pick.probability }}% {{ delta_badge(m.best_pick.delta) }}</div>
       </div>
+      {% if m.best_pick.actual %}<div class="mk-actual">📊 {{ m.best_pick.actual }}</div>{% endif %}
       <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center;">
         <span>{{ result_badge(m.best_pick.result) }}</span>
         {% if m.best_pick.odds %}<span style="color:var(--text-dim);">@{{ m.best_pick.odds }}</span>{% endif %}
@@ -58,14 +109,9 @@
     {% if m.other_picks %}
     <button class="toggle-picks" onclick="togglePicks('picks-{{ loop.index }}')">Masoko mengine ({{ m.other_picks|length }}) ▾</button>
     <div class="other-picks" id="picks-{{ loop.index }}">
-      {% for p in m.other_picks %}
-      <div class="other-pick-row">
-        <div>{{ p.market }} <span style="color:var(--text-dim); font-size:12px;">({{ p.probability }}%)</span></div>
-        <div style="display:flex; align-items:center; gap:10px;">
-          {% if p.odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
-          <span>{{ result_badge(p.result) }}</span>
-        </div>
-      </div>
+      {% for g in m.other_groups %}
+        <div class="grp-title">{{ g.icon }} {{ g.label }}</div>
+        {% for p in g.picks %}{{ pick_row(p) }}{% endfor %}
       {% endfor %}
     </div>
     {% endif %}
@@ -85,13 +131,15 @@
 
   {% for r in value_bets_list %}
   <div class="table-row" style="border-left-color: var(--indigo);">
-    <div style="font-size:13px;">
-      <b>{{ r.home }} vs {{ r.away }}</b> — {{ r.market }}
+    <div style="font-size:13px; min-width:0;">
+      <b>{{ r.home }} vs {{ r.away }}</b>{% if r.score %} <span style="color:var(--text-dim);">({{ r.score }})</span>{% endif %} — {{ r.market }}
       <div style="color:var(--text-dim); margin-top:2px;">
         {{ r.date }}{% if r.odds %} · @{{ r.odds }}{% endif %} · {{ r.probability }}%
+        {{ delta_badge(r.delta) }}
         {% if r.edge is not none %} · Edge: {{ r.edge }}%{% endif %}
         {% if r.ev is not none %} · EV: {{ r.ev }}%{% endif %}
       </div>
+      {% if r.actual %}<div class="mk-actual">📊 {{ r.actual }}</div>{% endif %}
     </div>
     <div>{{ result_badge(r.result) }}</div>
   </div>
@@ -131,11 +179,12 @@
     </div>
     {% for leg in c.legs %}
     <div class="other-pick-row">
-      <div>{{ leg.home }} vs {{ leg.away }} — {{ leg.market }} <span style="color:var(--text-dim); font-size:12px;">({{ leg.probability }}%)</span></div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        {% if leg.has_odds %}<span style="color:var(--text-dim);">@{{ leg.odds }}</span>{% endif %}
-        {{ result_badge(leg.result) }}
+      <div class="mk-main">
+        <div class="mk-name">{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
+        <div class="mk-sub">{{ leg.probability }}%{% if leg.has_odds %} · @{{ leg.odds }}{% endif %}</div>
+        {% if leg.actual %}<div class="mk-actual">📊 {{ leg.actual }}</div>{% endif %}
       </div>
+      <div>{{ result_badge(leg.result) }}</div>
     </div>
     {% endfor %}
   </div>
@@ -145,10 +194,9 @@
 {% endblock %}
 {% block scripts %}
 <script>
-function updateHistory() {
-  const tier = document.getElementById('tierSelect').value;
-  const date = document.getElementById('dateSelect').value;
-  window.location.href = "{{ url_for('history') }}?tier=" + tier + "&date=" + date;
+function goDate(d) {
+  if (!d) return;
+  window.location.href = "{{ url_for('history') }}?tier={{ tier }}&date=" + encodeURIComponent(d);
 }
 function togglePicks(id) {
   const el = document.getElementById(id);
