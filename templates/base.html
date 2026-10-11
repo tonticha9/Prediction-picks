@@ -25,9 +25,14 @@
     <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
     <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
 
+    {# Kitufe cha AI: admin anakiona kila wakati; watumiaji wengine ni admin akiwasha kwenye Admin → AI #}
+    {% if ai_nav_visible %}
+      <a href="{{ ai_nav_url }}" class="{{ 'active' if request.endpoint in ('admin_ai', 'user_ai') else '' }}">🤖 AI</a>
+    {% endif %}
+
     {# Kitufe cha Admin kinaonekana kwa akaunti ya admin PEKEE #}
     {% if is_admin %}
-      <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' else '' }}">⚙️ Admin</a>
+      <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' and request.endpoint != 'admin_ai' else '' }}">⚙️ Admin</a>
     {% endif %}
 
     <div style="border-top:1px solid rgba(255,255,255,.12); margin:12px 0;"></div>
