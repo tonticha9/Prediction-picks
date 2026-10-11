@@ -4,6 +4,7 @@ admin_tools.py — Zana za Admin zilizo nje ya app.py (app.py haibadilishwi tena
 - Market Analysis (/admin/markets)
 - Admin AI (/admin/ai) na AI ya watumiaji (/ai) yenye vikomo
 - Value bets bila dc_12 + ROI ya siku (kwa History)
+- Plugins: faili kama retrain_tools.py (likiwepo) linapakiwa otomatiki
 
 Inasajiliwa kutoka app.py kwa:  register_admin_tools(app, admin_only, globals())
 
@@ -22,7 +23,7 @@ from datetime import date, datetime, timedelta
 
 import numpy as np
 import pandas as pd
-from flask import (Response, abort, flash, jsonify, redirect, render_template, request,
+from flask import (Response, abort, flash, g, jsonify, redirect, render_template, request,
                    stream_with_context, url_for)
 from sqlalchemy import func
 
@@ -35,6 +36,8 @@ VERDICT_ORDER = {'strong': 0, 'watch': 1, 'weak': 2, 'nodata': 3}
 VERDICT_ICON = {'strong': '🟢', 'watch': '🟡', 'weak': '🔴', 'nodata': '⚪'}
 MIN_SAMPLE = 20
 GOOD_SAMPLE = 30
+
+PLUGINS = ('retrain_tools',)   # faili za ziada zinazopakiwa kama zipo (mf. retrain_tools.py)
 
 
 # ================================================================
@@ -162,29 +165,29 @@ def compute_market_stats(section='prediction', days=60, min_prob=50.0, recent_da
     recent_cut = pd.Timestamp(today - timedelta(days=recent_days))
 
     markets = []
-    for market, g in df.groupby('market'):
-        n = len(g)
-        wins = int(g['y'].sum())
+    for market, g_ in df.groupby('market'):
+        n = len(g_)
+        wins = int(g_['y'].sum())
         wr = wins / n
-        avg_p = float(g['p'].mean())
+        avg_p = float(g_['p'].mean())
         gap = (wr - avg_p) * 100
         lo, hi = _wilson(wins, n)
-        brier = float(((g['p'] - g['y']) ** 2).mean())
+        brier = float(((g_['p'] - g_['y']) ** 2).mean())
 
-        og = g[g['odds'].notna()]
+        og = g_[g_['odds'].notna()]
         n_odds = len(og)
         roi = float(og['profit'].mean() * 100) if n_odds else None
         avg_ev = float(og['ev'].mean() * 100) if n_odds else None
 
         bks = []
         for lab in BUCKET_LABELS:
-            bg = g[g['bucket'] == lab]
+            bg = g_[g_['bucket'] == lab]
             if len(bg):
                 bks.append({'label': lab, 'n': int(len(bg)),
                             'win_rate': round(float(bg['y'].mean()) * 100, 1)})
 
-        rec = g[g['match_date'] >= recent_cut]
-        old = g[g['match_date'] < recent_cut]
+        rec = g_[g_['match_date'] >= recent_cut]
+        old = g_[g_['match_date'] < recent_cut]
         trend, recent_wr, older_wr = None, None, None
         if len(rec) >= 10 and len(old) >= 20:
             recent_wr = float(rec['y'].mean())
@@ -231,13 +234,13 @@ def compute_market_stats(section='prediction', days=60, min_prob=50.0, recent_da
                             'win_rate': round(wr, 1), 'gap': round(wr - ap, 1)})
 
     groups = []
-    for gk, g in df.groupby('group'):
+    for gk, g_ in df.groupby('group'):
         icon, label = group_meta.get(gk, ('📌', 'Mengineyo'))
-        wr = float(g['y'].mean()) * 100
-        ap = float(g['p'].mean()) * 100
+        wr = float(g_['y'].mean()) * 100
+        ap = float(g_['p'].mean()) * 100
         gm = [m for m in markets if m['group_key'] == gk]
         groups.append({
-            'key': gk, 'icon': icon, 'label': label, 'n': int(len(g)),
+            'key': gk, 'icon': icon, 'label': label, 'n': int(len(g_)),
             'win_rate': round(wr, 1), 'avg_prob': round(ap, 1), 'gap': round(wr - ap, 1),
             'markets': len(gm),
             'strong': sum(1 for m in gm if m['verdict'] == 'strong'),
@@ -246,10 +249,10 @@ def compute_market_stats(section='prediction', days=60, min_prob=50.0, recent_da
     groups.sort(key=lambda x: -x['n'])
 
     tiers = []
-    for tname, g in df.groupby(df['pro_tier'].fillna('NONE')):
-        wr = float(g['y'].mean()) * 100
-        ap = float(g['p'].mean()) * 100
-        tiers.append({'tier': str(tname), 'n': int(len(g)), 'win_rate': round(wr, 1),
+    for tname, g_ in df.groupby(df['pro_tier'].fillna('NONE')):
+        wr = float(g_['y'].mean()) * 100
+        ap = float(g_['p'].mean()) * 100
+        tiers.append({'tier': str(tname), 'n': int(len(g_)), 'win_rate': round(wr, 1),
                       'avg_prob': round(ap, 1), 'gap': round(wr - ap, 1)})
 
     return {'ok': True, 'total_rows': n_all, 'overall': overall, 'buckets': buckets,
@@ -272,10 +275,11 @@ KUELEWA, SI KUKARIRI: Usirudia maneno ya maelezo haya. Tumia DATA YA SASA, RIPOT
 
 MUUNDO WA JIBU (Markdown, rahisi kusoma kwenye simu): mstari wa kwanza ni "🎯 Jibu fupi:" wenye jibu la moja kwa moja; kisha undani kwa vichwa vifupi (##), aya fupi, orodha, **namba muhimu kwa herufi nzito**, na jedwali dogo la safu 2-5 pale ulinganisho unahitajika; mwisho "➡️ Hatua inayofuata" kama inafaa. Maswali mepesi: jibu fupi bila vichwa. Admin akitaka maelezo kamili, ongeza urefu.
 
+TAARIFA ZA NJE (majeruhi, kikosi, habari): Zikiwepo kwenye DATA YA SASA chini ya "TAARIFA ZA NJE", ZISOME, zichambue na ujibu MOJA KWA MOJA kwa Kiswahili: nani ni majeruhi au amefungiwa, nani anaweza kurudi, hali ya kikosi, na athari kwa picks za mechi hiyo (mf. soko la magoli, ushindi wa timu). Tafsiri kutoka Kiingereza. USIMWAMBIE admin "nenda kwenye tovuti hii" na usitoe viungo kama jibu: taja jina la tovuti tu kama chanzo kwenye mabano, mfano (BBC Sport). Kama matokeo hayana jibu la swali, sema kwa ufupi ulichopata na kisichopatikana. Ushauri wa kuthibitisha kwenye tovuti rasmi za klabu ni mstari MMOJA mwishoni tu. Taarifa za mtandaoni zinaweza kuwa za zamani au si sahihi, kwa hiyo onya kwa ufupi mara moja. Kama utafutaji umeshindwa au haujawashwa, sema hukuweza kuzipata na usibuni majeruhi wala kikosi.
+
 UKWELI NA UAMINIFU (muhimu sana):
 - Matokeo ya History (nani alishinda au alipoteza, win rate, ROI, combos) yatoke TU kwenye "RIPOTI YA SIKU" au kwenye data uliyopewa. Usikisie wala usibuni. Siku isiyo kwenye ripoti: sema huna data ya siku hiyo na umwambie aombe "ripoti ya <tarehe>" (mfano 2026-10-09), "jana" au "wiki".
 - Namba zote zitoke kwenye data au mazungumzo. Usidai umeona code usiyoiona. Kama data haipo, sema wazi na umwambie aulize nini ili ipatikane.
-- TAARIFA ZA NJE (majeruhi, kikosi, habari) zikitolewa, ni makisio yasiyothibitishwa: taja chanzo (tovuti), onya kuwa zinaweza kuwa za zamani au si sahihi, na usiziongeze chochote. Zikikosekana au utafutaji ukishindwa, sema hukuweza kuzipata; usibuni majeruhi wala kikosi.
 - Tofautisha kilichopimwa kwenye data na makisio yako. Sampuli ndogo (n chini ya 30) = onya.
 - Hakuna uhakika wa ushindi kwenye utabiri au kamari. Usiahidi faida. Admin akiuliza kuhusu kuweka pesa, eleza hatari kwa ufupi na kwa heshima mara moja, si kila ujumbe.
 - Huoni wala hutoi API keys, passwords wala emails za watumiaji. Ukiombwa, kataa kwa upole.
@@ -309,10 +313,11 @@ SHERIA:
 MUUNDO: Markdown fupi inayosomeka kwenye simu: mstari wa "🎯 Jibu fupi:", kisha undani kwa aya fupi au orodha, **namba muhimu kwa herufi nzito**. Maswali mepesi: jibu fupi.
 """
 
-SEARCH_KW = ('majeruhi', 'mjeruhi', 'jeruhi', 'injur', 'kikosi', 'lineup', 'line-up', 'line up',
-             'team news', 'habari za timu', 'habari mpya', 'suspen', 'adhabu', 'tafuta', 'utafute',
-             'search', 'mtandaoni', 'online', 'h2h', 'head to head', 'transfer', 'kocha', 'msimamo',
-             'standings')
+SEARCH_KW = ('majeruhi', 'mjeruhi', 'jeruhi', 'majeraha', 'jeraha', 'injur', 'kikosi', 'lineup',
+             'line-up', 'line up', 'team news', 'news', 'habari za timu', 'habari mpya', 'suspen',
+             'adhabu', 'tafuta', 'utafute', 'search', 'mtandaoni', 'online', 'h2h', 'head to head',
+             'transfer', 'kocha', 'msimamo', 'standings', 'fitness', 'anakosekana', 'wanakosekana',
+             'absent', 'hali ya timu')
 MARKET_KW = ('market', 'soko', 'masoko', 'calibrat', 'roi', 'win rate', 'winrate', 'drift', 'imara',
              'dhaifu', 'uchambuzi', 'analysis', 'probability', 'uwezekano', 'corner', 'kadi', 'cards',
              'magoli', 'goals', 'sot', 'btts', 'nguvu', 'kali', 'faida', 'hasara', 'bora', 'mbaya',
@@ -324,8 +329,39 @@ PICKS_KW = ('pick', 'leo', 'today', 'chache', 'kidogo', 'hakuna', 'mechi', 'dash
 HISTORY_MESSAGES = 6
 HISTORY_CHAR_CAP = 1500
 SUMMARIZE_WHEN = 16
-CONTEXT_MAX = 8000
+CONTEXT_MAX = 6500        # data ya ndani ya mfumo
+EXT_MAX = 4200            # data ya nje (utafutaji), inaongezwa baada ya kukata
 SEARCH_DAILY_CAP = 40
+
+# Majina ya dataset -> majina ya kawaida kwa utafutaji wa mtandaoni
+TEAM_ALIASES = {
+    'Man United': 'Manchester United', 'Man City': 'Manchester City', 'Ath Madrid': 'Atletico Madrid',
+    'Ath Bilbao': 'Athletic Bilbao', "M'Gladbach": 'Borussia Monchengladbach',
+    'Ein Frankfurt': 'Eintracht Frankfurt', "Nott'M Forest": 'Nottingham Forest',
+    'Sheffield Weds': 'Sheffield Wednesday', 'Espanol': 'Espanyol', 'Vallecano': 'Rayo Vallecano',
+    'Sociedad': 'Real Sociedad', 'Celta': 'Celta Vigo', 'La Coruna': 'Deportivo La Coruna',
+    'Leverkusen': 'Bayer Leverkusen', 'Milan': 'AC Milan', 'Roma': 'AS Roma', 'Porto': 'FC Porto',
+    'Sp Braga': 'Braga', 'Guimaraes': 'Vitoria Guimaraes', 'Rb Leipzig': 'RB Leipzig',
+    'Fc Koln': 'FC Cologne', 'Hamburg': 'Hamburger SV', 'Mainz': 'Mainz 05',
+    'West Brom': 'West Bromwich Albion', 'Wolves': 'Wolverhampton Wanderers',
+    'Tottenham': 'Tottenham Hotspur', 'Newcastle': 'Newcastle United', 'West Ham': 'West Ham United',
+    'Leeds': 'Leeds United', 'Norwich': 'Norwich City', 'Paris SG': 'Paris Saint-Germain',
+    'Inter': 'Inter Milan', 'Dortmund': 'Borussia Dortmund', 'Betis': 'Real Betis',
+    'Olympiakos': 'Olympiacos', 'Az Alkmaar': 'AZ Alkmaar', 'For Sittard': 'Fortuna Sittard',
+    'Nac Breda': 'NAC Breda', 'Willem Ii': 'Willem II', 'St Truiden': 'Sint-Truiden',
+    'Waasland-Beveren': 'Beveren', 'Kasimpasa': 'Kasimpasa', 'Larisa': 'AEL Larissa',
+    'Levadeiakos': 'Levadiakos', 'Erzurum Bb': 'Erzurumspor',
+}
+# Majina ambayo mtumiaji anaweza kuandika -> jina la dataset
+TEAM_SYNONYMS = {
+    'man utd': 'Man United', 'manchester united': 'Man United', 'man united': 'Man United',
+    'manchester city': 'Man City', 'spurs': 'Tottenham', 'atletico': 'Ath Madrid',
+    'atlético': 'Ath Madrid', 'gladbach': "M'Gladbach", 'psg': 'Paris SG',
+    'inter milan': 'Inter', 'ac milan': 'Milan', 'bayern': 'Bayern Munich',
+    'real sociedad': 'Sociedad', 'wolverhampton': 'Wolves', 'newcastle united': 'Newcastle',
+    'nottingham forest': "Nott'M Forest", 'sheffield wednesday': 'Sheffield Weds',
+    'athletic bilbao': 'Ath Bilbao', 'borussia dortmund': 'Dortmund',
+}
 
 _CACHE = {}
 
@@ -509,14 +545,14 @@ def _model_digest(ns, shared):
     L = ['MODEL BEHAVIOUR (jifunze kutoka hapa, siku 60):']
     if not stats.get('ok'):
         return L + ['  hakuna data iliyosettlewa bado.']
-    gs = [g for g in stats['groups'] if g['n'] >= 30]
+    gs = [x for x in stats['groups'] if x['n'] >= 30]
     if gs:
-        best = max(gs, key=lambda g: g['gap'])
-        worst = min(gs, key=lambda g: g['gap'])
+        best = max(gs, key=lambda x: x['gap'])
+        worst = min(gs, key=lambda x: x['gap'])
         L.append(f"  Calibration bora: {best['label']} (pengo {best['gap']:+}); mbaya zaidi: "
                  f"{worst['label']} ({worst['gap']:+}). " +
-                 '; '.join(f"{g['label']} win {g['win_rate']}% vs model {g['avg_prob']}% (n={g['n']})"
-                           for g in stats['groups'][:6]))
+                 '; '.join(f"{x['label']} win {x['win_rate']}% vs model {x['avg_prob']}% (n={x['n']})"
+                           for x in stats['groups'][:6]))
     if stats.get('tiers'):
         L.append('  Tier: ' + '; '.join(
             f"{t['tier']} win {t['win_rate']}% vs model {t['avg_prob']}% (n={t['n']})"
@@ -676,6 +712,7 @@ def _search_provider():
 
 
 def _tavily(query):
+    """Rudisha (ok, maandishi au kosa, idadi ya vyanzo)."""
     key = os.environ['SEARCH_API_KEY'].strip()
 
     def call(topic):
@@ -687,7 +724,7 @@ def _tavily(query):
             'https://api.tavily.com/search', data=json.dumps(payload).encode('utf-8'),
             headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json',
                      'User-Agent': UA}, method='POST')
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=18) as resp:
             return json.loads(resp.read().decode('utf-8'))
 
     try:
@@ -695,18 +732,26 @@ def _tavily(query):
         if not body.get('results'):
             body = call('general')
     except urllib.error.HTTPError as e:
-        return False, f'Tavily {e.code}'
+        why = {401: 'key si sahihi', 403: 'ufikiaji umekataliwa', 429: 'kikomo cha maombi',
+               432: 'kikomo cha matumizi ya mwezi', 433: 'kikomo cha matumizi'}.get(e.code, '')
+        return False, f'Tavily {e.code}' + (f' ({why})' if why else ''), 0
     except Exception as e:
-        return False, f'{type(e).__name__}: {e}'
+        return False, f'{type(e).__name__}: {e}', 0
+
     lines = []
-    ans = (body.get('answer') or '').strip()
+    ans = ' '.join((body.get('answer') or '').split())
     if ans:
-        lines.append('Muhtasari wa chanzo: ' + ans[:450])
-    for r in (body.get('results') or [])[:4]:
+        lines.append('Muhtasari wa utafutaji: ' + ans[:600])
+    results = (body.get('results') or [])[:4]
+    for i, r in enumerate(results, 1):
         host = re.sub(r'^https?://(www\.)?', '', r.get('url', '')).split('/')[0]
-        content = (r.get('content') or '')[:230].replace('\n', ' ')
-        lines.append(f"- {host}: {(r.get('title') or '')[:90]} | {content}")
-    return (True, '\n'.join(lines)) if lines else (False, 'hakuna matokeo')
+        when = (r.get('published_date') or '')[:16]
+        content = ' '.join((r.get('content') or '').split())[:450]
+        lines.append(f"{i}. {host}{' (' + when + ')' if when else ''}: "
+                     f"{(r.get('title') or '')[:90]} — {content}")
+    if not lines:
+        return False, 'hakuna matokeo', 0
+    return True, '\n'.join(lines), len(results)
 
 
 def _groq_search(query):
@@ -714,18 +759,19 @@ def _groq_search(query):
     base = (os.environ.get('AI_BASE_URL') or 'https://api.groq.com/openai/v1').rstrip('/')
     model = (os.environ.get('AI_SEARCH_MODEL') or 'groq/compound-mini').strip()
     if not key:
-        return False, 'AI_API_KEY haipo'
+        return False, 'AI_API_KEY haipo', 0
     msgs = [
         {'role': 'system', 'content':
             'Wewe ni mtafiti wa mpira wa miguu. Tafuta mtandaoni habari za SASA kuhusu swali, '
-            'jibu kwa Kiswahili kwa orodha fupi (si zaidi ya maneno 150), taja tovuti na tarehe ya kila '
-            'taarifa. Kama hakuna taarifa za uhakika, sema "hakuna taarifa za uhakika".'},
+            'jibu kwa Kiswahili kwa orodha fupi (si zaidi ya maneno 150) yenye majina ya wachezaji na hali yao, '
+            'taja jina la tovuti na tarehe ya kila taarifa. Kama hakuna taarifa za uhakika, sema '
+            '"hakuna taarifa za uhakika".'},
         {'role': 'user', 'content': query},
     ]
     r = _llm_request(base, key, model, msgs, 600, 0.2)
     if r['ok']:
-        return True, r['text'][:1400]
-    return False, f"{r.get('status')}: {r.get('error', '')[:120]}"
+        return True, r['text'][:1400], 1
+    return False, f"{r.get('status')}: {r.get('error', '')[:120]}", 0
 
 
 def _web_search(query):
@@ -734,7 +780,7 @@ def _web_search(query):
         return _tavily(query)
     if prov == 'groq':
         return _groq_search(query)
-    return False, 'utafutaji haujawashwa'
+    return False, 'utafutaji haujawashwa', 0
 
 
 def _search_budget_ok(ns):
@@ -749,44 +795,103 @@ def _search_budget_ok(ns):
     return True
 
 
-def _match_queries(ns, low):
-    try:
-        df = ns['get_data']()['predictions']
-        today = ns['today_eat']()
-        dd = df[(df['match_date'].dt.date >= today) &
-                (df['match_date'].dt.date <= today + timedelta(days=4))]
-        out, seen = [], set()
-        for h, a in dd[['HomeTeam', 'AwayTeam']].drop_duplicates().itertuples(index=False):
-            if (h, a) in seen:
+def _sn(name):
+    """Jina la dataset -> jina la kawaida kwa utafutaji."""
+    return TEAM_ALIASES.get(name, name)
+
+
+def _mentioned(low, name):
+    for cand in (str(name), TEAM_ALIASES.get(name, '')):
+        c = cand.strip().lower()
+        if len(c) >= 4 and re.search(r'(?<!\w)' + re.escape(c) + r'(?!\w)', low):
+            return True
+    return False
+
+
+def _fixtures_ahead(ns, days=4):
+    df = ns['get_data']()['predictions']
+    today = ns['today_eat']()
+    d = df[(df['match_date'].dt.date >= today) &
+           (df['match_date'].dt.date <= today + timedelta(days=days))]
+    return list(d[['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates()
+                .itertuples(index=False, name=None))
+
+
+def _build_queries(ns, low, shared):
+    """Rudisha orodha ya (lebo, query ya Kiingereza), hadi 2."""
+    month = ns['today_eat']().strftime('%B %Y')
+    fixtures = _fixtures_ahead(ns)
+    teams = []
+    for h, a, _md in fixtures:
+        for t in (h, a):
+            if t not in teams and _mentioned(low, t):
+                teams.append(t)
+    for syn, ds in TEAM_SYNONYMS.items():
+        if re.search(r'(?<!\w)' + re.escape(syn) + r'(?!\w)', low) and ds not in teams:
+            teams.append(ds)
+
+    queries, used = [], set()
+    for t in teams:
+        fx = next(((h, a) for h, a, _md in fixtures if t in (h, a)), None)
+        if fx:
+            if fx in used:
                 continue
-            if str(h).lower() in low or str(a).lower() in low:
-                seen.add((h, a))
-                out.append(f'{h} vs {a} injuries suspensions expected lineup team news')
-        return out
-    except Exception:
-        return []
+            used.add(fx)
+            queries.append((f'{fx[0]} vs {fx[1]}',
+                            f'{_sn(fx[0])} vs {_sn(fx[1])} injuries suspensions team news '
+                            f'expected lineup {month}'))
+        else:
+            queries.append((t, f'{_sn(t)} injuries suspensions team news {month}'))
+
+    if not queries and any(k in low for k in ('leo', 'today', 'mechi', 'picks', 'zijazo')):
+        surv = shared.get('surv') or []
+        top = sorted(surv, key=lambda m: -float(m['survivors'][0]['probability_%']))[:2]
+        for m in top:
+            queries.append((f"{m['home']} vs {m['away']}",
+                            f"{_sn(m['home'])} vs {_sn(m['away'])} injuries suspensions team news "
+                            f"expected lineup {month}"))
+    return queries[:2]
 
 
-def _external_info(ns, text):
+def _external_info(ns, text, shared):
+    """Rudisha mistari ya TAARIFA ZA NJE; inaweka g.ai_notes (mistari ya 🔎) na g.ai_ext_used."""
     low = text.lower()
     if not any(k in low for k in SEARCH_KW):
         return []
-    if _search_provider() is None:
-        return ['TAARIFA ZA NJE: utafutaji wa mtandaoni haujawashwa (admin aweke SEARCH_API_KEY). '
-                'Usibuni majeruhi wala kikosi.']
-    queries = _match_queries(ns, low) or [text[:160] + ' football']
-    out = ['TAARIFA ZA NJE (kutoka mtandaoni; zinaweza kuwa za zamani au si sahihi; taja chanzo na onya):']
-    for q in queries[:2]:
+    prov = _search_provider()
+    pname = {'tavily': 'Tavily', 'groq': 'Groq Compound'}.get(prov, '')
+    if prov is None:
+        g.ai_notes = ['⚠️ Utafutaji wa mtandaoni haujawashwa (weka SEARCH_API_KEY kwenye Render).']
+        return ['TAARIFA ZA NJE: utafutaji haujawashwa. Sema hukuweza kuzipata; usibuni majeruhi wala kikosi.']
+
+    queries = _safe(lambda: _build_queries(ns, low, shared), []) or \
+        [(text[:60], text[:150] + ' football news')]
+    out = ['TAARIFA ZA NJE (zimepatikana mtandaoni sasa hivi). MAELEKEZO: zisome na ujibu swali la admin '
+           'MOJA KWA MOJA kwa Kiswahili (majina ya wachezaji, nani anakosekana, athari kwa picks). Usitoe '
+           'viungo kama jibu; taja jina la tovuti tu kama chanzo kwenye mabano.']
+    notes, any_ok = [], False
+    for label, q in queries[:2]:
         if not _search_budget_ok(ns):
+            notes.append('⚠️ Kikomo cha utafutaji cha leo kimefikiwa.')
             out.append('(kikomo cha utafutaji cha leo kimefikiwa)')
             break
-        ok, res = _web_search(q)
-        out.append(f'[Swali: {q}]')
-        out.append(res if ok else f'(utafutaji haukufanikiwa: {res[:150]})')
+        ok, res, n = _web_search(q)
+        out.append(f'[Utafutaji: {q}]')
+        if ok:
+            any_ok = True
+            notes.append(f'🔎 Nimetafuta mtandaoni ({pname}): **{label}**, vyanzo {n}')
+            out.append(res)
+        else:
+            notes.append(f'⚠️ Utafutaji wa **{label}** umeshindwa: {res[:120]}')
+            out.append(f'(utafutaji haukufanikiwa: {res[:150]}). Sema hukuweza kupata taarifa hizi; '
+                       f'usibuni majeruhi wala kikosi.')
+    g.ai_notes = notes
+    g.ai_ext_used = any_ok
     return out
 
 
 def build_context(ns, user_text, prev_text, group_fn, group_meta):
+    g.ai_notes, g.ai_ext_used = [], False
     settings = Settings.get()
     thr = float(settings.probability_threshold or 0)
     low = f'{user_text} {prev_text}'.lower()
@@ -798,10 +903,12 @@ def build_context(ns, user_text, prev_text, group_fn, group_meta):
         parts += _safe(lambda: _model_digest(ns, shared), [])
     if any(k in low for k in PICKS_KW):
         parts += _safe(lambda: _picks_detail(shared), [])
-    parts += _safe(lambda: _external_info(ns, user_text), [])
     text = '\n'.join(parts)
     if len(text) > CONTEXT_MAX:
         text = text[:CONTEXT_MAX] + '\n[...data imekatwa]'
+    ext = _safe(lambda: _external_info(ns, user_text, shared), [])
+    if ext:
+        text += '\n' + '\n'.join(ext)[:EXT_MAX]
     return text
 
 
@@ -858,13 +965,13 @@ def _parse_http_error(e):
     return {'ok': False, 'status': e.code, 'retry_after': ra, 'daily': daily, 'error': str(msg)[:300]}
 
 
-def _build_request(base, api_key, model, messages, max_tokens, temperature, stream):
+def _build_request(base, api_key, model, messages, max_tokens, temperature, stream, effort='low'):
     payload = {'model': model, 'messages': messages,
                'temperature': temperature, 'max_tokens': max_tokens}
     if stream:
         payload['stream'] = True
     if 'gpt-oss' in model:
-        payload['reasoning_effort'] = 'low'
+        payload['reasoning_effort'] = effort
     return urllib.request.Request(
         base + '/chat/completions', data=json.dumps(payload).encode('utf-8'),
         headers={'Authorization': 'Bearer ' + api_key, 'Content-Type': 'application/json',
@@ -907,10 +1014,12 @@ def _friendly_error(r):
         return 'Mtoa huduma amekataa ombi la seva (Cloudflare 1010). Nitumie ujumbe huu.'
     if st in (400, 404):
         return f'Ombi limekataliwa ({st}). Angalia AI_MODEL na AI_BASE_URL. {err[:200]}'
+    if st == 413:
+        return 'Ombi ni kubwa mno kwa kikomo cha tokens kwa dakika. Subiri kidogo kisha uulize swali fupi zaidi.'
     return f'AI imeshindwa ({st}): {err[:200]}'
 
 
-def _llm_events(messages, max_tokens=1800, temperature=0.6):
+def _llm_events(messages, max_tokens=1800, temperature=0.6, effort='low'):
     """Generator: ('text', kipande) ... kisha ('done', None) au ('error', ujumbe)."""
     api_key = (os.environ.get('AI_API_KEY') or '').strip()
     if not api_key:
@@ -926,7 +1035,7 @@ def _llm_events(messages, max_tokens=1800, temperature=0.6):
     last = {'status': 0, 'error': 'Kosa lisilojulikana.'}
     for model in models:
         for attempt in (1, 2):
-            req = _build_request(base, api_key, model, messages, max_tokens, temperature, True)
+            req = _build_request(base, api_key, model, messages, max_tokens, temperature, True, effort)
             try:
                 resp = urllib.request.urlopen(req, timeout=25)
             except urllib.error.HTTPError as e:
@@ -963,7 +1072,8 @@ def _llm_events(messages, max_tokens=1800, temperature=0.6):
                 if got_any:
                     yield ('done', None)
                     return
-                last = {'status': 200, 'error': 'AI imerudisha jibu tupu (tokens za kufikiri zimeisha). Jaribu tena.'}
+                last = {'status': 200,
+                        'error': 'AI imerudisha jibu tupu (tokens za kufikiri zimeisha). Jaribu tena.'}
             except Exception as e:
                 if got_any:
                     yield ('error', f'Mtandao ulikatika katikati ya jibu: {type(e).__name__}')
@@ -983,10 +1093,13 @@ def _llm_chat(messages, max_tokens=700, temperature=0.3):
     return True, ''.join(parts).strip()
 
 
-def _stream_reply(messages, max_tokens, on_success):
-    """Generator ya Response: maandishi kadri yanavyofika, kisha [[DONE]]{json} au [[ERR]]ujumbe."""
+def _stream_reply(messages, max_tokens, on_success, prefix='', effort='low'):
+    """Generator ya Response: maandishi kadri yanavyofika, kisha [[DONE]]{json} au [[ERR]]ujumbe.
+    prefix (mf. mistari ya 🔎) inaonyeshwa kwanza lakini haihifadhiwi kwenye historia."""
+    if prefix:
+        yield prefix
     parts, err = [], None
-    for kind, val in _llm_events(messages, max_tokens=max_tokens):
+    for kind, val in _llm_events(messages, max_tokens=max_tokens, effort=effort):
         if kind == 'text':
             parts.append(val)
             yield val
@@ -1236,6 +1349,10 @@ def register_admin_tools(app, admin_only, app_ns):
                      {'role': 'system', 'content': dyn}] + history +
                     [{'role': 'user', 'content': text}])
 
+        notes = getattr(g, 'ai_notes', None) or []
+        effort = 'medium' if getattr(g, 'ai_ext_used', False) else 'low'
+        prefix = ('\n'.join('> ' + n for n in notes) + '\n\n') if notes else ''
+
         def on_success(reply):
             t = thread
             if t is None:
@@ -1248,7 +1365,8 @@ def register_admin_tools(app, admin_only, app_ns):
             db.session.commit()
             return {'thread_id': t.id}
 
-        return _stream_reply(messages, 1800, on_success)
+        return _stream_reply(messages, 2300 if effort == 'medium' else 1800, on_success,
+                             prefix=prefix, effort=effort)
 
     @app.route('/admin/ai/stream', methods=['POST'])
     @admin_only
@@ -1365,3 +1483,20 @@ def register_admin_tools(app, admin_only, app_ns):
             UserChatMessage.query.filter_by(user_id=user.id).delete()
             db.session.commit()
         return redirect(url_for('user_ai'))
+
+    # ---------------- Plugins (mf. retrain_tools.py) ----------------
+    for mod_name in PLUGINS:
+        try:
+            mod = __import__(mod_name)
+        except ModuleNotFoundError as e:
+            if e.name != mod_name:
+                print(f'[admin_tools] plugin {mod_name} ina tatizo la import: {e}')
+            continue
+        except Exception as e:
+            print(f'[admin_tools] plugin {mod_name} imeshindwa kupakia: {type(e).__name__}: {e}')
+            continue
+        try:
+            mod.register(app, admin_only, app_ns)
+            print(f'[admin_tools] plugin {mod_name} imepakiwa.')
+        except Exception as e:
+            print(f'[admin_tools] plugin {mod_name}.register imeshindwa: {type(e).__name__}: {e}')
