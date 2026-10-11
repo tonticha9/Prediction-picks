@@ -8,20 +8,21 @@ kwenye hourly_catchup.py inazozileta kutoka AllSportsAPI):
   HTHG, HTAG          - bao la nusu ya kwanza
   HC, AC              - corners (nyumbani/ugenini)
   HY, AY, HR, AR      - kadi za njano/nyekundu (nyumbani/ugenini)
-  HS, AS              - risasi jumla (haitumiki)
   HST, AST            - risasi zilizolenga lengo (shots on target)
 
-MAREKEBISHO YA OKT 11 2026 (kuoanisha na ufafanuzi wa TRAINING):
-  - 'yellows_over_X' na 'cards_range_lo_hi' = NJANO TU (HY+AY).
-  - 'booking_pts_over_X' = POINTI: njano 10, nyekundu 25.
-    X ni pointi kamili (35, 45, 55) -> over_35 = pointi > 35.
-  - 'cards_over_X' / 'cards_under_X' = kadi ZOTE (njano+nyekundu) (haijabadilika).
-  - 'both_teams_carded' = kila timu angalau kadi 1 (njano au nyekundu) (haijabadilika).
-  - Masoko mapya 4 sasa yanasettliwa:
-      any_red_card           -> nyekundu 1+ kwenye mechi
-      no_cards_ft            -> hakuna kadi yoyote (njano+nyekundu = 0)
-      both_teams_2plus_cards -> kila timu angalau kadi 2 (njano+nyekundu)
-      home_more_cards        -> kadi za nyumbani > kadi za ugenini
+UFAFANUZI WA MASOKO YA KADI (umeoanishwa na TRAINING — Okt 11 2026):
+  - yellows_over_X, cards_range_lo_hi = NJANO TU (HY+AY). cards_range ni lo..hi pamoja.
+  - booking_pts_over_X = POINTI: njano 10, nyekundu 25 (X = 35/45/55, pointi > X).
+  - X_and_cards_over35 (home_win/away_win) = matokeo NA booking points > 35
+    (jina lina 'cards' lakini training inatumia booking_pts_over_35).
+  - any_red_card           = nyekundu 1+ (HR+AR >= 1)
+  - no_cards_ft            = njano+nyekundu = 0
+  - both_teams_carded      = (HY+HR) >= 1 na (AY+AR) >= 1
+  - both_teams_2plus_cards = (HY+HR) >= 2 na (AY+AR) >= 2
+  - home_more_cards        = (HY + 2*HR) nyumbani > (AY + 2*AR) ugenini
+                             (nyekundu inahesabiwa MARA 2, kama training)
+
+Masoko ya BTTS: btts, home_win_btts, away_win_btts, na X_and_btts (home_win/away_win/dc_*).
 
 evaluate_market(market, row) inarudisha:
   True   -> soko lilishinda (WON)
@@ -104,13 +105,6 @@ def _total_yellows(row):
     return _num(row, 'HY') + _num(row, 'AY')
 
 
-def _total_cards(row):
-    """Kadi ZOTE (njano+nyekundu) - inatumika kwa 'cards'."""
-    if not _has_cards(row):
-        return None
-    return _num(row, 'HY') + _num(row, 'AY') + _num(row, 'HR') + _num(row, 'AR')
-
-
 def _booking_points(row):
     """Pointi za nidhamu: njano = 10, nyekundu = 25."""
     if not _has_cards(row):
@@ -133,9 +127,14 @@ STAT_FUNCS = {
     'corners': _total_corners,
     'sot': _total_sot,
     'yellows': _total_yellows,
-    'cards': _total_cards,
     'booking_pts': _booking_points,
+    # 'cards' kwenye masoko ya mchanganyiko (home_win_and_cards_over35) =
+    # booking points > 35 kwa training, kwa hiyo inatumia pointi pia.
+    'cards': _booking_points,
 }
+
+# Stats ambazo namba ya soko ni THAMANI KAMILI (35 = 35), si 10x (75 = 7.5)
+RAW_THRESHOLD_STATS = ('booking_pts', 'cards')
 
 
 # ================================================================
@@ -185,6 +184,8 @@ def _half_result(market, row):
 
 BOOLEAN_MARKETS = (
     'btts',
+    'home_win_btts',
+    'away_win_btts',
     'both_teams_carded',
     'any_red_card',
     'no_cards_ft',
@@ -199,6 +200,13 @@ def _boolean_market(market, row):
             return None
         return _num(row, 'FTHG') > 0 and _num(row, 'FTAG') > 0
 
+    if market in ('home_win_btts', 'away_win_btts'):
+        if not _has_score(row):
+            return None
+        h, a = _num(row, 'FTHG'), _num(row, 'FTAG')
+        both = h > 0 and a > 0
+        return both and (h > a if market == 'home_win_btts' else h < a)
+
     if market == 'any_red_card':
         if not _has_reds(row):
             return None
@@ -209,8 +217,10 @@ def _boolean_market(market, row):
                   'both_teams_2plus_cards', 'home_more_cards'):
         if not _has_cards(row):
             return None
-        home_cards = _num(row, 'HY') + _num(row, 'HR')
-        away_cards = _num(row, 'AY') + _num(row, 'AR')
+        hy, ay = _num(row, 'HY'), _num(row, 'AY')
+        hr, ar = _num(row, 'HR'), _num(row, 'AR')
+        home_cards = hy + hr
+        away_cards = ay + ar
 
         if market == 'both_teams_carded':
             return home_cards >= 1 and away_cards >= 1
@@ -219,7 +229,8 @@ def _boolean_market(market, row):
         if market == 'both_teams_2plus_cards':
             return home_cards >= 2 and away_cards >= 2
         if market == 'home_more_cards':
-            return home_cards > away_cards
+            # Training: (HY + 2*HR) > (AY + 2*AR)
+            return (hy + 2 * hr) > (ay + 2 * ar)
 
     return 'unknown'
 
@@ -228,7 +239,7 @@ CARDS_RANGE_RE = re.compile(r'^cards_range_(\d+)_(\d+)$')
 
 
 def _cards_range(market, row):
-    """cards_range_lo_hi = idadi ya NJANO (HY+AY) iko kati ya lo na hi."""
+    """cards_range_lo_hi = idadi ya NJANO (HY+AY) iko kati ya lo na hi (pamoja)."""
     m = CARDS_RANGE_RE.match(market)
     if not m:
         return 'unknown'
@@ -248,6 +259,7 @@ THRESHOLD_RE = re.compile(r'^(?P<stat>[a-z_]*?)_?(?P<direction>over|under)_?(?P<
 def _parse_threshold(suffix):
     """Chambua 'corners_over_75' -> ('corners','over',7.5)
     'booking_pts_over_35' -> ('booking_pts','over',35.0)  (pointi kamili)
+    'cards_over35' (kwenye compound) -> ('cards','over',35.0)  (pointi kamili)
     au 'under95' (bila jina la stat, kwa ajili ya compound) -> ('','under',9.5)."""
     m = THRESHOLD_RE.match(suffix)
     if not m:
@@ -255,7 +267,7 @@ def _parse_threshold(suffix):
     stat = m.group('stat').strip('_')
     direction = m.group('direction')
     raw = int(m.group('num'))
-    if stat == 'booking_pts':
+    if stat in RAW_THRESHOLD_STATS:
         threshold = float(raw)      # pointi kamili: 35, 45, 55
     else:
         threshold = raw / 10.0      # 75 -> 7.5
@@ -279,7 +291,7 @@ def _threshold_market(market, row):
 
 # ================================================================
 # Masoko ya mchanganyiko: "X_and_Y" (mfano home_win_and_over_25,
-# away_win_and_cards_under35, dc_12_and_over_25)
+# away_win_and_cards_over35, dc_12_and_over_25, home_win_and_btts)
 # ================================================================
 def _compound_market(market, row):
     if '_and_' not in market:
@@ -292,7 +304,10 @@ def _compound_market(market, row):
     if base_result == 'unknown':
         return 'unknown'
 
-    second_result = _threshold_market(second, row)
+    if second == 'btts':
+        second_result = _boolean_market('btts', row)
+    else:
+        second_result = _threshold_market(second, row)
     if second_result is None:
         return None
     if second_result == 'unknown':
