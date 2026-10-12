@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Excelsior vs Groningen: dc_12 @1.28 + Aberdeen vs St Mirren: dc_1x @1.25,1.6,66.3
-3,3,Mechelen vs St Truiden: dc_12 @1.30 + Racing Santander vs Valencia: dc_12 @1.28 + Millwall vs Swansea: dc_1x @1.46,2.43,43.2
-5,6,Betis vs Barcelona: dc_x2 @1.14 + Liverpool vs Man City: dc_12 @1.28 + Elche vs Celta: dc_12 @1.36 + Hull vs Everton: dc_12 @1.33 + Cardiff vs Watford: dc_12 @1.19 + Excelsior vs Groningen: dc_12 @1.28,4.02,25.1
-7,6,Rio Ave vs Nacional: dc_1x @1.36 + Millwall vs Swansea: dc_1x @1.46 + Brighton vs Crystal Palace: dc_1x @1.18 + Crystal Palace vs Nottingham: dc_12 @1.36 + Parma vs Torino: dc_12 @1.36 + La Coruna vs Levante: dc_12 @1.30,5.63,15.4
+2,2,Lincoln vs West Ham: dc_12 @1.25 + Angers vs Marseille: dc_12 @1.28,1.6,64.6
+3,3,Asteras Tripolis vs Levadeiakos: dc_x2 @1.51 + Motherwell vs Hearts: dc_12 @1.28 + Kilmarnock vs Motherwell: dc_12 @1.28,2.47,41.9
+5,6,Stoke vs Middlesbrough: dc_12 @1.28 + Lyon vs Nice: dc_1x @1.17 + Angers vs Marseille: dc_12 @1.28 + Venezia vs Napoli: dc_x2 @1.18 + Asteras Tripolis vs Levadeiakos: dc_x2 @1.51 + Bologna vs Inter: dc_x2 @1.18,4.03,25.7
+7,6,Millwall vs Swansea: dc_x2 @1.50 + Falkirk vs Kilmarnock: dc_1x @1.25 + Bristol City vs Blackburn: dc_1x @1.28 + Aston Villa vs Man City: dc_12 @1.25 + Leeds vs Man United: dc_12 @1.28 + Middlesbrough vs Cardiff: home_win @1.47,5.64,17.3
