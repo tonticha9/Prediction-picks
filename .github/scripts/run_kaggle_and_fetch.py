@@ -7,6 +7,10 @@ predictions.csv/value_bets.csv/combos.csv kwenye kaggle_output/.
 
 Ina "retry with backoff" - haikati tamaa mara moja endapo Kaggle
 ikatoa error ya muda (403/429/network).
+
+MABADILIKO: predictions.csv pekee ndiyo LAZIMA. value_bets.csv na
+combos.csv zinaweza kukosekana siku isiyo na picks - hiyo ni onyo tu,
+si kosa.
 """
 import os
 import sys
@@ -120,19 +124,36 @@ def main():
     os.makedirs('kaggle_output', exist_ok=True)
     run_kaggle_cmd(['kernels', 'output', KAGGLE_SLUG, '-p', 'kaggle_output'])
 
+    # Onyesha faili zote zilizopakuliwa (msaada wa kugundua tatizo)
+    print("📂 Faili zilizopakuliwa kutoka Kaggle:")
+    for fname in sorted(os.listdir('kaggle_output')):
+        fpath = os.path.join('kaggle_output', fname)
+        if os.path.isfile(fpath):
+            print(f"   - {fname}: {os.path.getsize(fpath):,} bytes")
+
     # HATUA 5: Uthibitisho wa msingi (sanity check) kabla ya kukubali matokeo
-    # MUHIMU: fixtures 0 (mfano wakati wa "international break") SI kosa -
-    # ni hali halali. Tunatofautisha "faili halali yenye mechi 0" (endelea,
-    # lakini USIBADILISHE data ya app) na "faili iliyoharibika kabisa" (kosa la
-    # kweli - simamisha workflow).
+    # MUHIMU:
+    #  - predictions.csv ni LAZIMA. Ikikosekana = kosa la kweli, simamisha.
+    #  - value_bets.csv na combos.csv ni za HIARI. Siku isiyo na picks,
+    #    notebook inaweza kutoziandika. Hiyo si kosa - tunaonya tu, na
+    #    yml itashughulikia (inaweka header tu).
+    #  - fixtures 0 (international break) SI kosa - tunaruka sasisho la data.
     import pandas as pd
     predictions_path = os.path.join('kaggle_output', 'predictions.csv')
-    for fname in ['predictions.csv', 'value_bets.csv', 'combos.csv']:
+
+    if not os.path.exists(predictions_path):
+        print("❌ predictions.csv haipo baada ya kupakua - kitu kimeshindikana.")
+        sys.exit(1)
+    print(f"✅ predictions.csv: {os.path.getsize(predictions_path):,} bytes")
+
+    for fname in ['value_bets.csv', 'combos.csv']:
         path = os.path.join('kaggle_output', fname)
         if not os.path.exists(path):
-            print(f"❌ {fname} haipo baada ya kupakua - kitu kimeshindikana.")
-            sys.exit(1)
-        print(f"✅ {fname}: {os.path.getsize(path):,} bytes")
+            print(f"⚠️  {fname} haipo kwenye output ya Kaggle (huenda hakuna picks leo,")
+            print(f"    au cell ya {fname} imeshindwa kimya kimya). Naendelea - workflow")
+            print(f"    itaweka header tu kwenye data/{fname}.")
+        else:
+            print(f"✅ {fname}: {os.path.getsize(path):,} bytes")
 
     try:
         df_pred = pd.read_csv(predictions_path)
