@@ -7,16 +7,21 @@ MATCH_RESULT_DIRECT_PAIR = {'home_win': 'away_win', 'away_win': 'home_win'}
 THRESHOLD_RE = re.compile(r'^(?P<stat>[a-z_]+?)_(?P<direction>over|under)_(?P<num>\d{2,3})$')
 OVER_05_RE = re.compile(r'^(home_|away_)?goals_over_05$')
 
+# Masoko ya timu moja "under" (mf. home_goals_under_15): yanaruhusiwa kuonekana (Other Picks)
+# na kwenye combos, lakini HAYAWI Best Pick kamwe.
+TEAM_GOALS_UNDER_RE = re.compile(r'^(home|away)_goals_under_\d{2,3}$')
+
 # Kigezo cha 'Pro Confidence' ya model - kinatumika kuvunja usawa wa
 # probability zilizokaribiana (point 1-2), badala ya namba pekee.
 TIER_RANK = {'PRO_STRONG': 2, 'PRO_MEDIUM': 1}
 
 
 def is_market_allowed(market):
-    """Sheria ya kudumu (inatumika pia na COMBOS). Over 0.5 inabaki marufuku hapa."""
+    """Sheria ya kudumu (inatumika pia na COMBOS). Over 0.5 inabaki marufuku hapa.
+    home_goals_under_* / away_goals_under_* zimerudishwa (Oct 13 2026): zinazuiwa
+    kuwa Best Pick tu (angalia is_best_pick_excluded)."""
+    market = str(market)
     if 'goals' in market and (market.endswith('_05') or market.endswith('_45')):
-        return False
-    if market.startswith('home_goals_under_') or market.startswith('away_goals_under_'):
         return False
     if '_and_' in market and 'under' in market:
         return False
@@ -29,6 +34,16 @@ def is_display_allowed(market):
     return is_market_allowed(market) or bool(OVER_05_RE.match(str(market)))
 
 
+def is_recordable(market):
+    """Soko linaloweza kumfikia mtumiaji (kuonyeshwa au kwenye combos) ndilo pekee
+    linalorekodiwa na kuchambuliwa. Masoko yaliyozuiliwa kabisa hayarekodiwi
+    wala hayaingii Market Analysis."""
+    try:
+        return is_display_allowed(str(market))
+    except Exception:
+        return True
+
+
 def is_best_pick_excluded(market, allow_dc_best=False):
     """Masoko yasiyoruhusiwa kuwa Best Pick (yanaruhusiwa kuonekana Other Picks)."""
     m = str(market)
@@ -38,6 +53,8 @@ def is_best_pick_excluded(market, allow_dc_best=False):
         return True                       # Admin anaweza kuruhusu
     if OVER_05_RE.match(m):
         return True                       # over 0.5: Other Picks tu
+    if TEAM_GOALS_UNDER_RE.match(m):
+        return True                       # home/away goals under: Other Picks tu
     return False
 
 
