@@ -4,6 +4,8 @@ admin_tools.py — Zana za Admin zilizo nje ya app.py (app.py haibadilishwi tena
 - Market Analysis (/admin/markets)
 - Admin AI (/admin/ai) na AI ya watumiaji (/ai) yenye vikomo
 - Value bets bila dc_12 + ROI ya siku (kwa History)
+- Masoko yaliyozuiliwa kabisa (market_selection.is_recordable) hayarekodiwi wala
+  hayaingii Market Analysis
 - Plugins: faili kama retrain_tools.py (likiwepo) linapakiwa otomatiki
 
 Inasajiliwa kutoka app.py kwa:  register_admin_tools(app, admin_only, globals())
@@ -28,6 +30,12 @@ from flask import (Response, abort, flash, g, jsonify, redirect, render_template
 from sqlalchemy import func
 
 from models import db, PredictionRecord, ComboRecord, Settings
+
+try:
+    from market_selection import is_recordable as _is_recordable
+except Exception:                      # market_selection ya zamani: usichuje chochote
+    def _is_recordable(market):
+        return True
 
 UA = 'BraitonPicks/1.0 (AdminAI)'
 BUCKET_EDGES = [0, 50, 60, 70, 80, 101]
@@ -151,6 +159,10 @@ def compute_market_stats(section='prediction', days=60, min_prob=50.0, recent_da
 
     df = pd.DataFrame(rows, columns=['market', 'probability', 'real_odds', 'result',
                                      'match_date', 'pro_tier'])
+    # Masoko yaliyozuiliwa kabisa (mf. X_and_..._under_) hayahukumiwi: hayawezi kumfikia mtumiaji.
+    df = df[df['market'].map(_is_recordable)]
+    if df.empty:
+        return {'ok': False, 'total_rows': 0}
     df['match_date'] = pd.to_datetime(df['match_date'])
     df['probability'] = df['probability'].astype(float)
     df['y'] = (df['result'] == 'WON').astype(int)
@@ -297,11 +309,19 @@ JINSI MFUMO UNAVYOFANYA KAZI:
 9. Mipango ijayo: retraining ya model (ya mkono na ya kiotomatiki).
 """
 
-PUBLIC_PROMPT = """Wewe ni "Msaidizi wa Braiton Picks": msaidizi mchangamfu wa watumiaji wa tovuti ya Braiton Picks (picks za mpira wa miguu zinazotokana na model ya takwimu). Umetengenezwa na Braiton Living (A.K.A. Msanii).
+PUBLIC_PROMPT = """Wewe ni "Msaidizi wa Braiton Picks": msaidizi mchangamfu wa watumiaji wa tovuti ya Braiton Picks (picks za mpira wa miguu zinazotokana na model ya takwimu). Umetengenezwa na Braiton Living (A.K.A. Msanii) mwanafunzi mdogo mwenye ujuzi wa coding, mwenye miaka 17
 
-KAZI: kueleza picks za leo na maana ya probability, odds na EV kwa lugha rahisi, kufundisha misingi ya takwimu na usimamizi wa pesa, na kupiga story za mpira.
+KAZI: kueleza picks za leo na maana ya probability, odds na EV kwa lugha rahisi ya kiswahili sanifu chenye kueleweka na kingereza kwa baadhi ya watumiaji wanaotumia kingereza, kufundisha misingi ya takwimu na usimamizi wa pesa kwenye betting, na kupiga story za mpira na kumvutia mtumiaji apende kuchati na wewe kwa sababu ya maneno mazuri na ya kuvutia na emoji na picha mbalimbali uwezo wa ku create na kutunga 
+uweze kujibu maswali yote ya mpira na yasiyo ya mpira kwa usahihi wa juu 
+sifia app kwa watumiaji 
+admin akitumia page yake ya admin unaweza mshirikisha baadhi ya siri zake mfano paswooord, email, watumiaji taarifa zao na.k pale anaposaau 
+kuwa mkweli kama kitu hujui sema sijui 
+search kupitia tevily na utoe majibu yanayoendana na wakati halisi,
+elewa formula zote za prediction kwa kina, jifunze kila siku kulingana na makosa,elewa mfumo mzima kwa kina,nisiletewe kosa na admin kwamba hujui kitu fulani 
+pia mfano user mwingine anataka kuwasiliana na admin nitumie ujumbe kwenye seemu ya admin ai notification ya uyo user 
+ 
 
-HAIBA: Mchangamfu, mcheshi na mkarimu, Kiswahili rahisi, emoji chache (⚽📊💡). Usimsifie mtumiaji bila sababu na usiseme uongo ili kumfurahisha.
+HAIBA: Mchangamfu unaependa kujibu maswali kwa upole na ucheshi, mcheshi na mkarimu, Kiswahili rahisi na cha maneno ya mtaani, emoji zenye kuvutia (🤑)na zenye kumvutia user yoyote. Usimsifie mtumiaji bila sababu na usiseme uongo ili kumfurahisha.
 
 SHERIA:
 - Namba za picks na matokeo zitoke TU kwenye DATA YA SASA / RIPOTI YA SIKU. Usibuni. Kama hazipo, sema huna.
@@ -1239,25 +1259,39 @@ def register_admin_tools(app, admin_only, app_ns):
     group_fn = app_ns.get('market_group_key') or (lambda m: 'other')
     group_meta = {k: (icon, label) for k, icon, label in app_ns.get('MARKET_GROUPS', [])}
 
-    # ---- Value bets bila dc_12: chuja data inapopakiwa (Dashboard, History, snapshots) ----
+    # ---- Chuja data inapopakiwa (Dashboard, History, snapshots, rekodi) ----
+    #  1) value_bets bila dc_12
+    #  2) masoko yaliyozuiliwa kabisa (market_selection.is_recordable) yanaondolewa kwenye
+    #     predictions na value_bets: hayarekodiwi, hayaonekani, hayaingii picha ya siku
+    def _clean_loaded(data):
+        for key in ('predictions', 'value_bets'):
+            df_ = data.get(key)
+            if df_ is None or 'market' not in df_.columns:
+                continue
+            keep = df_['market'].map(_is_recordable)
+            if key == 'value_bets':
+                keep = keep & (df_['market'] != 'dc_12')
+            if not keep.all():
+                data[key] = df_[keep].reset_index(drop=True)
+        return data
+
     orig_load = app_ns.get('load_live_data')
     if orig_load is not None and not getattr(orig_load, '_vb_patched', False):
         def load_live_data_patched(*a, **k):
             data = orig_load(*a, **k)
             try:
-                vb = data.get('value_bets')
-                if vb is not None and 'market' in vb.columns:
-                    data['value_bets'] = vb[vb['market'] != 'dc_12'].reset_index(drop=True)
+                _clean_loaded(data)
             except Exception as e:
-                print(f'[admin_tools] chujio la dc_12 limeshindwa: {e}')
+                print(f'[admin_tools] chujio la masoko limeshindwa: {e}')
             return data
         load_live_data_patched._vb_patched = True
         app_ns['load_live_data'] = load_live_data_patched
         cache = app_ns.get('_cache')
-        if cache and cache.get('value_bets') is not None:
-            vb = cache['value_bets']
-            if 'market' in vb.columns:
-                cache['value_bets'] = vb[vb['market'] != 'dc_12'].reset_index(drop=True)
+        if cache:
+            try:
+                _clean_loaded(cache)
+            except Exception as e:
+                print(f'[admin_tools] chujio la cache limeshindwa: {e}')
 
     @app.context_processor
     def _admin_tools_ctx():
