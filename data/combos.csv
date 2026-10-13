@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Lincoln vs West Ham: dc_12 @1.25 + Angers vs Marseille: dc_12 @1.28,1.6,64.6
-3,3,Asteras Tripolis vs Levadeiakos: dc_x2 @1.51 + Motherwell vs Hearts: dc_12 @1.28 + Kilmarnock vs Motherwell: dc_12 @1.28,2.47,41.9
-5,6,Stoke vs Middlesbrough: dc_12 @1.28 + Lyon vs Nice: dc_1x @1.17 + Angers vs Marseille: dc_12 @1.28 + Venezia vs Napoli: dc_x2 @1.18 + Asteras Tripolis vs Levadeiakos: dc_x2 @1.51 + Bologna vs Inter: dc_x2 @1.18,4.03,25.7
-7,6,Millwall vs Swansea: dc_x2 @1.50 + Falkirk vs Kilmarnock: dc_1x @1.25 + Bristol City vs Blackburn: dc_1x @1.28 + Aston Villa vs Man City: dc_12 @1.25 + Leeds vs Man United: dc_12 @1.28 + Middlesbrough vs Cardiff: home_win @1.47,5.64,17.3
+2,2,Fc Koln vs Schalke 04: dc_1x @1.36 + Alaves vs Malaga: dc_1x @1.18,1.6,64.9
+3,4,Man United vs Bournemouth: dc_1x @1.25 + Nijmegen vs Groningen: dc_1x @1.36 + Celtic vs Hearts: dc_1x @1.17 + Atalanta vs Frosinone: dc_12 @1.22,2.43,44.0
+5,6,Kalamata vs Ofi Crete: dc_x2 @1.50 + Lincoln vs West Ham: dc_12 @1.25 + Milan vs Atalanta: dc_1x @1.22 + Augsburg vs Union Berlin: dc_1x @1.28 + Heerenveen vs Excelsior: dc_12 @1.22 + Lille vs Brest: dc_1x @1.22,4.36,25.3
+7,5,Kifisia vs Aris: dc_12 @1.36 + Norwich vs Portsmouth: home_win @1.73 + Kalamata vs Ofi Crete: dc_x2 @1.50 + Malaga vs Sociedad: dc_x2 @1.36 + Hibernian vs Falkirk: dc_1x @1.18,5.66,18.0
