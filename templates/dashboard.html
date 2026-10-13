@@ -1,155 +1,49 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<style>
-:root { --ticker-duration: 36s; }
-
-/* Hero */
-.app-hero {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:space-between;
-  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 14px;
-  position: relative;
-  border: 1px solid rgba(60,180,255,0.10);
-}
-.app-hero-left { display:flex; gap:12px; align-items:center; }
-.app-logo { width:56px; height:56px; border-radius:10px; background:linear-gradient(135deg,#3fd1ff,#2bc4a6); display:flex; align-items:center; justify-content:center; font-weight:900; color:#012; box-shadow:0 10px 30px rgba(43,196,166,0.10); }
-.app-title { font-weight:900; font-size:18px; color:#e9fbff; }
-.app-sub { font-size:12px; color:#cfe8ff; opacity:0.95; }
-
-/* optional player image on right */
-.app-hero-right { width:88px; height:88px; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 30px rgba(0,0,0,0.25); }
-.app-player { width:100%; height:100%; object-fit:cover; display:block; }
-
-/* marquee top */
-.marquee-wrap { position:relative; height:36px; overflow:hidden; margin-left:12px; }
-.marquee-inner { position:absolute; white-space:nowrap; will-change:transform; }
-.marquee-item { display:inline-block; padding:6px 18px; margin-right:14px; border-radius:999px; background: rgba(255,255,255,0.02); color:#e8fbff; font-weight:700; }
-
-/* cards */
-.match-card { background: linear-gradient(135deg, rgba(255,255,255,0.01), rgba(0,0,0,0.03)); border-radius:10px; padding:12px; margin-bottom:12px; border:1px solid rgba(120,180,255,0.06); color:#f7fbff; box-shadow:0 8px 26px rgba(30,140,255,0.04); transition:transform .18s ease; }
-.match-card:hover{ transform:translateY(-3px); box-shadow:0 22px 40px rgba(30,140,255,0.10); }
-.match-teams { font-weight:900; font-size:15px; }
-.match-meta { color:#cfe8ff; font-size:12px; margin-top:6px; }
-
-/* best pick */
-.best-pick { margin-top:8px; padding:10px; border-radius:8px; background:linear-gradient(90deg, rgba(10,20,40,0.24), rgba(0,0,0,0.06)); }
-.best-pick-market { font-weight:800; font-size:14px; }
-.best-pick-prob { font-weight:900; font-size:18px; color:#fff; }
-
-/* badges */
-.tier-badge { padding:6px 10px; border-radius:999px; font-weight:700; display:inline-block; margin-top:8px; }
-.tier-strong { background:linear-gradient(90deg,#ff7a7a,#ffb46b); color:#1b0b00; }
-.tier-medium { background:linear-gradient(90deg,#ffd36b,#ffd36b); color:#3b2300; }
-.tier-other { background:rgba(255,255,255,0.04); color:#cfe8ff; }
-
-/* toggles & lists */
-.toggle-picks { background:transparent; border:0; color:#cfe8ff; font-weight:800; cursor:pointer; padding:6px 0; text-align:left; display:block; }
-.toggle-picks.small { font-size:13px; }
-.toggle-picks[aria-expanded="true"] { color:#fff; text-decoration:underline; }
-
-.other-picks { margin-top:8px; padding-left:8px; }
-.other-picks.collapsed { display:none !important; } /* force hide */
-.other-pick-row { display:flex; justify-content:space-between; align-items:center; padding:8px 6px; border-bottom:1px dashed rgba(255,255,255,0.03); }
-
-/* bottom ticker (fixed so it remains visible) */
-.app-footer-ticker {
-  position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  background: linear-gradient(90deg, rgba(0,0,0,0.45), rgba(10,10,30,0.35));
-  border-radius: 10px;
-  padding:8px 12px;
-  z-index: 9999;
-  border: 1px solid rgba(255,255,255,0.03);
-  box-shadow: 0 8px 30px rgba(0,0,0,0.4);
-}
-.ticker-track { display:inline-block; white-space:nowrap; animation: ticker var(--ticker-duration) linear infinite; }
-.ticker-item { display:inline-block; padding:8px 26px; margin-right:18px; color:#fff; font-weight:800; }
-.app-footer-ticker:hover .ticker-track { animation-play-state:paused; }
-
-/* slower ticker if needed, change --ticker-duration at top */
-@keyframes ticker {
-  0% { transform: translateX(0%); }
-  100% { transform: translateX(-50%); }
-}
-
-/* responsive tweaks */
-@media (max-width:720px) {
-  .app-hero { flex-direction:column; align-items:flex-start; gap:8px; }
-  .app-hero-right { width:72px; height:72px; }
-  .app-footer-ticker { left:8px; right:8px; bottom:8px; font-size:13px; }
-}
-</style>
-
-<div class="app-hero">
-  <div style="display:flex; align-items:center; gap:12px; width:100%;">
-    <div class="app-hero-left">
-      <div class="app-logo">BP</div>
-      <div>
-        <div class="app-title">Braiton Picks</div>
-        <div class="app-sub">Daily football predictions, value bets & combos — braiton living (MSANII)</div>
-      </div>
-    </div>
-
-    <div class="marquee-wrap" aria-hidden="true" style="margin-left:auto;">
-      <div class="marquee-inner" id="marquee-inner"></div>
-    </div>
-  </div>
-
-  <div class="app-hero-right" title="lamin yamal">
-    <!-- Put your image file at static/lamin.jpg or change filename -->
-    <img src="{{ url_for('static', filename='lamin.jpg') }}" alt="player" class="app-player" onerror="this.style.display='none'">
-  </div>
-</div>
-
+{# Mshale: ▲ kijani = imepanda, ▼ nyekundu = imeshuka, ▬ kijivu = haijabadilika, hakuna = hakuna rekodi ya kulinganisha #}
 {% macro delta_badge(delta) %}
   {% if delta is none %}
   {% elif delta > 0 %}
-    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:seagreen; white-space:nowrap;">▲ {{ '+%.1f'|format(delta) }}</span>
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:seagreen; white-space:nowrap;">
+      ▲ {{ '+%.1f'|format(delta) }}
+    </span>
   {% elif delta < 0 %}
-    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:crimson; white-space:nowrap;">▼ {{ '%.1f'|format(delta) }}</span>
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:crimson; white-space:nowrap;">
+      ▼ {{ '%.1f'|format(delta) }}
+    </span>
   {% else %}
-    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:gray; white-space:nowrap;">▬ 0.0</span>
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:gray; white-space:nowrap;">
+      ▬ 0.0
+    </span>
   {% endif %}
 {% endmacro %}
 
 {% if not matches %}
-  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0; text-align:center; color:#e8fbff;">{{ empty_message }}</div>
+  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
 
 {% for m in matches %}
 {% set mi = loop.index %}
-<div class="match-card" style="animation-delay: {{ (loop.index0 * 60)|int }}ms;">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <div>
-      <div class="match-teams">{{ m.home }} <span style="opacity:0.6;">vs</span> {{ m.away }}</div>
-      <div class="match-meta">{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }} EAT{% endif %}</div>
-    </div>
-
-    <div style="text-align:right;">
-      <div style="font-size:12px; color:#9fe8ff;">Best pick prob</div>
-      <div style="font-weight:900; font-size:20px; margin-top:6px;" class="best-pick-prob">{{ m.best_pick.probability }}%</div>
-    </div>
+<div class="match-card">
+  <div class="match-card-header">
+    <div class="match-teams">{{ m.home }} vs {{ m.away }}</div>
+    <div class="match-meta">{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }} EAT{% endif %}</div>
   </div>
 
   <div class="best-pick">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="best-pick-label">Best Pick</div>
+    <div class="best-pick-row">
       <div class="best-pick-market">{{ m.best_pick.market }}</div>
-      <div class="best-pick-prob">{{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}</div>
+      <div class="best-pick-prob">
+        {{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}
+      </div>
     </div>
-    <div>
+    <div style="margin-top:8px;">
       <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
     </div>
-
     {% if m.best_pick.has_odds %}
-    <div style="margin-top:8px; display:flex; gap:12px; align-items:center;">
+    <div class="best-pick-extra">
       <div>Odds: <b>{{ m.best_pick.odds }}</b></div>
       <div>EV: <b style="color: {{ 'var(--emerald)' if m.best_pick.ev > 0 else 'var(--red)' }}">{{ m.best_pick.ev }}%</b></div>
     </div>
@@ -157,11 +51,13 @@
   </div>
 
   {% if m.other_picks %}
-  <button type="button" class="toggle-picks" data-target="picks-{{ mi }}" aria-expanded="false">Other Picks ({{ m.other_picks|length }}) ▾</button>
-  <div class="other-picks collapsed" id="picks-{{ mi }}">
+  <button class="toggle-picks" onclick="togglePicks('picks-{{ mi }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <div class="other-picks" id="picks-{{ mi }}">
     {% for g in m.other_groups %}
-      <button type="button" class="toggle-picks small" data-target="picks-{{ mi }}-{{ g.key }}" aria-expanded="false">{{ g.icon }} {{ g.label }} ({{ g.picks|length }}) ▾</button>
-      <div class="other-picks collapsed" id="picks-{{ mi }}-{{ g.key }}">
+      <button class="toggle-picks" style="font-size:13px;" onclick="togglePicks('picks-{{ mi }}-{{ g.key }}')">
+        {{ g.icon }} {{ g.label }} ({{ g.picks|length }}) ▾
+      </button>
+      <div class="other-picks" id="picks-{{ mi }}-{{ g.key }}">
         {% for p in g.picks %}
         <div class="other-pick-row">
           <div>{{ p.market }}</div>
@@ -178,87 +74,5 @@
   {% endif %}
 </div>
 {% endfor %}
-
-<!-- fixed bottom ticker: marketing copy, not model internals -->
-<div class="app-footer-ticker" role="region" aria-label="Site highlights">
-  <div class="ticker-track" id="ticker-track">
-    <span class="ticker-item">Yesterday: 6 picks — 5 WON · All picks winrate 88%+</span>
-    <span class="ticker-item">Top value bets today — check EV and stake wisely</span>
-    <span class="ticker-item">Combos available: hand-picked multi-leg opportunities</span>
-    <span class="ticker-item">Join braiton living (MSANII) — follow for daily highlights</span>
-    <span class="ticker-item">Safe tips: manage bankroll • check odds • play responsibly</span>
-
-    <!-- repeat for smooth scrolling -->
-    <span class="ticker-item">Yesterday: 6 picks — 5 WON · All picks winrate 88%+</span>
-    <span class="ticker-item">Top value bets today — check EV and stake wisely</span>
-    <span class="ticker-item">Combos available: hand-picked multi-leg opportunities</span>
-    <span class="ticker-item">Join braiton living (MSANII) — follow for daily highlights</span>
-    <span class="ticker-item">Safe tips: manage bankroll • check odds • play responsibly</span>
-  </div>
-</div>
-
-<script>
-// Top banner messages (marketing)
-const bannerMessages = [
-  'Braiton Picks — Yesterday: 6 picks · 5 WON',
-  'All picks winrate: 88%+ — Join today',
-  'Value Bets & Combos — shortlists delivered daily',
-  'Refresh data on Admin to get latest picks'
-];
-
-const marqueeInner = document.getElementById('marquee-inner');
-let bannerIndex = 0;
-function renderMarquee(){
-  if(!marqueeInner) return;
-  marqueeInner.innerHTML = '';
-  for(let i=0;i<bannerMessages.length;i++){
-    const span = document.createElement('span');
-    span.className = 'marquee-item';
-    span.textContent = bannerMessages[(bannerIndex + i) % bannerMessages.length];
-    marqueeInner.appendChild(span);
-  }
-  const totalWidth = marqueeInner.scrollWidth || 600;
-  marqueeInner.style.transform = 'translateX(100%)';
-  marqueeInner.animate(
-    [{ transform: 'translateX(100%)' }, { transform: `translateX(-${totalWidth}px)` }],
-    { duration: 14000, iterations: 1, easing: 'linear' }
-  ).onfinish = () => { bannerIndex = (bannerIndex + 1) % bannerMessages.length; renderMarquee(); };
-}
-
-// Toggle handling: attach listeners to buttons
-function initToggles(){
-  document.querySelectorAll('.toggle-picks').forEach(btn => {
-    btn.addEventListener('click', function(e){
-      e.preventDefault();
-      const target = btn.getAttribute('data-target');
-      if(!target) return;
-      const el = document.getElementById(target);
-      if(!el) return;
-      const collapsed = el.classList.toggle('collapsed');
-      btn.setAttribute('aria-expanded', String(!collapsed));
-      // if opening, scroll into view slightly above the target so user sees it
-      if(!collapsed){
-        setTimeout(()=> {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 120);
-      }
-    });
-  });
-}
-
-document.addEventListener('DOMContentLoaded', function(){
-  renderMarquee();
-  initToggles();
-  // start all other-picks collapsed
-  document.querySelectorAll('.other-picks').forEach(el => el.classList.add('collapsed'));
-});
-
-// Pause/resume ticker on window visibility
-document.addEventListener('visibilitychange', () => {
-  const track = document.querySelector('.ticker-track');
-  if(!track) return;
-  track.style.animationPlayState = document.hidden ? 'paused' : 'running';
-});
-</script>
 
 {% endblock %}
