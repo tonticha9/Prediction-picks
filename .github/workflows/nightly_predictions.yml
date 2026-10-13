@@ -49,9 +49,28 @@ jobs:
         if: env.SKIP_UPDATE != 'true'
         run: |
           mkdir -p data
+          # predictions.csv ni LAZIMA - ikikosekana, workflow ishindwe
+          if [ ! -s kaggle_output/predictions.csv ]; then
+            echo "::error::predictions.csv haipo au ni tupu - siwezi kuendelea."
+            exit 1
+          fi
           cp kaggle_output/predictions.csv data/predictions.csv
-          cp kaggle_output/value_bets.csv data/value_bets.csv
-          cp kaggle_output/combos.csv data/combos.csv
+
+          # value_bets.csv na combos.csv zinaweza kukosekana siku isiyo na picks
+          for f in value_bets combos; do
+            if [ -s "kaggle_output/$f.csv" ]; then
+              cp "kaggle_output/$f.csv" "data/$f.csv"
+            else
+              echo "::warning::$f.csv haipo kwenye output ya Kaggle (huenda hakuna picks leo). Naweka header tu."
+              if [ -f "data/$f.csv" ]; then
+                head -n 1 "data/$f.csv" > "data/$f.tmp"
+                mv "data/$f.tmp" "data/$f.csv"
+              else
+                echo "::error::data/$f.csv haipo na hakuna header ya kutumia. Run ya kwanza lazima itoe $f.csv."
+                exit 1
+              fi
+            fi
+          done
 
       - name: Commit and push updated data
         if: env.SKIP_UPDATE != 'true'
