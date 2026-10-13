@@ -1,0 +1,333 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<style>
+/* Neon / animated dashboard styling */
+.app-hero {
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03));
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 6px 30px rgba(60,180,255,0.07), 0 0 30px rgba(60,180,255,0.04) inset;
+  border: 1px solid rgba(60,180,255,0.12);
+}
+
+.banner-text {
+  font-weight: 700;
+  font-size: 18px;
+  color: #eaf6ff;
+  display: inline-block;
+  white-space: nowrap;
+  will-change: transform, opacity;
+}
+
+.banner-message {
+  display: inline-block;
+  padding: 6px 14px;
+  margin-right: 28px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(60,180,255,0.12), rgba(0,255,200,0.06));
+  color: #dffaff;
+  box-shadow: 0 6px 18px rgba(60,180,255,0.06);
+}
+
+.match-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  border: 1px solid rgba(120,180,255,0.06);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+  color: #f7fbff;
+  box-shadow: 0 10px 30px rgba(30,140,255,0.06), 0 0 40px rgba(100,180,255,0.02) inset;
+  transform: translateY(8px);
+  animation: floatUp 450ms ease forwards;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.match-card:hover {
+  transform: translateY(0px) scale(1.01);
+  box-shadow: 0 18px 45px rgba(30,140,255,0.12);
+}
+
+@keyframes floatUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.best-pick {
+  border-radius: 8px;
+  padding: 10px;
+  background: linear-gradient(90deg, rgba(10,30,80,0.3), rgba(0,0,0,0.12));
+}
+
+.best-pick-label {
+  font-size: 12px;
+  color: #bfe8ff;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.best-pick-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.best-pick-market {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(80,200,255,0.08);
+}
+
+.best-pick-prob {
+  font-size: 16px;
+  font-weight: 800;
+  color: #fffff0;
+}
+
+.tier-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.tier-strong {
+  background: linear-gradient(90deg,#ff7a7a, #ffb46b);
+  color: #1b0b00;
+}
+
+.tier-medium {
+  background: linear-gradient(90deg,#ffd36b,#ffd36b);
+  color: #3b2300;
+}
+
+.tier-other {
+  background: rgba(255,255,255,0.04);
+  color: #cfe8ff;
+}
+
+.toggle-picks {
+  margin-top: 10px;
+  background: transparent;
+  border: 0;
+  color: #cfe8ff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.other-picks {
+  margin-top: 8px;
+  padding-left: 8px;
+}
+
+.other-pick-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 6px;
+  border-bottom: 1px dashed rgba(255,255,255,0.03);
+}
+
+.prob-glow {
+  box-shadow: 0 6px 20px rgba(60,240,180,0.12);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+
+.marquee-wrap {
+  position: relative;
+  height: 36px;
+  overflow: hidden;
+}
+
+.marquee-inner {
+  position: absolute;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.marquee-item {
+  display: inline-block;
+  padding: 6px 22px;
+  margin-right: 16px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03));
+  border: 1px solid rgba(255,255,255,0.02);
+  color: #dffaff;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 80%;
+  height: 100%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.35), rgba(255,255,255,0));
+  animation: shimmer 2.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes shimmer {
+  0% { left: -120%; }
+  100% { left: 220%; }
+}
+</style>
+
+<div class="app-hero">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <div style="width:48px; height:48px; border-radius:10px; background:linear-gradient(135deg,#3fd1ff,#2bc4a6); box-shadow:0 8px 30px rgba(43,196,166,0.12); display:flex; align-items:center; justify-content:center; font-weight:800; color:#022;">BP</div>
+      <div>
+        <div style="font-weight:900; font-size:18px; color:#e9fbff;">Braiton Picks</div>
+        <div style="font-size:12px; color:#cfe8ff;">Daily football predictions, value bets & combos — now with glow.</div>
+      </div>
+    </div>
+    <div style="flex:1; margin-left:12px;">
+      <div id="banner-rotator" class="marquee-wrap" aria-hidden="true">
+        <div class="marquee-inner" id="marquee-inner"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Mshale: ▲ kijani = imepanda, ▼ nyekundu = imeshuka, ▬ kijivu = haijabadilika, hakuna = hakuna rekodi ya kulinganisha #}
+{% macro delta_badge(delta) %}
+  {% if delta is none %}
+  {% elif delta > 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:seagreen; white-space:nowrap;">
+      ▲ {{ '+%.1f'|format(delta) }}
+    </span>
+  {% elif delta < 0 %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:crimson; white-space:nowrap;">
+      ▼ {{ '%.1f'|format(delta) }}
+    </span>
+  {% else %}
+    <span style="font-size:0.72em; font-weight:600; margin-left:6px; color:gray; white-space:nowrap;">
+      ▬ 0.0
+    </span>
+  {% endif %}
+{% endmacro %}
+
+{% if not matches %}
+  <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0; text-align:center; color:#e8fbff;">{{ empty_message }}</div>
+{% endif %}
+
+{% for m in matches %}
+{% set mi = loop.index %}
+<div class="match-card shimmer" style="animation-delay: {{ (loop.index0 * 60)|int }}ms;">
+  <div class="match-card-header" style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+    <div>
+      <div class="match-teams" style="font-size:16px; font-weight:900;">{{ m.home }} <span style="opacity:0.55;">vs</span> {{ m.away }}</div>
+      <div class="match-meta" style="font-size:12px; color:#cfe8ff; margin-top:6px;">{{ m.date }}{% if m.time_eat %} · {{ m.time_eat }} EAT{% endif %}</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:12px; color:#9fe8ff;">Best pick prob</div>
+      <div style="font-weight:900; font-size:20px; margin-top:6px;" class="prob-glow">{{ m.best_pick.probability }}%</div>
+    </div>
+  </div>
+
+  <div style="height:8px"></div>
+
+  <div class="best-pick">
+    <div class="best-pick-label">Best Pick</div>
+    <div class="best-pick-row">
+      <div class="best-pick-market">{{ m.best_pick.market }}</div>
+      <div class="best-pick-prob">{{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}</div>
+    </div>
+    <div style="margin-top:8px;">
+      <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
+    </div>
+    {% if m.best_pick.has_odds %}
+    <div class="best-pick-extra" style="margin-top:8px; display:flex; gap:12px;">
+      <div>Odds: <b>{{ m.best_pick.odds }}</b></div>
+      <div>EV: <b style="color: {{ 'var(--emerald)' if m.best_pick.ev > 0 else 'var(--red)' }}">{{ m.best_pick.ev }}%</b></div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if m.other_picks %}
+  <button class="toggle-picks" onclick="togglePicks('picks-{{ mi }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <div class="other-picks" id="picks-{{ mi }}">
+    {% for g in m.other_groups %}
+      <button class="toggle-picks" style="font-size:13px;" onclick="togglePicks('picks-{{ mi }}-{{ g.key }}')">
+        {{ g.icon }} {{ g.label }} ({{ g.picks|length }}) ▾
+      </button>
+      <div class="other-picks" id="picks-{{ mi }}-{{ g.key }}">
+        {% for p in g.picks %}
+        <div class="other-pick-row">
+          <div>{{ p.market }}</div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
+            <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
+            {{ delta_badge(p.delta) }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<script>
+const messages = [
+  'Braiton Picks — football predictions, value bets and combos',
+  'Value Bets: check EV% and edge before you place a bet',
+  'Combos: generated daily with smart market selection',
+  'Admin dashboard: monitor data quality and refresh health',
+  'FAST models + Pro Confidence for daily pick intelligence'
+];
+
+const marqueeInner = document.getElementById('marquee-inner');
+let bannerIndex = 0;
+
+function renderMarquee() {
+  if (!marqueeInner) return;
+  marqueeInner.innerHTML = '';
+  for (let i = 0; i < messages.length; i++) {
+    const span = document.createElement('span');
+    span.className = 'marquee-item';
+    span.textContent = messages[(bannerIndex + i) % messages.length];
+    marqueeInner.appendChild(span);
+  }
+
+  const totalWidth = marqueeInner.scrollWidth;
+  marqueeInner.style.transform = 'translateX(100%)';
+  marqueeInner.animate([
+    { transform: 'translateX(100%)' },
+    { transform: `translateX(-${totalWidth}px)` }
+  ], { duration: 12000, iterations: 1, easing: 'linear' }).onfinish = () => {
+    bannerIndex = (bannerIndex + 1) % messages.length;
+    renderMarquee();
+  };
+}
+
+function togglePicks(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const isHidden = el.style.display === 'none' || getComputedStyle(el).display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  renderMarquee();
+  document.querySelectorAll('.other-picks').forEach(function(el) {
+    el.style.display = 'none';
+  });
+});
+</script>
+
+{% endblock %}
