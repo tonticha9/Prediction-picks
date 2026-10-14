@@ -22,10 +22,24 @@ v3 (MAJINA YA TIMU): majina yote ya timu yanapita kwenye team_names.canon()
   - jina jipya lisilojulikana linaleta ONYO la wazi (::warning::) na pendekezo.
   - mechi zinatafutwa siku 7 nyuma (si 2): Job ikishindwa siku chache, hakuna mechi inayopotea.
 
+v4 (STATS KUTOKA football-data.co.uk):
+  - Dataset ikikosa safu HF (mara ya kwanza): inajaza historia YOTE (2014 hadi sasa) kutoka
+    football-data: shots, SOT, corners, kadi, fouls (HF/AF) na Referee. Inajaza SEHEMU TUPU
+    tu; thamani zilizopo hazibadilishwi.
+  - Baada ya hapo: msimu huu na uliopita unasawazishwa mara 4 kwa siku (na kila run ya mkono).
+    FD_FULL=1 inalazimisha usawazishaji kamili tena; FD_SYNC=1 inalazimisha wa kawaida.
+  - Kadi 'sifuri za uongo' (API haikutoa takwimu wala kadi) zinakuwa tupu (NaN), si 0.
+  - HF/AF/Referee vinahifadhiwa kutoka API pia (mechi mpya).
+  - Ulinzi: CSV lazima iitwe historical_complete_no_gap.csv; dataset ikiwa na mechi chini ya
+    MIN_ROWS, job inasimama (haiandiki juu ya historia).
+  - Mechi za football-data zisizolingana na dataset zinaleta ::warning:: (majina/tarehe).
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
+import io
 import os
+import re
 import sys
 import time
 import json
@@ -45,6 +59,15 @@ KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")
 
 LOOKBACK_DAYS = 7        # mechi zilizokwisha zinatafutwa siku 7 nyuma (dedupe inazuia nakala)
 STUCK_DAYS = 2           # ukaguzi wa mechi 'zilizokwama' unabaki siku 2
+
+DATASET_CSV = 'historical_complete_no_gap.csv'
+MIN_ROWS = 45000         # dataset ikiwa chini ya hii, kuna tatizo - usiandike juu yake
+
+FD_BASE = "https://www.football-data.co.uk/mmz4281"
+FD_FIRST_SEASON = 2014
+FD_NUM = ['HS', 'AS', 'HST', 'AST', 'HC', 'AC', 'HY', 'AY', 'HR', 'AR', 'HF', 'AF']
+CARD_COLS = ['HY', 'AY', 'HR', 'AR']
+NOSTAT_COLS = ['HC', 'AC', 'HS', 'AS', 'HST', 'AST']
 
 
 def fetch_api_key_from_admin():
@@ -159,8 +182,21 @@ def fetch_recent_results(from_date, to_date):
                 except Exception:
                     pass
 
-            stats = parse_statistics(f.get('statistics', []))
-            hy, ay, hr, ar = parse_cards(f.get('cards', []))
+            stats_list = f.get('statistics', []) or []
+            cards_list = f.get('cards', []) or []
+            stats = parse_statistics(stats_list)
+            hy, ay, hr, ar = parse_cards(cards_list)
+            if not stats_list and not cards_list:
+                # Hakuna takwimu wala kadi kutoka API: hatujui, si sifuri.
+                hy = ay = hr = ar = np.nan
+            elif not cards_list:
+                # Orodha ya kadi tupu lakini takwimu zipo: tumia 'Yellow Cards' kama ipo.
+                ys_h = stats['home'].get('yellow_cards')
+                ys_a = stats['away'].get('yellow_cards')
+                if ys_h is not None and not pd.isna(ys_h):
+                    hy = ys_h
+                if ys_a is not None and not pd.isna(ys_a):
+                    ay = ys_a
 
             all_matches.append({
                 'Date': f.get('event_date'), 'HomeTeam': f.get('event_home_team'),
@@ -171,6 +207,8 @@ def fetch_recent_results(from_date, to_date):
                 'HS': stats['home'].get('shots_total'), 'AS': stats['away'].get('shots_total'),
                 'HST': stats['home'].get('shots_on_target'), 'AST': stats['away'].get('shots_on_target'),
                 'HY': hy, 'AY': ay, 'HR': hr, 'AR': ar,
+                'HF': stats['home'].get('fouls'), 'AF': stats['away'].get('fouls'),
+                'Referee': (f.get('event_referee') or np.nan),
             })
         time.sleep(0.3)
 
@@ -269,6 +307,159 @@ def warn_new_team_names(df_existing, df_new):
             extra = f" (huenda ni: {', '.join(hint)})" if hint else ''
             print(f"::warning::Jina jipya la timu {lg}: '{n}'{extra} - ikiwa ni timu ileile "
                   f"ya zamani, ongeza mstari kwenye team_names.py")
+
+
+# ============================================================
+# STATS KUTOKA football-data.co.uk (v4)
+# ============================================================
+
+def _k(n):
+    return re.sub(r'[^a-z0-9]', '', str(n).lower())
+
+
+_ALIAS_K = {_k(k): v for k, v in team_names.ALIASES.items()}
+
+
+def tkey(name):
+    """Ufunguo wa jina la timu: jina rasmi, herufi ndogo, bila alama (ule ule
+    uliothibitishwa kwenye notebook: mechi 100% zililingana)."""
+    return _k(_ALIAS_K.get(_k(name), name))
+
+
+def fetch_football_data(seasons):
+    """Pakua faili za ligi zote kwa misimu iliyotolewa (2014 = msimu 14/15)."""
+    frames = []
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    for s in seasons:
+        code = f"{str(s)[2:]}{str(s + 1)[2:]}"
+        ok = 0
+        for lg in LEAGUE_MAP:
+            url = f"{FD_BASE}/{code}/{lg}.csv"
+            try:
+                resp = requests.get(url, headers=headers, timeout=30)
+                resp.raise_for_status()
+                x = pd.read_csv(io.StringIO(resp.content.decode('latin-1')), on_bad_lines='skip')
+            except Exception as e:
+                print(f"   ⚠️ football-data {lg} {code}: {e}")
+                continue
+            if 'HomeTeam' not in x.columns or 'AwayTeam' not in x.columns:
+                continue
+            x = x.dropna(subset=['HomeTeam', 'AwayTeam'])
+            x['league'] = lg
+            for c in FD_NUM:
+                x[c] = pd.to_numeric(x[c], errors='coerce') if c in x.columns else np.nan
+            if 'Referee' not in x.columns:
+                x['Referee'] = np.nan
+            frames.append(x[['league', 'Date', 'HomeTeam', 'AwayTeam'] + FD_NUM + ['Referee']])
+            ok += 1
+            time.sleep(0.2)
+        print(f"   football-data msimu {s}/{s + 1}: ligi {ok}/{len(LEAGUE_MAP)}")
+    if not frames:
+        return pd.DataFrame()
+    fd = pd.concat(frames, ignore_index=True)
+    fd['dt'] = pd.to_datetime(fd['Date'], dayfirst=True, format='mixed', errors='coerce').dt.normalize()
+    fd = fd.dropna(subset=['dt'])
+    fd['hk'] = fd['HomeTeam'].map(tkey)
+    fd['ak'] = fd['AwayTeam'].map(tkey)
+    return fd
+
+
+def football_data_mode(df):
+    """Rudisha (full, do_sync). full=True: dataset haina HF bado (au FD_FULL=1)."""
+    full = ('HF' not in df.columns) or os.environ.get('FD_FULL') == '1'
+    manual = os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch'
+    forced = os.environ.get('FD_SYNC') == '1'
+    scheduled = datetime.utcnow().hour % 6 == 0
+    return full, (full or manual or forced or scheduled)
+
+
+def sync_stats_from_football_data(df_in, full):
+    """Jaza SEHEMU TUPU za stats (na HF/AF/Referee) kutoka football-data.
+    Haibadilishi thamani zilizopo. Pia inabadilisha kadi 'sifuri za uongo' kuwa tupu.
+    Inarudisha (df, idadi_ya_mabadiliko, maelezo)."""
+    df = df_in.copy()
+    n_before = len(df)
+    for c in ['HF', 'AF']:
+        if c not in df.columns:
+            df[c] = np.nan
+    if 'Referee' not in df.columns:
+        df['Referee'] = np.nan
+    for c in FD_NUM:
+        df[c] = pd.to_numeric(df[c], errors='coerce')
+    df['Referee'] = df['Referee'].astype('object')
+
+    d = pd.to_datetime(df['Date'], errors='coerce').dt.normalize()
+    season = d.dt.year.where(d.dt.month >= 7, d.dt.year - 1)
+    cur = season.max()
+    if pd.isna(cur):
+        return df_in, 0, 'hakuna tarehe'
+    cur = int(cur)
+    seasons = list(range(FD_FIRST_SEASON, cur + 1)) if full else [cur - 1, cur]
+    mask = season.isin(seasons)
+    label = f"kamili {seasons[0]}-{cur}" if full else f"msimu {cur - 1}-{cur}"
+    print(f"\n📊 Usawazishaji wa stats kutoka football-data ({label})...")
+
+    changes = 0
+
+    # 1) Kadi 'sifuri za uongo': hakuna takwimu yoyote na kadi zote nne ni 0
+    nostat = df[NOSTAT_COLS].isna().all(axis=1)
+    zero_cards = (df[CARD_COLS].fillna(-1) == 0).all(axis=1)
+    fake = mask & nostat & zero_cards
+    if fake.any():
+        df.loc[fake, CARD_COLS] = np.nan
+        changes += int(fake.sum())
+        print(f"   Kadi 'sifuri za uongo' zilizofanywa tupu: {int(fake.sum())}")
+
+    # 2) Pakua football-data
+    fd = fetch_football_data(seasons)
+    if len(fd) == 0:
+        print("::warning::football-data: hakuna data iliyopatikana - naruka kujaza.")
+        return (df if changes else df_in), changes, label
+
+    look = {(r.league, r.dt, r.hk, r.ak): r for r in fd.itertuples(index=False)}
+    hk = df['HomeTeam'].map(tkey)
+    ak = df['AwayTeam'].map(tkey)
+
+    used = set()
+    filled = 0
+    for i in df.index[mask]:
+        r_dt = d.at[i]
+        if pd.isna(r_dt):
+            continue
+        f = None
+        for off in (0, -1, 1):
+            k = (df.at[i, 'league'], r_dt + pd.Timedelta(days=off), hk.at[i], ak.at[i])
+            f = look.get(k)
+            if f is not None:
+                used.add(k)
+                break
+        if f is None:
+            continue
+        for c in FD_NUM:
+            v = getattr(f, c)
+            if pd.isna(df.at[i, c]) and not pd.isna(v):
+                df.at[i, c] = v
+                filled += 1
+        ref = getattr(f, 'Referee')
+        if pd.isna(df.at[i, 'Referee']) and isinstance(ref, str) and ref.strip():
+            df.at[i, 'Referee'] = ref.strip()
+            filled += 1
+    changes += filled
+    print(f"   Seli zilizojazwa: {filled:,}")
+
+    # 3) Mechi za football-data zisizolingana na dataset (zaidi ya siku 3 zilizopita)
+    cutoff = pd.Timestamp(date.today() - timedelta(days=3))
+    bad = [r for r in fd.itertuples(index=False)
+           if r.dt < cutoff and (r.league, r.dt, r.hk, r.ak) not in used]
+    if bad:
+        print(f"::warning::football-data: mechi {len(bad)} hazikulingana na dataset "
+              f"(huenda majina ya timu au playoffs). Mifano:")
+        for r in bad[:10]:
+            print(f"   • {r.league}: {r.HomeTeam} vs {r.AwayTeam} ({r.dt:%Y-%m-%d})")
+
+    if len(df) != n_before:
+        raise RuntimeError("idadi ya mechi imebadilika wakati wa usawazishaji (haipaswi)")
+    return df, changes, label
 
 
 # ============================================================
@@ -445,13 +636,19 @@ def main():
                      '-p', 'kaggle_dataset', '--unzip', '-o'])
 
     csv_files = [f for f in os.listdir('kaggle_dataset') if f.endswith('.csv')]
-    if not csv_files:
-        print("❌ Hakuna CSV iliyopatikana kwenye dataset")
+    if len(csv_files) > 1:
+        print(f"::warning::Dataset ina CSV zaidi ya moja ({csv_files}) - natumia {DATASET_CSV} tu.")
+    if DATASET_CSV not in csv_files:
+        print(f"❌ {DATASET_CSV} haipo kwenye dataset. CSV zilizopo: {csv_files}")
         sys.exit(1)
-    csv_path = os.path.join('kaggle_dataset', csv_files[0])
+    csv_path = os.path.join('kaggle_dataset', DATASET_CSV)
     df_existing = pd.read_csv(csv_path)
     df_existing['Date'] = pd.to_datetime(df_existing['Date'], format='mixed')
     print(f"   Historia ya sasa: {len(df_existing):,} mechi")
+    if len(df_existing) < MIN_ROWS:
+        print(f"::error::Dataset ina mechi {len(df_existing):,} tu (chini ya {MIN_ROWS:,}). "
+              f"Nasimama ili nisiandike juu ya historia.")
+        sys.exit(1)
 
     # Majina rasmi ya timu: kagua orodha, kisha weka team_aliases.json ndani ya dataset
     for p in team_names.validate_aliases():
@@ -471,7 +668,8 @@ def main():
     df_results = df_existing   # dataset itakayotumika kutathmini
     upload_ok = True
     need_upload = aliases_changed
-    upload_msg = f"Update team_aliases.json {datetime.utcnow().isoformat()}"
+    csv_dirty = False
+    reasons = ["team_aliases.json"] if aliases_changed else []
 
     if len(df_new) == 0:
         print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu.")
@@ -490,13 +688,33 @@ def main():
             warn_new_team_names(df_existing, df_new_unique)
             df_combined = pd.concat([df_existing, df_new_unique], ignore_index=True)
             df_combined = df_combined.sort_values('Date').reset_index(drop=True)
-            df_combined.to_csv(csv_path, index=False)
             print(f"✅ Historia mpya: {len(df_combined):,} mechi (+{len(df_new_unique)})")
             df_results = df_combined
+            csv_dirty = True
             need_upload = True
-            upload_msg = f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"
+            reasons.append(f"+{len(df_new_unique)} mechi")
+
+    # Stats kutoka football-data (kamili mara ya kwanza; kisha msimu huu na uliopita)
+    full, do_sync = football_data_mode(df_results)
+    if do_sync:
+        try:
+            df_sync, changes, label = sync_stats_from_football_data(df_results, full)
+            if changes > 0:
+                df_results = df_sync
+                csv_dirty = True
+                need_upload = True
+                reasons.append(f"football-data {label}: {changes} mabadiliko")
+            else:
+                print("ℹ️ football-data: hakuna cha kujaza mzunguko huu.")
+        except Exception as e:
+            print(f"::warning::Usawazishaji wa football-data umeshindwa (naendelea bila huo): {e}")
+
+    if csv_dirty:
+        df_results.to_csv(csv_path, index=False)
+        print(f"💾 CSV imehifadhiwa: {len(df_results):,} mechi")
 
     if need_upload:
+        upload_msg = f"Auto-update {datetime.utcnow().isoformat()} ({'; '.join(reasons)})"
         metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
                     "licenses": [{"name": "CC0-1.0"}]}
         with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
