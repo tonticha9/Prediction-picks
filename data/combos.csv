@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Alaves vs Malaga: dc_1x @1.18 + Nijmegen vs Groningen: dc_1x @1.36,1.6,65.9
-3,3,Man United vs Bournemouth: dc_1x @1.25 + Stoke vs Middlesbrough: dc_12 @1.28 + Kalamata vs Ofi Crete: dc_x2 @1.50,2.4,44.9
-5,6,Groningen vs Ajax: dc_x2 @1.22 + Fc Koln vs Schalke 04: dc_1x @1.36 + Chelsea vs Tottenham: dc_1x @1.25 + Malaga vs Sociedad: dc_x2 @1.36 + Milan vs Atalanta: dc_1x @1.22 + Cardiff vs Watford: dc_1x @1.17,4.03,26.3
-7,6,Nijmegen vs Groningen: dc_1x @1.36 + Paris FC vs Rennes: dc_12 @1.28 + Genoa vs Venezia: dc_1x @1.33 + Kalamata vs Ofi Crete: dc_x2 @1.50 + Malaga vs Sociedad: dc_x2 @1.36 + Watford vs Charlton: dc_12 @1.28,6.05,16.6
+2,2,Augsburg vs Union Berlin: dc_1x @1.28 + Qpr vs Derby: dc_12 @1.25,1.6,66.6
+3,4,Lille vs Brest: dc_1x @1.22 + Nijmegen vs Groningen: dc_1x @1.36 + Celtic vs Hearts: dc_1x @1.17 + Kilmarnock vs Motherwell: dc_12 @1.25,2.43,43.8
+5,5,Kalamata vs Ofi Crete: dc_x2 @1.50 + Nijmegen vs Groningen: dc_1x @1.36 + Leeds vs Man United: dc_12 @1.28 + Psv Eindhoven vs Feyenoord: dc_1x @1.30 + Utrecht vs Zwolle: dc_1x @1.18,4.01,26.0
+7,6,Getafe vs Vallecano: dc_x2 @1.40 + Iraklis vs Kifisia: dc_1x @1.40 + Cagliari vs Bologna: dc_12 @1.36 + Paderborn vs Hamburg: dc_12 @1.28 + Levadeiakos vs Volos Nfc: dc_1x @1.33 + Lincoln vs West Ham: dc_12 @1.25,5.67,16.5
