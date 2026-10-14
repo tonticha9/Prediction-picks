@@ -12,6 +12,16 @@ tu). Kwa hiyo hata kama mzunguko uliopita ulishindwa, mzunguko unaofuata
 unazirekebisha. Utathmini ukishindwa kuanza (DATABASE_URL haipo, import
 imeshindwa), job inakuwa NYEKUNDU (si kijani kimya kimya).
 
+v3 (MAJINA YA TIMU): majina yote ya timu yanapita kwenye team_names.canon()
+(chanzo kimoja: team_names.py). Faida:
+  - mechi mpya zinaingia kwa jina RASMI (si 'PSG' kwa sehemu na 'Paris Sg' kwa sehemu),
+  - kuondoa mechi zinazojirudia kunatumia majina rasmi (jina mbadala halileti nakala),
+  - utathmini unalinganisha majina rasmi pande zote mbili (rekodi za zamani zenye jina
+    mbadala nazo zinatathminiwa),
+  - dataset inapata team_aliases.json (notebooks za Kaggle zinaisoma kuunganisha historia),
+  - jina jipya lisilojulikana linaleta ONYO la wazi (::warning::) na pendekezo.
+  - mechi zinatafutwa siku 7 nyuma (si 2): Job ikishindwa siku chache, hakuna mechi inayopotea.
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
@@ -27,10 +37,14 @@ from collections import Counter
 from datetime import datetime, timedelta, date
 
 sys.path.insert(0, os.getcwd())
+import team_names
 
 APP_URL = os.environ.get("APP_URL")
 REFRESH_SECRET = os.environ.get("REFRESH_SECRET")
 KAGGLE_DATASET = os.environ.get("KAGGLE_DATASET_SLUG")
+
+LOOKBACK_DAYS = 7        # mechi zilizokwisha zinatafutwa siku 7 nyuma (dedupe inazuia nakala)
+STUCK_DAYS = 2           # ukaguzi wa mechi 'zilizokwama' unabaki siku 2
 
 
 def fetch_api_key_from_admin():
@@ -74,36 +88,8 @@ STAT_TYPE_MAP = {'Corners': 'corners', 'Shots Total': 'shots_total',
                   'Offsides': 'offsides', 'Ball Possession': 'possession',
                   'Yellow Cards': 'yellow_cards', 'Saves': 'saves'}
 
-TEAM_NAME_MAPPING = {
-    'AC Milan': 'Milan', 'AEL Larissa': 'Larisa', 'AS Roma': 'Roma',
-    'AZ Alkmaar': 'Az Alkmaar', 'Academico Viseu': 'Academica', 'Alavés': 'Alaves',
-    'Arsenal FC': 'Arsenal', 'Asteras': 'Asteras Tripolis', 'Atl. Madrid': 'Ath Madrid',
-    'Atromitos FC': 'Atromitos', 'B. Monchengladbach': "M'Gladbach",
-    'Bayer Leverkusen': 'Leverkusen', 'Bayern München': 'Bayern Munich',
-    'Beerschot VA': 'Beerschot Va', 'Beveren': 'Waasland-Beveren', 'Beşiktaş': 'Besiktas',
-    'Bournemouth FC': 'Bournemouth', 'Braga': 'Sp Braga', 'Bremen': 'Werder Bremen',
-    'Celta Vigo': 'Celta', 'Cercle Brugge KSV': 'Cercle Brugge', 'Club Brugge KV': 'Club Brugge',
-    'Dep. A Coruna': 'La Coruna', 'Dundee FC': 'Dundee', 'Dundee Utd': 'Dundee United',
-    'Eintracht Frankfurt': 'Ein Frankfurt', 'Erzurumspor': 'Erzurum Bb', 'Espanyol': 'Espanol',
-    'FC Koln': 'Fc Koln', 'FC Porto': 'Porto', 'FC Volendam': 'Volendam',
-    'Famalicão': 'Famalicao', 'Fenerbahçe': 'Fenerbahce', 'Fortuna': 'For Sittard',
-    'Frankfurt': 'Ein Frankfurt', 'G.A. Eagles': 'Go Ahead Eagles',
-    'Gençlerbirliği': 'Genclerbirligi', 'Go Ahead': 'Go Ahead Eagles', 'Goztepe': 'Goztep',
-    'Göztepe': 'Goztep', 'Hamburger SV': 'Hamburg', 'Iraklis 1908': 'Iraklis',
-    'Juventus FC': 'Juventus', 'KV Mechelen': 'Mechelen', 'Kasımpaşa': 'Kasimpasa',
-    'Kayseri': 'Kayserispor', 'Larissa': 'Larisa', 'Leipzig': 'Rb Leipzig',
-    'Levadiakos': 'Levadeiakos', "M'gladbach": "M'Gladbach", 'Mainz 05': 'Mainz',
-    'Man Utd': 'Man United', 'Manchester City': 'Man City', 'Manchester Utd': 'Man United',
-    'NAC Breda': 'Nac Breda', 'Nottm Forest': "Nott'M Forest", 'OFI Crete': 'Ofi Crete',
-    'Olympiacos Piraeus': 'Olympiakos', 'Panaitolikos': 'Panetolikos',
-    'Partick Thistle': 'Partick', 'RB Leipzig': 'Rb Leipzig', 'Rayo Vallecano': 'Vallecano',
-    'Real Sociedad': 'Sociedad', 'Rize': 'Rizespor', 'Sheff Utd': 'Sheffield United',
-    'Sheff Wed': 'Sheffield Weds', 'Sheffield Utd': 'Sheffield United',
-    'Sheffield Wed': 'Sheffield Weds', 'Sint-Truiden': 'St Truiden', 'Sittard': 'For Sittard',
-    'St. Mirren': 'St Mirren', 'St. Truiden': 'St Truiden',
-    'Vitoria Guimaraes': 'Guimaraes', 'Volos': 'Volos Nfc', 'West Bromwich': 'West Brom',
-    'Willem II': 'Willem Ii',
-}
+# Kwa utangamano na msimbo wa zamani: ramani ya majina sasa iko team_names.py (chanzo kimoja).
+TEAM_NAME_MAPPING = team_names.ALIASES
 
 
 def parse_statistics(stats_list):
@@ -153,7 +139,7 @@ def fetch_recent_results(from_date, to_date):
         fixtures = data.get('result', []) or []
         finished = [f for f in fixtures if f.get('event_status') == 'Finished']
         if finished:
-            print(f"   {code}: {len(finished)} mechi mpya zilizokwisha")
+            print(f"   {code}: {len(finished)} mechi zilizokwisha")
 
         for f in finished:
             try:
@@ -191,8 +177,10 @@ def fetch_recent_results(from_date, to_date):
     df = pd.DataFrame(all_matches)
     if len(df) > 0:
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        df['HomeTeam'] = df['HomeTeam'].replace(TEAM_NAME_MAPPING)
-        df['AwayTeam'] = df['AwayTeam'].replace(TEAM_NAME_MAPPING)
+        df = df.dropna(subset=['Date', 'HomeTeam', 'AwayTeam']).copy()
+        # Majina rasmi (chanzo kimoja: team_names.py)
+        df['HomeTeam'] = df['HomeTeam'].map(team_names.canon)
+        df['AwayTeam'] = df['AwayTeam'].map(team_names.canon)
     return df
 
 
@@ -254,15 +242,45 @@ def run_stuck_check(from_date, to_date):
 
 
 # ============================================================
+# MAJINA YA TIMU: funguo za mechi (kwa majina rasmi) + onyo la jina jipya
+# ============================================================
+
+def canon_keys(df):
+    """Ufunguo wa kila mechi: tarehe|nyumbani|ugenini, kwa MAJINA RASMI."""
+    d = pd.to_datetime(df['Date'], errors='coerce').dt.strftime('%Y-%m-%d')
+    h = df['HomeTeam'].map(team_names.canon).astype(str)
+    a = df['AwayTeam'].map(team_names.canon).astype(str)
+    return d + '|' + h + '|' + a
+
+
+def warn_new_team_names(df_existing, df_new):
+    """Onya kuhusu majina ya timu yasiyojulikana kwa ligi hiyo (kwa majina rasmi).
+    Timu iliyopanda daraja kweli itaonekana mara moja tu; jina mbadala la timu
+    ya zamani litaonekana na pendekezo."""
+    known = {}
+    for lg, g in df_existing.groupby('league'):
+        names = pd.concat([g['HomeTeam'], g['AwayTeam']]).dropna().unique()
+        known[lg] = {team_names.canon(x) for x in names}
+    for lg, g in df_new.groupby('league'):
+        names = set(g['HomeTeam']) | set(g['AwayTeam'])
+        pool = known.get(lg, set())
+        for n in sorted(names - pool):
+            hint = team_names.suggest(n, pool)
+            extra = f" (huenda ni: {', '.join(hint)})" if hint else ''
+            print(f"::warning::Jina jipya la timu {lg}: '{n}'{extra} - ikiwa ni timu ileile "
+                  f"ya zamani, ongeza mstari kwenye team_names.py")
+
+
+# ============================================================
 # UTATHMINI (SETTLEMENT) - v2
 # ============================================================
 
 def norm_team(name):
-    """Jina la timu lililosafishwa: trim + mapping ya API -> dataset + herufi ndogo.
-    Inatumika pande zote mbili (rekodi za DB na dataset) ili zilingane."""
+    """Jina la timu lililosafishwa: jina rasmi (team_names.canon) + herufi ndogo.
+    Inatumika pande zote mbili (rekodi za DB na dataset) ili zilingane, hata
+    kama rekodi ya zamani ina jina mbadala."""
     n = str(name or '').strip()
-    n = TEAM_NAME_MAPPING.get(n, n)
-    return n.lower()
+    return str(team_names.canon(n)).lower()
 
 
 def to_date(v):
@@ -435,50 +453,67 @@ def main():
     df_existing['Date'] = pd.to_datetime(df_existing['Date'], format='mixed')
     print(f"   Historia ya sasa: {len(df_existing):,} mechi")
 
-    to_date_str = date.today().isoformat()
-    from_date_str = (date.today() - timedelta(days=2)).isoformat()
+    # Majina rasmi ya timu: kagua orodha, kisha weka team_aliases.json ndani ya dataset
+    for p in team_names.validate_aliases():
+        print(f"::warning::team_names.py: {p}")
+    aliases_changed = team_names.write_aliases_json('kaggle_dataset')
+    if aliases_changed:
+        print("📝 team_aliases.json imesasishwa kwenye folda ya dataset (itapakiwa na toleo jipya).")
+
+    today = date.today()
+    to_date_str = today.isoformat()
+    from_date_str = (today - timedelta(days=LOOKBACK_DAYS)).isoformat()
+    stuck_from_str = (today - timedelta(days=STUCK_DAYS)).isoformat()
     print(f"🔍 Kutafuta mechi zilizokwisha: {from_date_str} hadi {to_date_str}")
     df_new = fetch_recent_results(from_date_str, to_date_str)
-    print(f"   Jumla ya mechi mpya zilizopatikana: {len(df_new)}")
+    print(f"   Jumla ya mechi zilizopatikana: {len(df_new)}")
 
     df_results = df_existing   # dataset itakayotumika kutathmini
     upload_ok = True
+    need_upload = aliases_changed
+    upload_msg = f"Update team_aliases.json {datetime.utcnow().isoformat()}"
 
     if len(df_new) == 0:
         print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu.")
     else:
-        key_cols = ['Date', 'HomeTeam', 'AwayTeam']
-        df_existing_keys = set(df_existing[key_cols].apply(tuple, axis=1))
-        df_new_unique = df_new[~df_new[key_cols].apply(tuple, axis=1).isin(df_existing_keys)]
+        # Nakala zinaondolewa kwa MAJINA RASMI: 'PSG' na 'Paris Sg' ni timu moja
+        existing_keys = set(canon_keys(df_existing))
+        df_new = df_new.copy()
+        df_new['_key'] = canon_keys(df_new)
+        df_new_unique = (df_new[~df_new['_key'].isin(existing_keys)]
+                         .drop_duplicates('_key').drop(columns='_key'))
         print(f"   Mechi HALISI mpya (baada ya dedupe): {len(df_new_unique)}")
 
         if len(df_new_unique) == 0:
             print("ℹ️ Mechi zote zilizopatikana tayari zipo kwenye historia.")
         else:
+            warn_new_team_names(df_existing, df_new_unique)
             df_combined = pd.concat([df_existing, df_new_unique], ignore_index=True)
             df_combined = df_combined.sort_values('Date').reset_index(drop=True)
             df_combined.to_csv(csv_path, index=False)
             print(f"✅ Historia mpya: {len(df_combined):,} mechi (+{len(df_new_unique)})")
             df_results = df_combined
+            need_upload = True
+            upload_msg = f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"
 
-            metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
-                        "licenses": [{"name": "CC0-1.0"}]}
-            with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
-                json.dump(metadata, f)
+    if need_upload:
+        metadata = {"title": "historical-complete-no-gap", "id": KAGGLE_DATASET,
+                    "licenses": [{"name": "CC0-1.0"}]}
+        with open(os.path.join('kaggle_dataset', 'dataset-metadata.json'), 'w') as f:
+            json.dump(metadata, f)
 
-            print("📤 Kupakia toleo jipya la dataset...")
-            out = run_kaggle_cmd(['datasets', 'version', '-p', 'kaggle_dataset',
-                                   '-m', f"Auto-update {datetime.utcnow().isoformat()} (+{len(df_new_unique)} mechi)"],
-                                  fatal=False)
-            if out is None:
-                upload_ok = False
-                print("::error::Upload ya dataset imeshindwa - utathmini utaendelea na data ya mzunguko huu.")
-            else:
-                print("🎉 Dataset imesasishwa kikamilifu!")
+        print("📤 Kupakia toleo jipya la dataset...")
+        out = run_kaggle_cmd(['datasets', 'version', '-p', 'kaggle_dataset', '-m', upload_msg],
+                              fatal=False)
+        if out is None:
+            upload_ok = False
+            print("::error::Upload ya dataset imeshindwa - utathmini utaendelea na data ya mzunguko huu.")
+        else:
+            print("🎉 Dataset imesasishwa kikamilifu!")
 
     # Utathmini UNAFANYIKA KILA MZUNGUKO, bila kujali kama kuna mechi mpya.
     settle_ok = settle_pending(df_results)
-    run_stuck_check(from_date_str, to_date_str)
+    run_stuck_check(stuck_from_str, to_date_str)
 
     if not upload_ok or not settle_ok:
         sys.exit(1)
