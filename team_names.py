@@ -115,7 +115,7 @@ ALIASES = {
     'Oxford': 'Oxford Utd',
     'Leuven': 'Oud-Heverlee Leuven',
     'La Louvière': 'RAAL La Louviere',
-    'R. Union SG': 'Royale Union SG',
+    'R. Union SG': 'St. Gilloise',
     'Sporting': 'Sp Lisbon',
     'Sporting CP': 'Sp Lisbon',
     'Athletic': 'Ath Bilbao',
@@ -125,6 +125,20 @@ ALIASES = {
     'Başakşehir': 'Buyuksehyr',
     'Bodrumspor': 'Bodrum FK',
     'St Pauli': 'St. Pauli',
+
+    # ---------- Oct 14 2026: timu moja yenye majina mawili (imethibitishwa kwa tarehe) ----------
+    # Jina rasmi = lile lenye historia ndefu kwenye dataset (football-data).
+    'Royale Union SG': 'St. Gilloise',
+    'St. Liege': 'Standard',
+    'Mouscron-Peruwelz': 'Mouscron',
+    'OHL': 'Oud-Heverlee Leuven',
+    'ZW': 'Waregem',
+    'AFS': 'AVS',
+    'Vitória SC': 'Guimaraes',
+    'NEC': 'Nijmegen',
+    'Rayo': 'Vallecano',
+    'Eyüp': 'Eyupspor',
+    'Fatih': 'Karagumruk',
 }
 
 _LOWER = {}
