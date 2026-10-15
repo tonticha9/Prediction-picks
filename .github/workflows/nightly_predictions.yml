@@ -5,6 +5,9 @@
 # folder ya repo (Render itaziona na ku-deploy yenyewe), KISHA inaita
 # /api/refresh ya app moja kwa moja ili data ionekane papo hapo bila
 # kusubiri Render redeploy.
+#
+# v2 (Oct 15 2026): kikomo cha job kimeongezwa hadi dakika 170 (Kaggle inaweza kuchukua
+# hadi dakika 150), na 'concurrency' inazuia nightly mbili kuendeshwa pamoja.
 
 name: Nightly Predictions Update
 
@@ -14,10 +17,14 @@ on:
     - cron: '0 22 * * *'
   workflow_dispatch:        # Inaruhusu ku-trigger kwa mkono (kwa jaribio la kwanza)
 
+concurrency:
+  group: nightly-predictions
+  cancel-in-progress: false  # Run ya pili inasubiri ya kwanza imalize (haifutwi)
+
 jobs:
   update-predictions:
     runs-on: ubuntu-latest
-    timeout-minutes: 90     # Usalama - isiendelee milele ikiwa kitu kikakwama
+    timeout-minutes: 170    # Usalama - Kaggle inasubiriwa hadi dakika 150
 
     steps:
       - name: Checkout repository
