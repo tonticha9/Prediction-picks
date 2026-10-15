@@ -11,6 +11,12 @@ ikatoa error ya muda (403/429/network).
 MABADILIKO: predictions.csv pekee ndiyo LAZIMA. value_bets.csv na
 combos.csv zinaweza kukosekana siku isiyo na picks - hiyo ni onyo tu,
 si kosa.
+
+v2 (Oct 15 2026): usiku mmoja Kaggle ilichukua dakika 70 (kawaida 19-22), karibu na
+kikomo cha zamani cha dakika 80. Sasa:
+  - kikomo cha kusubiri = dakika 150 (muda unapimwa kwa saa halisi, si kwa kuhesabu usingizi),
+  - onyo (::warning::) Kaggle ikipita dakika 45,
+  - muda halisi wa Kaggle unaandikwa kwenye muhtasari wa run (GITHUB_STEP_SUMMARY).
 """
 import os
 import sys
@@ -23,9 +29,22 @@ if not KAGGLE_SLUG:
     print("❌ KAGGLE_SLUG haijawekwa (env variable)")
     sys.exit(1)
 
-MAX_WAIT_MINUTES = 80          # Kikomo cha juu cha kusubiri Kaggle imalize
+MAX_WAIT_MINUTES = 150         # Kikomo cha juu cha kusubiri Kaggle imalize
+SLOW_WARN_MINUTES = 45         # Onyo likipita muda huu (kawaida ni dakika 19-22)
 POLL_INTERVAL_SECONDS = 90     # Angalia hali kila dakika 1.5 (tahadhari, si haraka mno)
 MAX_RETRIES_PER_CALL = 4
+
+
+def write_summary(text):
+    """Andika mstari kwenye muhtasari wa run ya GitHub Actions (ukipatikana)."""
+    path = os.environ.get('GITHUB_STEP_SUMMARY')
+    if not path:
+        return
+    try:
+        with open(path, 'a') as f:
+            f.write(text + "\n")
+    except Exception:
+        pass
 
 
 def run_kaggle_cmd(args, allow_fail=False):
@@ -61,16 +80,23 @@ def main():
 
     # HATUA 3: Subiri ikamilike (polling ya taratibu)
     print(f"⏳ Kusubiri Kaggle imalize (upeo: dakika {MAX_WAIT_MINUTES})...")
-    waited = 0
+    start = time.time()
     status = None
-    while waited < MAX_WAIT_MINUTES * 60:
+    slow_warned = False
+    while time.time() - start < MAX_WAIT_MINUTES * 60:
         time.sleep(POLL_INTERVAL_SECONDS)
-        waited += POLL_INTERVAL_SECONDS
+        elapsed_min = int((time.time() - start) // 60)
+
+        if elapsed_min >= SLOW_WARN_MINUTES and not slow_warned:
+            slow_warned = True
+            print(f"::warning::Kaggle imechukua zaidi ya dakika {SLOW_WARN_MINUTES} "
+                  f"(kawaida ni dakika 19-22). Angalia logs za notebook kuona seli inayochelewesha.")
+
         output = run_kaggle_cmd(['kernels', 'status', KAGGLE_SLUG], allow_fail=True)
         if output is None:
             print("   (Hali haikupatikana mzunguko huu, naendelea kusubiri...)")
             continue
-        print(f"   [{waited//60} dakika] Hali: {output.strip()}")
+        print(f"   [{elapsed_min} dakika] Hali: {output.strip()}")
         if 'complete' in output.lower():
             status = 'complete'
             break
@@ -78,7 +104,10 @@ def main():
             status = 'error'
             break
 
+    total_min = int((time.time() - start) // 60)
+
     if status == 'error':
+        write_summary(f"### Nightly: Kaggle ILISHINDWA baada ya dakika {total_min}")
         print("❌ Kaggle notebook ilishindwa kuendesha (error).")
         print("🔍 Kupakua logs za Kaggle kuonyesha error HASA...")
         os.makedirs('kaggle_debug_logs', exist_ok=True)
@@ -115,10 +144,12 @@ def main():
             print("   Nenda kaggle.com moja kwa moja kuona 'Version History' ya notebook.")
         sys.exit(1)
     if status != 'complete':
+        write_summary(f"### Nightly: muda umeisha (dakika {MAX_WAIT_MINUTES}) - Kaggle bado inaendesha")
         print(f"❌ Muda umeisha (dakika {MAX_WAIT_MINUTES}) bila kukamilika. Kaggle bado inaendesha - angalia baadaye.")
         sys.exit(1)
 
-    print("✅ Kaggle imemaliza kuendesha!")
+    print(f"✅ Kaggle imemaliza kuendesha! (dakika {total_min})")
+    write_summary(f"### Nightly: Kaggle ilichukua **{total_min} dakika** (kikomo {MAX_WAIT_MINUTES}, kawaida 19-22)")
 
     # HATUA 4: Pakua matokeo (FAILI ZOTE mara moja - hakuna '-f' flag kwa amri hii)
     os.makedirs('kaggle_output', exist_ok=True)
