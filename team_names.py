@@ -139,6 +139,7 @@ ALIASES = {
     'Rayo': 'Vallecano',
     'Eyüp': 'Eyupspor',
     'Fatih': 'Karagumruk',
+    'Santander': 'Racing Santander',
 }
 
 _LOWER = {}
