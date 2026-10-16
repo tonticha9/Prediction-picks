@@ -1,7 +1,20 @@
 """
 market_selection.py — Uchaguzi wa masoko kwa kila mechi.
+
+Step 8B (Okt 2026): kichujio cha ubora (quality gate) kimeongezwa. Kinatumia
+market_quality.py (madaraja A/B/C/X kwa skill + base rate ya hivi karibuni).
+Kudhibiti kupitia Render env var QUALITY_GATE:
+   '1' (chaguo-msingi) = kamili: daraja + margin juu ya base rate
+   'soft'              = daraja tu (bila margin)
+   '0'                 = kimezimwa (tabia ya zamani)
 """
+import os
 import re
+
+try:
+    from market_quality import QUALITY, MIN_EDGE, BEST_TIERS
+except Exception:                      # faili likikosekana, gate inazimika kimya
+    QUALITY, MIN_EDGE, BEST_TIERS = {}, {}, set()
 
 MATCH_RESULT_DIRECT_PAIR = {'home_win': 'away_win', 'away_win': 'home_win'}
 THRESHOLD_RE = re.compile(r'^(?P<stat>[a-z_]+?)_(?P<direction>over|under)_(?P<num>\d{2,3})$')
@@ -58,6 +71,79 @@ def is_best_pick_excluded(market, allow_dc_best=False):
     return False
 
 
+# ---------------------------------------------------------------------------
+# QUALITY GATE (Step 8B)
+# ---------------------------------------------------------------------------
+def _gate_mode():
+    """'0' = imezimwa, 'soft' = daraja tu, '1' = kamili (chaguo-msingi)."""
+    if not QUALITY:
+        return '0'
+    v = os.environ.get('QUALITY_GATE', '1').strip().lower()
+    if v in ('0', 'off', 'false', 'no'):
+        return '0'
+    if v == 'soft':
+        return 'soft'
+    return '1'
+
+
+def _quality_key(market):
+    """Ramani jina la soko kwenda jina la jedwali. Rudisha (ufunguo, ni_under)."""
+    m = str(market)
+    if '_and_' in m:
+        # 'home_win_and_over_15' -> 'home_win_and_over15'
+        return re.sub(r'over_(\d+)', r'over\1', m), False
+    if '_under_' in m:
+        # 'corners_under_95' -> 'corners_over_95' (base = 100 - base ya over)
+        return m.replace('_under_', '_over_'), True
+    return m, False
+
+
+def quality_info(market, probability):
+    """Taarifa ya ubora wa soko kwa probability husika, au None kama soko halimo
+    kwenye jedwali (masoko yasiyojulikana hayachujwi)."""
+    try:
+        key, is_under = _quality_key(market)
+        q = QUALITY.get(key)
+        if q is None:
+            return None
+        tier, skill, base = q
+        base_eff = (100.0 - base) if is_under else base
+        edge = float(probability or 0) - base_eff
+        min_edge = MIN_EDGE.get(tier, 0.0)
+        return {
+            'tier': tier,
+            'skill': skill,
+            'base_rate': round(base_eff, 1),
+            'edge': round(edge, 1),
+            'min_edge': min_edge,
+            'informative': (tier != 'X') and edge >= min_edge,
+            'best_ok': (tier in BEST_TIERS) and edge >= min_edge,
+        }
+    except Exception:
+        return None
+
+
+def quality_label(market, probability):
+    """Kwa UI (Step 8C): rudisha (msimbo, maandishi) au None.
+       'base_rate' = pick haizidi kiwango cha kawaida cha soko
+       'weak'      = soko lenye ishara dhaifu (daraja C)
+       'ok'        = soko lenye ishara na pick inazidi base rate"""
+    qi = quality_info(market, probability)
+    if qi is None:
+        return None
+    if not qi['informative']:
+        return ('base_rate', 'Base rate')
+    if qi['tier'] == 'C':
+        return ('weak', 'Ishara dhaifu')
+    return ('ok', '')
+
+
+def unknown_quality_markets(markets):
+    """Orodha ya masoko (kutoka kwenye data) yasiyo kwenye jedwali la ubora."""
+    return sorted({str(m) for m in markets if quality_info(m, 0) is None})
+
+
+# ---------------------------------------------------------------------------
 def _parse_threshold(market):
     m = THRESHOLD_RE.match(market)
     if not m:
@@ -125,6 +211,10 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
       - 'ev'          : MASOKO YENYE ODDS TU, kwa EV (yasiyo na odds yanafichwa)
       - 'no_odds'     : MASOKO YASIYO NA ODDS TU, kwa probability (yenye odds yanafichwa)
 
+    Quality gate (QUALITY_GATE): masoko ya daraja X yanafichwa (isipokuwa over 0.5 ya
+    magoli, Other Picks tu); Best Pick lazima iwe daraja A/B (na, kwenye mode '1',
+    probability izidi base rate kwa margin ya daraja).
+
     Orodha inayorudishwa: kipengele cha KWANZA ni Best Pick (soko la kwanza
     lisilozuiwa kuwa Best Pick), vingine vyote ni Other Picks kwa mpangilio wa formula.
     Kama hakuna soko linaloruhusiwa kuwa Best Pick, orodha tupu (mechi inafichwa).
@@ -151,11 +241,34 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
     elif formula == 'no_odds':
         survivors = [e for e in survivors if not _has_odds(e[2])]
 
+    mode = _gate_mode()
+    if mode != '0':
+        kept = []
+        for e in survivors:
+            qi = quality_info(e[0], e[1])
+            if qi is not None and qi['tier'] == 'X' and not OVER_05_RE.match(str(e[0])):
+                continue                      # hakuna ishara: ficha
+            kept.append(e)
+        survivors = kept
+
     scorer = FORMULA_SCORERS.get(formula, _score_hybrid)
     survivors.sort(key=lambda e: scorer(e[1], e[2], e[3]), reverse=True)
 
-    best_idx = next((i for i, e in enumerate(survivors)
-                     if not is_best_pick_excluded(e[0], allow_dc_best)), None)
+    def _best_ok(e):
+        if is_best_pick_excluded(e[0], allow_dc_best):
+            return False
+        if mode == '0':
+            return True
+        qi = quality_info(e[0], e[1])
+        if qi is None:
+            return True                       # soko lisilojulikana: haligusiwi
+        if qi['tier'] not in BEST_TIERS:
+            return False
+        if mode == '1' and qi['edge'] < qi['min_edge']:
+            return False
+        return True
+
+    best_idx = next((i for i, e in enumerate(survivors) if _best_ok(e)), None)
     if best_idx is None:
         return []
     if best_idx > 0:
