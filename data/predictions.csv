@@ -181,7 +181,7 @@ Amedspor,Konyaspor,2026-10-17,away_goals_over_05,64.6,PRO_MEDIUM,
 Amedspor,Konyaspor,2026-10-17,booking_pts_under_55,59.2,PRO_MEDIUM,
 Amedspor,Konyaspor,2026-10-17,home_goals_over_15,57.6,PRO_MEDIUM,
 Amedspor,Konyaspor,2026-10-17,booking_pts_over_45,56.0,PRO_MEDIUM,
-Amedspor,Konyaspor,2026-10-17,btts,55.7,PRO_MEDIUM,1.8
+Amedspor,Konyaspor,2026-10-17,btts,55.7,PRO_MEDIUM,1.73
 Anderlecht,Westerlo,2026-10-31,home_goals_over_05,84.5,PRO_STRONG,
 Anderlecht,Westerlo,2026-10-31,booking_pts_under_55,78.4,PRO_STRONG,
 Anderlecht,Westerlo,2026-10-31,dc_1x,75.0,PRO_STRONG,
@@ -361,7 +361,7 @@ Asteras Tripolis,Levadeiakos,2026-10-24,dc_12,67.7,PRO_MEDIUM,1.36
 Asteras Tripolis,Levadeiakos,2026-10-24,home_goals_under_15,64.3,PRO_MEDIUM,
 Asteras Tripolis,Levadeiakos,2026-10-24,away_goals_over_05,61.3,PRO_MEDIUM,
 Asteras Tripolis,Levadeiakos,2026-10-24,goals_under_25,61.1,PRO_MEDIUM,1.62
-Asteras Tripolis,Levadeiakos,2026-10-24,dc_x2,58.2,PRO_MEDIUM,1.57
+Asteras Tripolis,Levadeiakos,2026-10-24,dc_x2,58.2,PRO_MEDIUM,1.7
 Asteras Tripolis,Levadeiakos,2026-10-24,booking_pts_under_55,57.3,PRO_MEDIUM,
 Aston Villa,Fulham,2026-10-31,home_goals_over_05,78.1,PRO_STRONG,
 Aston Villa,Fulham,2026-10-31,both_teams_carded,76.6,PRO_STRONG,
@@ -461,8 +461,8 @@ Ath Madrid,Barcelona,2026-11-08,goals_over_25,55.6,PRO_MEDIUM,
 Ath Madrid,Barcelona,2026-11-08,dc_1x_and_over_15,55.4,PRO_MEDIUM,
 Ath Madrid,La Coruna,2026-10-24,away_goals_under_25,96.9,PRO_STRONG,
 Ath Madrid,La Coruna,2026-10-24,home_goals_over_05,94.7,PRO_STRONG,
-Ath Madrid,La Coruna,2026-10-24,dc_1x,93.3,PRO_STRONG,1.04
-Ath Madrid,La Coruna,2026-10-24,dc_12,89.7,PRO_STRONG,1.11
+Ath Madrid,La Coruna,2026-10-24,dc_1x,93.3,PRO_STRONG,1.05
+Ath Madrid,La Coruna,2026-10-24,dc_12,89.7,PRO_STRONG,1.12
 Ath Madrid,La Coruna,2026-10-24,home_win_either_half,89.2,PRO_STRONG,
 Ath Madrid,La Coruna,2026-10-24,away_goals_under_15,86.0,PRO_STRONG,
 Ath Madrid,La Coruna,2026-10-24,both_teams_carded,85.8,PRO_STRONG,
@@ -643,7 +643,7 @@ Bayern Munich,Dortmund,2026-10-31,btts,58.9,PRO_MEDIUM,
 Bayern Munich,Dortmund,2026-10-31,goals_over_25,57.9,PRO_MEDIUM,
 Bayern Munich,Rb Leipzig,2026-10-17,home_goals_over_05,93.5,PRO_STRONG,
 Bayern Munich,Rb Leipzig,2026-10-17,away_goals_under_25,93.0,PRO_STRONG,
-Bayern Munich,Rb Leipzig,2026-10-17,dc_1x,91.6,PRO_STRONG,1.07
+Bayern Munich,Rb Leipzig,2026-10-17,dc_1x,91.6,PRO_STRONG,1.06
 Bayern Munich,Rb Leipzig,2026-10-17,dc_12,88.7,PRO_STRONG,1.1
 Bayern Munich,Rb Leipzig,2026-10-17,home_win_either_half,87.3,PRO_STRONG,
 Bayern Munich,Rb Leipzig,2026-10-17,dc_1x_and_over_15,83.1,PRO_STRONG,
@@ -874,9 +874,9 @@ Brentford,Liverpool,2026-10-17,away_goals_over_05,76.3,PRO_STRONG,
 Brentford,Liverpool,2026-10-17,booking_pts_under_55,73.8,PRO_MEDIUM,
 Brentford,Liverpool,2026-10-17,booking_pts_over_35,64.9,PRO_MEDIUM,
 Brentford,Liverpool,2026-10-17,goals_over_25,62.8,PRO_MEDIUM,1.57
-Brentford,Liverpool,2026-10-17,dc_1x,62.8,PRO_MEDIUM,1.4
+Brentford,Liverpool,2026-10-17,dc_1x,62.8,PRO_MEDIUM,1.44
 Brentford,Liverpool,2026-10-17,away_goals_under_15,61.3,PRO_MEDIUM,
-Brentford,Liverpool,2026-10-17,dc_x2,58.0,PRO_MEDIUM,1.57
+Brentford,Liverpool,2026-10-17,dc_x2,58.0,PRO_MEDIUM,1.53
 Brentford,Liverpool,2026-10-17,dc_12_and_over_25,57.0,PRO_MEDIUM,
 Brentford,Liverpool,2026-10-17,btts,55.5,PRO_MEDIUM,1.5
 Brentford,Nott'M Forest,2026-10-31,home_goals_over_05,83.1,PRO_STRONG,
@@ -1688,7 +1688,7 @@ Espanol,Ath Madrid,2026-10-17,dc_x2,81.9,PRO_STRONG,1.18
 Espanol,Ath Madrid,2026-10-17,home_goals_under_15,74.4,PRO_MEDIUM,
 Espanol,Ath Madrid,2026-10-17,away_goals_under_25,73.2,PRO_MEDIUM,
 Espanol,Ath Madrid,2026-10-17,away_win_either_half,72.0,PRO_MEDIUM,
-Espanol,Ath Madrid,2026-10-17,dc_12,70.1,PRO_MEDIUM,1.25
+Espanol,Ath Madrid,2026-10-17,dc_12,70.1,PRO_MEDIUM,1.22
 Espanol,Ath Madrid,2026-10-17,home_goals_over_05,67.4,PRO_MEDIUM,
 Espanol,Ath Madrid,2026-10-17,dc_x2_and_over_15,65.7,PRO_MEDIUM,
 Espanol,Ath Madrid,2026-10-17,booking_pts_under_55,58.7,PRO_MEDIUM,
@@ -2765,8 +2765,8 @@ Kifisia,Olympiakos,2026-10-31,booking_pts_under_55,56.4,PRO_MEDIUM,
 Kilmarnock,Motherwell,2026-10-17,home_goals_under_25,90.0,PRO_STRONG,
 Kilmarnock,Motherwell,2026-10-17,away_goals_over_05,85.0,PRO_STRONG,
 Kilmarnock,Motherwell,2026-10-17,both_teams_carded,79.3,PRO_STRONG,
-Kilmarnock,Motherwell,2026-10-17,dc_12,78.5,PRO_STRONG,1.25
-Kilmarnock,Motherwell,2026-10-17,dc_x2,73.0,PRO_MEDIUM,1.33
+Kilmarnock,Motherwell,2026-10-17,dc_12,78.5,PRO_STRONG,1.28
+Kilmarnock,Motherwell,2026-10-17,dc_x2,73.0,PRO_MEDIUM,1.36
 Kilmarnock,Motherwell,2026-10-17,away_goals_under_25,71.6,PRO_MEDIUM,
 Kilmarnock,Motherwell,2026-10-17,booking_pts_under_55,70.8,PRO_MEDIUM,
 Kilmarnock,Motherwell,2026-10-17,home_goals_over_05,70.3,PRO_MEDIUM,
@@ -3145,7 +3145,7 @@ Lille,Brest,2026-10-17,both_teams_carded,76.8,PRO_STRONG,
 Lille,Brest,2026-10-17,home_goals_under_25,75.7,PRO_STRONG,
 Lille,Brest,2026-10-17,booking_pts_under_55,71.3,PRO_MEDIUM,
 Lille,Brest,2026-10-17,away_goals_under_15,70.8,PRO_MEDIUM,
-Lille,Brest,2026-10-17,dc_12,70.7,PRO_MEDIUM,1.25
+Lille,Brest,2026-10-17,dc_12,70.7,PRO_MEDIUM,1.28
 Lille,Brest,2026-10-17,dc_1x_and_over_15,64.0,PRO_MEDIUM,
 Lille,Brest,2026-10-17,away_goals_over_05,63.9,PRO_MEDIUM,
 Lille,Brest,2026-10-17,home_win_either_half,63.6,PRO_MEDIUM,
@@ -3355,8 +3355,8 @@ Man City,Brighton,2026-10-31,cards_range_3_5,58.7,PRO_MEDIUM,
 Man City,Brighton,2026-10-31,btts,56.0,PRO_MEDIUM,
 Man City,Ipswich,2026-10-17,away_goals_under_25,96.4,PRO_STRONG,
 Man City,Ipswich,2026-10-17,home_goals_over_05,94.3,PRO_STRONG,
-Man City,Ipswich,2026-10-17,dc_1x,92.6,PRO_STRONG,1.07
-Man City,Ipswich,2026-10-17,dc_12,90.2,PRO_STRONG,1.11
+Man City,Ipswich,2026-10-17,dc_1x,92.6,PRO_STRONG,1.05
+Man City,Ipswich,2026-10-17,dc_12,90.2,PRO_STRONG,1.1
 Man City,Ipswich,2026-10-17,home_win_either_half,87.6,PRO_STRONG,
 Man City,Ipswich,2026-10-17,dc_1x_and_over_15,83.0,PRO_STRONG,
 Man City,Ipswich,2026-10-17,home_win,82.8,PRO_STRONG,1.25
@@ -4363,9 +4363,9 @@ Racing Santander,Espanol,2026-10-24,away_goals_under_25,82.6,PRO_MEDIUM,
 Racing Santander,Espanol,2026-10-24,home_goals_over_05,80.1,PRO_STRONG,
 Racing Santander,Espanol,2026-10-24,away_goals_over_05,77.3,PRO_STRONG,
 Racing Santander,Espanol,2026-10-24,dc_12,75.9,PRO_STRONG,1.28
-Racing Santander,Espanol,2026-10-24,dc_1x,64.3,PRO_MEDIUM,1.4
+Racing Santander,Espanol,2026-10-24,dc_1x,64.3,PRO_MEDIUM,1.44
 Racing Santander,Espanol,2026-10-24,away_goals_under_15,62.3,PRO_MEDIUM,
-Racing Santander,Espanol,2026-10-24,dc_x2,59.8,PRO_MEDIUM,1.57
+Racing Santander,Espanol,2026-10-24,dc_x2,59.8,PRO_MEDIUM,1.53
 Racing Santander,Espanol,2026-10-24,goals_over_25,57.3,PRO_MEDIUM,1.73
 Racing Santander,Espanol,2026-10-24,home_goals_under_15,55.9,PRO_MEDIUM,
 Racing Santander,Real Madrid,2026-11-01,home_goals_over_05,81.2,PRO_STRONG,
@@ -4621,13 +4621,13 @@ Schalke 04,Mainz,2026-10-17,home_goals_under_25,87.4,PRO_STRONG,
 Schalke 04,Mainz,2026-10-17,both_teams_carded,86.0,PRO_STRONG,
 Schalke 04,Mainz,2026-10-17,away_goals_over_05,79.4,PRO_STRONG,
 Schalke 04,Mainz,2026-10-17,home_goals_over_05,75.3,PRO_STRONG,
-Schalke 04,Mainz,2026-10-17,dc_12,72.6,PRO_MEDIUM,1.28
+Schalke 04,Mainz,2026-10-17,dc_12,72.6,PRO_MEDIUM,1.25
 Schalke 04,Mainz,2026-10-17,dc_x2,70.5,PRO_MEDIUM,1.36
 Schalke 04,Mainz,2026-10-17,home_goals_under_15,61.4,PRO_MEDIUM,
 Schalke 04,Mainz,2026-10-17,booking_pts_under_55,60.9,PRO_MEDIUM,
 Schalke 04,Mainz,2026-10-17,away_win_either_half,59.3,PRO_MEDIUM,
 Schalke 04,Mainz,2026-10-17,btts,57.1,PRO_MEDIUM,1.53
-Schalke 04,Mainz,2026-10-17,dc_1x,56.9,PRO_MEDIUM,1.57
+Schalke 04,Mainz,2026-10-17,dc_1x,56.9,PRO_MEDIUM,1.62
 Schalke 04,Mainz,2026-10-17,booking_pts_over_45,55.0,PRO_MEDIUM,
 Schalke 04,Rb Leipzig,2026-10-31,home_goals_over_05,79.2,PRO_STRONG,
 Schalke 04,Rb Leipzig,2026-10-31,both_teams_carded,76.0,PRO_STRONG,
