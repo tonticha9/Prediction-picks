@@ -240,12 +240,12 @@ Aris,Atromitos,2026-10-25,away_goals_under_25,92.2,PRO_STRONG,
 Aris,Atromitos,2026-10-25,home_goals_under_25,86.0,PRO_STRONG,
 Aris,Atromitos,2026-10-25,both_teams_carded,85.0,PRO_STRONG,
 Aris,Atromitos,2026-10-25,dc_1x,82.7,PRO_STRONG,1.2
-Aris,Atromitos,2026-10-25,away_goals_under_15,76.6,PRO_STRONG,
+Aris,Atromitos,2026-10-25,away_goals_under_15,76.7,PRO_STRONG,
 Aris,Atromitos,2026-10-25,home_goals_over_05,76.0,PRO_STRONG,
 Aris,Atromitos,2026-10-25,booking_pts_over_35,73.7,PRO_MEDIUM,
 Aris,Atromitos,2026-10-25,dc_12,68.3,PRO_MEDIUM,1.33
 Aris,Atromitos,2026-10-25,home_win_either_half,64.6,PRO_MEDIUM,
-Aris,Atromitos,2026-10-25,dc_1x_and_over_15,58.1,PRO_MEDIUM,
+Aris,Atromitos,2026-10-25,dc_1x_and_over_15,58.9,PRO_MEDIUM,
 Aris,Atromitos,2026-10-25,away_goals_over_05,57.9,PRO_MEDIUM,
 Aris,Atromitos,2026-10-25,booking_pts_under_55,56.4,PRO_MEDIUM,
 Aris,Atromitos,2026-10-25,home_goals_under_15,55.8,PRO_MEDIUM,
@@ -840,25 +840,24 @@ Burnley,Portsmouth,2026-10-31,dc_12,69.1,PRO_MEDIUM,
 Burnley,Portsmouth,2026-10-31,booking_pts_under_45,64.7,PRO_MEDIUM,
 Burnley,Portsmouth,2026-10-31,home_win_either_half,61.7,PRO_MEDIUM,
 Burnley,Portsmouth,2026-10-31,home_goals_under_15,57.8,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,away_goals_under_25,92.6,PRO_STRONG,
-Buyuksehyr,Gaziantep,2026-10-18,home_goals_over_05,89.8,PRO_STRONG,
-Buyuksehyr,Gaziantep,2026-10-18,dc_1x,84.5,PRO_STRONG,1.18
-Buyuksehyr,Gaziantep,2026-10-18,dc_12,80.3,PRO_STRONG,1.22
-Buyuksehyr,Gaziantep,2026-10-18,home_win_either_half,78.8,PRO_STRONG,
+Buyuksehyr,Gaziantep,2026-10-18,away_goals_under_25,91.9,PRO_STRONG,
+Buyuksehyr,Gaziantep,2026-10-18,home_goals_over_05,87.4,PRO_STRONG,
+Buyuksehyr,Gaziantep,2026-10-18,dc_12,82.2,PRO_STRONG,1.22
+Buyuksehyr,Gaziantep,2026-10-18,dc_1x,81.2,PRO_STRONG,1.17
 Buyuksehyr,Gaziantep,2026-10-18,both_teams_carded,77.2,PRO_STRONG,
-Buyuksehyr,Gaziantep,2026-10-18,away_goals_under_15,76.5,PRO_STRONG,
+Buyuksehyr,Gaziantep,2026-10-18,away_goals_under_15,76.3,PRO_STRONG,
+Buyuksehyr,Gaziantep,2026-10-18,home_win_either_half,74.9,PRO_MEDIUM,
 Buyuksehyr,Gaziantep,2026-10-18,booking_pts_under_55,70.5,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,dc_1x_and_over_15,70.0,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,home_goals_under_25,67.6,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,away_goals_over_05,66.4,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,home_win,64.8,PRO_MEDIUM,1.57
-Buyuksehyr,Gaziantep,2026-10-18,home_goals_over_15,64.1,PRO_MEDIUM,
+Buyuksehyr,Gaziantep,2026-10-18,home_goals_under_25,69.6,PRO_MEDIUM,
+Buyuksehyr,Gaziantep,2026-10-18,dc_1x_and_over_15,68.7,PRO_MEDIUM,
+Buyuksehyr,Gaziantep,2026-10-18,home_win,63.4,PRO_MEDIUM,1.65
 Buyuksehyr,Gaziantep,2026-10-18,goals_over_25,61.6,PRO_MEDIUM,1.6
 Buyuksehyr,Gaziantep,2026-10-18,booking_pts_over_35,61.6,PRO_MEDIUM,
+Buyuksehyr,Gaziantep,2026-10-18,home_goals_over_15,60.4,PRO_MEDIUM,
 Buyuksehyr,Gaziantep,2026-10-18,home_win_and_over_15,57.5,PRO_MEDIUM,
 Buyuksehyr,Gaziantep,2026-10-18,dc_12_and_over_25,57.5,PRO_MEDIUM,
 Buyuksehyr,Gaziantep,2026-10-18,booking_pts_under_45,57.0,PRO_MEDIUM,
-Buyuksehyr,Gaziantep,2026-10-18,btts,56.5,PRO_MEDIUM,1.57
+Buyuksehyr,Gaziantep,2026-10-18,btts,56.5,PRO_MEDIUM,1.53
 Buyuksehyr,Samsunspor,2026-11-01,home_goals_over_05,81.0,PRO_STRONG,
 Buyuksehyr,Samsunspor,2026-11-01,both_teams_carded,77.5,PRO_STRONG,
 Buyuksehyr,Samsunspor,2026-11-01,dc_1x,76.0,PRO_STRONG,
@@ -1026,18 +1025,18 @@ Celtic,Dundee United,2026-10-28,dc_12,64.5,PRO_MEDIUM,
 Celtic,Dundee United,2026-10-28,dc_1x_and_over_15,58.4,PRO_MEDIUM,
 Celtic,Dundee United,2026-10-28,dc_x2,56.2,PRO_MEDIUM,
 Celtic,Dundee United,2026-10-28,cards_range_3_5,56.2,PRO_MEDIUM,
-Celtic,Hearts,2026-10-18,away_goals_under_25,93.1,PRO_STRONG,
-Celtic,Hearts,2026-10-18,home_goals_over_05,89.2,PRO_STRONG,
-Celtic,Hearts,2026-10-18,dc_1x,85.4,PRO_STRONG,1.17
-Celtic,Hearts,2026-10-18,dc_12,82.9,PRO_STRONG,1.18
-Celtic,Hearts,2026-10-18,home_win_either_half,81.4,PRO_STRONG,
+Celtic,Hearts,2026-10-18,away_goals_under_25,94.3,PRO_STRONG,
+Celtic,Hearts,2026-10-18,home_goals_over_05,90.8,PRO_STRONG,
+Celtic,Hearts,2026-10-18,dc_1x,86.8,PRO_STRONG,1.17
+Celtic,Hearts,2026-10-18,dc_12,82.5,PRO_STRONG,1.18
+Celtic,Hearts,2026-10-18,home_win_either_half,81.5,PRO_STRONG,
 Celtic,Hearts,2026-10-18,booking_pts_under_55,78.4,PRO_STRONG,
-Celtic,Hearts,2026-10-18,away_goals_under_15,75.7,PRO_STRONG,
+Celtic,Hearts,2026-10-18,away_goals_under_15,77.9,PRO_STRONG,
 Celtic,Hearts,2026-10-18,dc_1x_and_over_15,74.1,PRO_MEDIUM,
 Celtic,Hearts,2026-10-18,both_teams_carded,69.8,PRO_MEDIUM,
-Celtic,Hearts,2026-10-18,home_win,68.2,PRO_MEDIUM,1.57
-Celtic,Hearts,2026-10-18,home_goals_under_25,67.2,PRO_MEDIUM,
+Celtic,Hearts,2026-10-18,home_win,69.3,PRO_MEDIUM,1.53
 Celtic,Hearts,2026-10-18,home_goals_over_15,67.1,PRO_MEDIUM,
+Celtic,Hearts,2026-10-18,home_goals_under_25,66.2,PRO_MEDIUM,
 Celtic,Hearts,2026-10-18,booking_pts_under_45,64.2,PRO_MEDIUM,
 Celtic,Hearts,2026-10-18,away_goals_over_05,60.9,PRO_MEDIUM,
 Celtic,Hearts,2026-10-18,goals_over_25,60.1,PRO_MEDIUM,1.53
@@ -1595,7 +1594,7 @@ Falkirk,Celtic,2026-11-01,cards_range_3_5,61.3,PRO_MEDIUM,
 Falkirk,Celtic,2026-11-01,home_win_either_half,60.3,PRO_MEDIUM,
 Falkirk,Celtic,2026-11-01,home_goals_under_15,55.5,PRO_MEDIUM,
 Falkirk,Celtic,2026-11-01,dc_x2,55.4,PRO_MEDIUM,
-Falkirk,Kilmarnock,2026-10-24,away_goals_under_25,90.6,PRO_STRONG,
+Falkirk,Kilmarnock,2026-10-24,away_goals_under_25,90.4,PRO_STRONG,
 Falkirk,Kilmarnock,2026-10-24,home_goals_over_05,83.8,PRO_STRONG,
 Falkirk,Kilmarnock,2026-10-24,dc_1x,80.0,PRO_STRONG,1.25
 Falkirk,Kilmarnock,2026-10-24,home_goals_under_25,77.6,PRO_STRONG,
@@ -1864,7 +1863,7 @@ Gaziantep,Erzurum Bb,2026-10-24,booking_pts_under_55,70.5,PRO_MEDIUM,
 Gaziantep,Erzurum Bb,2026-10-24,away_goals_under_15,70.3,PRO_MEDIUM,
 Gaziantep,Erzurum Bb,2026-10-24,dc_12,69.4,PRO_MEDIUM,
 Gaziantep,Erzurum Bb,2026-10-24,booking_pts_over_35,60.8,PRO_MEDIUM,
-Gaziantep,Erzurum Bb,2026-10-24,home_win_either_half,59.7,PRO_MEDIUM,
+Gaziantep,Erzurum Bb,2026-10-24,home_win_either_half,59.6,PRO_MEDIUM,
 Gaziantep,Erzurum Bb,2026-10-24,home_goals_under_15,58.4,PRO_MEDIUM,
 Gaziantep,Erzurum Bb,2026-10-24,booking_pts_under_45,57.4,PRO_MEDIUM,
 Gaziantep,Kasimpasa,2026-11-06,both_teams_carded,86.9,PRO_STRONG,
@@ -2173,8 +2172,8 @@ Hibernian,Celtic,2026-10-25,away_goals_over_05,85.7,PRO_STRONG,
 Hibernian,Celtic,2026-10-25,dc_x2,81.7,PRO_STRONG,1.2
 Hibernian,Celtic,2026-10-25,booking_pts_under_55,80.5,PRO_STRONG,
 Hibernian,Celtic,2026-10-25,dc_12,76.4,PRO_STRONG,1.22
-Hibernian,Celtic,2026-10-25,away_win_either_half,72.7,PRO_MEDIUM,
-Hibernian,Celtic,2026-10-25,home_goals_under_15,72.3,PRO_MEDIUM,
+Hibernian,Celtic,2026-10-25,home_goals_under_15,73.8,PRO_MEDIUM,
+Hibernian,Celtic,2026-10-25,away_win_either_half,72.9,PRO_MEDIUM,
 Hibernian,Celtic,2026-10-25,both_teams_carded,69.4,PRO_MEDIUM,
 Hibernian,Celtic,2026-10-25,away_goals_under_25,68.9,PRO_MEDIUM,
 Hibernian,Celtic,2026-10-25,dc_x2_and_over_15,68.0,PRO_MEDIUM,
@@ -2295,12 +2294,12 @@ Iraklis,Kifisia,2026-10-24,home_goals_under_25,92.0,PRO_STRONG,
 Iraklis,Kifisia,2026-10-24,both_teams_carded,87.3,PRO_STRONG,
 Iraklis,Kifisia,2026-10-24,away_goals_under_15,75.4,PRO_STRONG,
 Iraklis,Kifisia,2026-10-24,booking_pts_over_35,75.1,PRO_STRONG,
-Iraklis,Kifisia,2026-10-24,home_goals_over_05,69.9,PRO_MEDIUM,
+Iraklis,Kifisia,2026-10-24,home_goals_over_05,69.8,PRO_MEDIUM,
 Iraklis,Kifisia,2026-10-24,home_goals_under_15,68.5,PRO_MEDIUM,
 Iraklis,Kifisia,2026-10-24,dc_x2,66.8,PRO_MEDIUM,1.53
 Iraklis,Kifisia,2026-10-24,goals_under_25,64.6,PRO_MEDIUM,1.62
 Iraklis,Kifisia,2026-10-24,away_goals_over_05,64.4,PRO_MEDIUM,
-Iraklis,Kifisia,2026-10-24,dc_12,61.9,PRO_MEDIUM,1.36
+Iraklis,Kifisia,2026-10-24,dc_12,61.6,PRO_MEDIUM,1.36
 Iraklis,Kifisia,2026-10-24,booking_pts_under_55,56.9,PRO_MEDIUM,
 Iraklis,Panathinaikos,2026-11-08,both_teams_carded,87.3,PRO_STRONG,
 Iraklis,Panathinaikos,2026-11-08,dc_1x,75.7,PRO_STRONG,
@@ -2369,18 +2368,18 @@ Kalamata,Iraklis,2026-11-02,booking_pts_under_55,56.4,PRO_MEDIUM,
 Kalamata,Iraklis,2026-11-02,dc_1x_and_over_15,56.3,PRO_MEDIUM,
 Kalamata,Ofi Crete,2026-10-18,home_goals_under_25,91.5,PRO_STRONG,
 Kalamata,Ofi Crete,2026-10-18,both_teams_carded,87.3,PRO_STRONG,
-Kalamata,Ofi Crete,2026-10-18,away_goals_under_25,85.8,PRO_STRONG,
+Kalamata,Ofi Crete,2026-10-18,away_goals_under_25,85.9,PRO_STRONG,
 Kalamata,Ofi Crete,2026-10-18,booking_pts_over_35,75.1,PRO_STRONG,
+Kalamata,Ofi Crete,2026-10-18,dc_12,72.6,PRO_MEDIUM,1.36
 Kalamata,Ofi Crete,2026-10-18,away_goals_over_05,71.6,PRO_MEDIUM,
 Kalamata,Ofi Crete,2026-10-18,dc_x2,71.2,PRO_MEDIUM,1.44
-Kalamata,Ofi Crete,2026-10-18,dc_12,70.8,PRO_MEDIUM,1.36
-Kalamata,Ofi Crete,2026-10-18,away_goals_under_15,69.5,PRO_MEDIUM,
-Kalamata,Ofi Crete,2026-10-18,home_goals_over_05,67.9,PRO_MEDIUM,
+Kalamata,Ofi Crete,2026-10-18,away_goals_under_15,69.4,PRO_MEDIUM,
+Kalamata,Ofi Crete,2026-10-18,home_goals_over_05,67.5,PRO_MEDIUM,
 Kalamata,Ofi Crete,2026-10-18,home_goals_under_15,67.3,PRO_MEDIUM,
-Kalamata,Ofi Crete,2026-10-18,dc_1x,58.1,PRO_MEDIUM,1.44
 Kalamata,Ofi Crete,2026-10-18,goals_under_25,57.2,PRO_MEDIUM,1.75
 Kalamata,Ofi Crete,2026-10-18,away_win_either_half,57.0,PRO_MEDIUM,
 Kalamata,Ofi Crete,2026-10-18,booking_pts_under_55,56.4,PRO_MEDIUM,
+Kalamata,Ofi Crete,2026-10-18,dc_1x,56.2,PRO_MEDIUM,1.44
 Kalamata,Panathinaikos,2026-09-20,both_teams_carded,78.1,PRO_STRONG,
 Kalamata,Panathinaikos,2026-09-20,home_goals_over_05,75.5,PRO_STRONG,
 Kalamata,Panathinaikos,2026-09-20,dc_12,72.2,PRO_MEDIUM,
@@ -2401,17 +2400,17 @@ Kasimpasa,Besiktas,2026-11-01,booking_pts_under_55,59.2,PRO_MEDIUM,
 Kasimpasa,Besiktas,2026-11-01,dc_1x_and_over_15,57.7,PRO_MEDIUM,
 Kasimpasa,Besiktas,2026-11-01,booking_pts_over_45,56.0,PRO_MEDIUM,
 Kasimpasa,Besiktas,2026-11-01,btts,55.2,PRO_MEDIUM,
-Kasimpasa,Samsunspor,2026-10-18,away_goals_under_25,87.0,PRO_STRONG,
-Kasimpasa,Samsunspor,2026-10-18,home_goals_under_25,86.1,PRO_STRONG,
-Kasimpasa,Samsunspor,2026-10-18,home_goals_over_05,79.6,PRO_STRONG,
+Kasimpasa,Samsunspor,2026-10-18,away_goals_under_25,87.1,PRO_STRONG,
+Kasimpasa,Samsunspor,2026-10-18,home_goals_under_25,85.4,PRO_STRONG,
+Kasimpasa,Samsunspor,2026-10-18,home_goals_over_05,80.5,PRO_STRONG,
 Kasimpasa,Samsunspor,2026-10-18,both_teams_carded,78.0,PRO_STRONG,
-Kasimpasa,Samsunspor,2026-10-18,dc_12,72.3,PRO_MEDIUM,1.3
+Kasimpasa,Samsunspor,2026-10-18,dc_12,74.4,PRO_MEDIUM,1.3
 Kasimpasa,Samsunspor,2026-10-18,booking_pts_under_55,70.5,PRO_MEDIUM,
-Kasimpasa,Samsunspor,2026-10-18,dc_1x,65.9,PRO_MEDIUM,1.36
 Kasimpasa,Samsunspor,2026-10-18,booking_pts_over_35,62.1,PRO_MEDIUM,
-Kasimpasa,Samsunspor,2026-10-18,dc_x2,61.9,PRO_MEDIUM,1.53
+Kasimpasa,Samsunspor,2026-10-18,home_win_either_half,58.2,PRO_MEDIUM,
 Kasimpasa,Samsunspor,2026-10-18,booking_pts_under_45,57.0,PRO_MEDIUM,
-Kasimpasa,Samsunspor,2026-10-18,home_goals_under_15,55.9,PRO_MEDIUM,
+Kasimpasa,Samsunspor,2026-10-18,dc_1x_and_over_15,55.7,PRO_MEDIUM,
+Kasimpasa,Samsunspor,2026-10-18,dc_x2,55.5,PRO_MEDIUM,1.53
 Kifisia,Aris,2026-10-18,home_goals_under_25,90.7,PRO_STRONG,
 Kifisia,Aris,2026-10-18,away_goals_under_25,87.6,PRO_STRONG,
 Kifisia,Aris,2026-10-18,both_teams_carded,75.3,PRO_STRONG,
@@ -3637,8 +3636,8 @@ Paok,Asteras Tripolis,2026-11-01,home_goals_under_15,56.2,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,away_goals_under_25,96.9,PRO_STRONG,
 Paok,Iraklis,2026-10-18,home_goals_over_05,92.9,PRO_STRONG,
 Paok,Iraklis,2026-10-18,dc_1x,92.6,PRO_STRONG,1.07
-Paok,Iraklis,2026-10-18,dc_12,87.8,PRO_STRONG,1.12
-Paok,Iraklis,2026-10-18,home_win_either_half,87.6,PRO_STRONG,
+Paok,Iraklis,2026-10-18,home_win_either_half,87.9,PRO_STRONG,
+Paok,Iraklis,2026-10-18,dc_12,87.8,PRO_STRONG,1.14
 Paok,Iraklis,2026-10-18,away_goals_under_15,84.8,PRO_STRONG,
 Paok,Iraklis,2026-10-18,home_win,80.4,PRO_STRONG,1.27
 Paok,Iraklis,2026-10-18,dc_1x_and_over_15,77.8,PRO_STRONG,
@@ -3646,14 +3645,15 @@ Paok,Iraklis,2026-10-18,both_teams_carded,77.1,PRO_STRONG,
 Paok,Iraklis,2026-10-18,home_goals_over_15,71.8,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,booking_pts_under_55,70.2,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,home_win_and_over_15,67.7,PRO_MEDIUM,
+Paok,Iraklis,2026-10-18,home_win_2h,62.7,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,booking_pts_over_35,61.9,PRO_MEDIUM,
-Paok,Iraklis,2026-10-18,home_win_2h,61.6,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,home_win_1h,60.8,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,home_goals_under_25,60.6,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,dc_1x_and_over_25,60.1,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,goals_over_25,59.3,PRO_MEDIUM,1.57
 Paok,Iraklis,2026-10-18,home_win_and_over_25,56.3,PRO_MEDIUM,
 Paok,Iraklis,2026-10-18,dc_12_and_over_25,56.2,PRO_MEDIUM,
+Paok,Iraklis,2026-10-18,home_score_both_halves,55.5,PRO_MEDIUM,
 Paris FC,Monaco,2026-11-01,home_goals_over_05,82.8,PRO_STRONG,
 Paris FC,Monaco,2026-11-01,booking_pts_under_55,79.0,PRO_STRONG,
 Paris FC,Monaco,2026-11-01,dc_12,74.7,PRO_MEDIUM,
@@ -4069,7 +4069,7 @@ Roma,Sassuolo,2026-11-07,dc_1x_and_over_15,59.3,PRO_MEDIUM,
 Roma,Sassuolo,2026-11-07,booking_pts_under_55,58.7,PRO_MEDIUM,
 Roma,Sassuolo,2026-11-07,btts,56.8,PRO_MEDIUM,
 Roma,Sassuolo,2026-11-07,dc_x2,56.7,PRO_MEDIUM,
-Samsunspor,Amedspor,2026-10-24,home_goals_over_05,82.2,PRO_STRONG,
+Samsunspor,Amedspor,2026-10-24,home_goals_over_05,82.1,PRO_STRONG,
 Samsunspor,Amedspor,2026-10-24,both_teams_carded,76.7,PRO_STRONG,
 Samsunspor,Amedspor,2026-10-24,dc_1x,75.7,PRO_STRONG,
 Samsunspor,Amedspor,2026-10-24,away_goals_over_05,72.1,PRO_MEDIUM,
@@ -4652,16 +4652,16 @@ Trabzonspor,Besiktas,2026-10-19,home_goals_under_25,82.6,PRO_STRONG,
 Trabzonspor,Besiktas,2026-10-19,away_goals_over_05,80.2,PRO_STRONG,
 Trabzonspor,Besiktas,2026-10-19,home_goals_over_05,77.5,PRO_STRONG,
 Trabzonspor,Besiktas,2026-10-19,away_goals_under_25,77.2,PRO_STRONG,
-Trabzonspor,Besiktas,2026-10-19,dc_12,73.6,PRO_MEDIUM,1.28
+Trabzonspor,Besiktas,2026-10-19,dc_12,74.0,PRO_MEDIUM,1.28
 Trabzonspor,Besiktas,2026-10-19,dc_x2,64.6,PRO_MEDIUM,1.5
-Trabzonspor,Besiktas,2026-10-19,dc_1x,61.8,PRO_MEDIUM,1.53
+Trabzonspor,Besiktas,2026-10-19,dc_1x,61.4,PRO_MEDIUM,1.53
 Trabzonspor,Besiktas,2026-10-19,goals_over_25,60.8,PRO_MEDIUM,1.57
 Trabzonspor,Besiktas,2026-10-19,booking_pts_under_55,59.9,PRO_MEDIUM,
 Trabzonspor,Besiktas,2026-10-19,away_goals_under_15,59.2,PRO_MEDIUM,
 Trabzonspor,Besiktas,2026-10-19,home_goals_under_15,59.1,PRO_MEDIUM,
-Trabzonspor,Besiktas,2026-10-19,btts,58.0,PRO_MEDIUM,1.5
+Trabzonspor,Besiktas,2026-10-19,btts,58.0,PRO_MEDIUM,1.44
 Trabzonspor,Besiktas,2026-10-19,booking_pts_over_45,56.0,PRO_MEDIUM,
-Trabzonspor,Besiktas,2026-10-19,away_win_either_half,55.1,PRO_MEDIUM,
+Trabzonspor,Besiktas,2026-10-19,away_win_either_half,55.2,PRO_MEDIUM,
 Trabzonspor,Besiktas,2026-10-19,dc_12_and_over_25,55.1,PRO_MEDIUM,
 Trabzonspor,Gaziantep,2026-11-01,home_goals_over_05,82.5,PRO_STRONG,
 Trabzonspor,Gaziantep,2026-11-01,both_teams_carded,77.2,PRO_STRONG,
@@ -5198,7 +5198,6 @@ Brest,Lyon,2026-11-08 00:00:00,goals_over_05,94.3,PRO_DERIVED,
 Brighton,Crystal Palace,2026-10-18 00:00:00,goals_over_05,95.5,PRO_DERIVED,
 Bristol City,Norwich,2026-11-07 00:00:00,goals_over_05,93.8,PRO_DERIVED,
 Burnley,Portsmouth,2026-10-31 00:00:00,goals_over_05,93.7,PRO_DERIVED,
-Buyuksehyr,Gaziantep,2026-10-18 00:00:00,goals_over_05,96.6,PRO_DERIVED,
 Buyuksehyr,Samsunspor,2026-11-01 00:00:00,goals_over_05,94.5,PRO_DERIVED,
 Cagliari,Bologna,2026-10-24 00:00:00,goals_over_05,90.1,PRO_DERIVED,
 Cagliari,Frosinone,2026-11-07 00:00:00,goals_over_05,94.3,PRO_DERIVED,
@@ -5210,7 +5209,7 @@ Cardiff,West Ham,2026-11-04 00:00:00,goals_over_05,94.7,PRO_DERIVED,
 Celta,Alaves,2026-10-18 00:00:00,goals_over_05,93.2,PRO_DERIVED,
 Celta,Betis,2026-10-25 00:00:00,goals_over_05,94.2,PRO_DERIVED,
 Celtic,Dundee United,2026-10-28 00:00:00,goals_over_05,94.3,PRO_DERIVED,
-Celtic,Hearts,2026-10-18 00:00:00,goals_over_05,95.8,PRO_DERIVED,
+Celtic,Hearts,2026-10-18 00:00:00,goals_over_05,96.4,PRO_DERIVED,
 Celtic,Kilmarnock,2026-11-08 00:00:00,goals_over_05,93.5,PRO_DERIVED,
 Celtic,Rangers,2026-09-20 00:00:00,goals_over_05,95.2,PRO_DERIVED,
 Cercle Brugge,Antwerp,2026-11-01 00:00:00,goals_over_05,94.0,PRO_DERIVED,
@@ -5283,11 +5282,11 @@ Inter,Como,2026-11-08 00:00:00,goals_over_05,94.9,PRO_DERIVED,
 Inter,Fiorentina,2026-10-25 00:00:00,goals_over_05,96.8,PRO_DERIVED,
 Ipswich,Bournemouth,2026-11-08 00:00:00,goals_over_05,93.5,PRO_DERIVED,
 Ipswich,Nott'M Forest,2026-10-23 00:00:00,goals_over_05,92.9,PRO_DERIVED,
-Iraklis,Kifisia,2026-10-24 00:00:00,goals_over_05,89.3,PRO_DERIVED,
+Iraklis,Kifisia,2026-10-24 00:00:00,goals_over_05,89.2,PRO_DERIVED,
 Iraklis,Panathinaikos,2026-11-08 00:00:00,goals_over_05,91.3,PRO_DERIVED,
 Juventus,Atalanta,2026-09-20 00:00:00,goals_over_05,95.0,PRO_DERIVED,
 Juventus,Lazio,2026-10-18 00:00:00,goals_over_05,95.3,PRO_DERIVED,
-Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_over_05,90.9,PRO_DERIVED,
+Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_over_05,90.8,PRO_DERIVED,
 Kasimpasa,Besiktas,2026-11-01 00:00:00,goals_over_05,94.4,PRO_DERIVED,
 Kifisia,Olympiakos,2026-10-31 00:00:00,goals_over_05,93.5,PRO_DERIVED,
 Kocaelispor,Goztep,2026-10-18 00:00:00,goals_over_05,92.7,PRO_DERIVED,
@@ -5487,7 +5486,6 @@ Bournemouth,Sunderland,2026-10-18 00:00:00,goals_over_15,74.4,PRO_DERIVED,1.25
 Brighton,Crystal Palace,2026-10-18 00:00:00,goals_over_15,81.3,PRO_DERIVED,1.17
 Bristol City,Norwich,2026-11-07 00:00:00,goals_over_15,76.4,PRO_DERIVED,
 Burnley,Portsmouth,2026-10-31 00:00:00,goals_over_15,73.8,PRO_DERIVED,
-Buyuksehyr,Gaziantep,2026-10-18 00:00:00,goals_over_15,83.6,PRO_DERIVED,1.18
 Buyuksehyr,Samsunspor,2026-11-01 00:00:00,goals_over_15,76.1,PRO_DERIVED,
 Cagliari,Bologna,2026-10-24 00:00:00,goals_over_15,67.5,PRO_DERIVED,1.36
 Cagliari,Frosinone,2026-11-07 00:00:00,goals_over_15,77.0,PRO_DERIVED,
@@ -5498,7 +5496,7 @@ Cardiff,West Ham,2026-11-04 00:00:00,goals_over_15,77.8,PRO_DERIVED,
 Celta,Alaves,2026-10-18 00:00:00,goals_over_15,73.1,PRO_DERIVED,1.4
 Celta,Betis,2026-10-25 00:00:00,goals_over_15,75.7,PRO_DERIVED,1.25
 Celtic,Dundee United,2026-10-28 00:00:00,goals_over_15,76.2,PRO_DERIVED,
-Celtic,Hearts,2026-10-18 00:00:00,goals_over_15,83.2,PRO_DERIVED,1.17
+Celtic,Hearts,2026-10-18 00:00:00,goals_over_15,83.6,PRO_DERIVED,1.17
 Celtic,Kilmarnock,2026-11-08 00:00:00,goals_over_15,74.4,PRO_DERIVED,
 Celtic,Rangers,2026-09-20 00:00:00,goals_over_15,77.9,PRO_DERIVED,
 Cercle Brugge,Antwerp,2026-11-01 00:00:00,goals_over_15,74.2,PRO_DERIVED,
@@ -5554,7 +5552,7 @@ Guimaraes,Maritimo,2026-10-23 00:00:00,goals_over_15,78.3,PRO_DERIVED,1.33
 Guimaraes,Moreirense,2026-09-20 00:00:00,goals_over_15,74.0,PRO_DERIVED,
 Hearts,Rangers,2026-10-28 00:00:00,goals_over_15,75.9,PRO_DERIVED,
 Heerenveen,Nijmegen,2026-10-31 00:00:00,goals_over_15,77.1,PRO_DERIVED,
-Hibernian,Celtic,2026-10-25 00:00:00,goals_over_15,79.2,PRO_DERIVED,1.22
+Hibernian,Celtic,2026-10-25 00:00:00,goals_over_15,79.0,PRO_DERIVED,1.22
 Hoffenheim,Leverkusen,2026-10-25 00:00:00,goals_over_15,84.4,PRO_DERIVED,1.11
 Hull,Brentford,2026-10-25 00:00:00,goals_over_15,78.1,PRO_DERIVED,1.22
 Inter,Como,2026-11-08 00:00:00,goals_over_15,77.1,PRO_DERIVED,
@@ -5565,7 +5563,7 @@ Iraklis,Kifisia,2026-10-24 00:00:00,goals_over_15,63.6,PRO_DERIVED,1.4
 Iraklis,Panathinaikos,2026-11-08 00:00:00,goals_over_15,69.8,PRO_DERIVED,
 Juventus,Atalanta,2026-09-20 00:00:00,goals_over_15,77.1,PRO_DERIVED,
 Juventus,Lazio,2026-10-18 00:00:00,goals_over_15,80.1,PRO_DERIVED,1.3
-Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_over_15,67.7,PRO_DERIVED,1.33
+Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_over_15,67.6,PRO_DERIVED,1.33
 Kasimpasa,Besiktas,2026-11-01 00:00:00,goals_over_15,77.0,PRO_DERIVED,
 Kifisia,Olympiakos,2026-10-31 00:00:00,goals_over_15,74.1,PRO_DERIVED,
 Konyaspor,Galatasaray,2026-10-30 00:00:00,goals_over_15,72.5,PRO_DERIVED,
@@ -5711,12 +5709,11 @@ Auxerre,Le Mans,2026-10-25 00:00:00,goals_under_35,74.0,PRO_DERIVED,
 Az Alkmaar,Twente,2026-10-25 00:00:00,goals_under_35,63.3,PRO_DERIVED,
 Bournemouth,Sunderland,2026-10-18 00:00:00,goals_under_35,73.9,PRO_DERIVED,
 Brighton,Crystal Palace,2026-10-18 00:00:00,goals_under_35,62.0,PRO_DERIVED,
-Buyuksehyr,Gaziantep,2026-10-18 00:00:00,goals_under_35,63.4,PRO_DERIVED,
 Cagliari,Bologna,2026-10-24 00:00:00,goals_under_35,75.5,PRO_DERIVED,
 Cambuur,Az Alkmaar,2026-10-18 00:00:00,goals_under_35,64.3,PRO_DERIVED,
 Celta,Alaves,2026-10-18 00:00:00,goals_under_35,78.7,PRO_DERIVED,
 Celta,Betis,2026-10-25 00:00:00,goals_under_35,71.2,PRO_DERIVED,
-Celtic,Hearts,2026-10-18 00:00:00,goals_under_35,63.7,PRO_DERIVED,
+Celtic,Hearts,2026-10-18 00:00:00,goals_under_35,63.9,PRO_DERIVED,
 Chelsea,Tottenham,2026-10-24 00:00:00,goals_under_35,62.8,PRO_DERIVED,
 Como,Sassuolo,2026-10-24 00:00:00,goals_under_35,59.1,PRO_DERIVED,
 Coventry,Fulham,2026-10-24 00:00:00,goals_under_35,71.4,PRO_DERIVED,
@@ -5732,14 +5729,14 @@ Gil Vicente,Porto,2026-10-24 00:00:00,goals_under_35,67.8,PRO_DERIVED,
 Go Ahead Eagles,Telstar,2026-10-23 00:00:00,goals_under_35,63.1,PRO_DERIVED,
 Groningen,Ajax,2026-10-18 00:00:00,goals_under_35,62.4,PRO_DERIVED,
 Guimaraes,Maritimo,2026-10-23 00:00:00,goals_under_35,73.0,PRO_DERIVED,
-Hibernian,Celtic,2026-10-25 00:00:00,goals_under_35,64.0,PRO_DERIVED,
+Hibernian,Celtic,2026-10-25 00:00:00,goals_under_35,64.4,PRO_DERIVED,
 Hoffenheim,Leverkusen,2026-10-25 00:00:00,goals_under_35,57.4,PRO_DERIVED,
 Hull,Brentford,2026-10-25 00:00:00,goals_under_35,66.1,PRO_DERIVED,
 Inter,Fiorentina,2026-10-25 00:00:00,goals_under_35,59.8,PRO_DERIVED,
 Ipswich,Nott'M Forest,2026-10-23 00:00:00,goals_under_35,72.6,PRO_DERIVED,
 Iraklis,Kifisia,2026-10-24 00:00:00,goals_under_35,84.5,PRO_DERIVED,
 Juventus,Lazio,2026-10-18 00:00:00,goals_under_35,71.2,PRO_DERIVED,
-Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_under_35,78.8,PRO_DERIVED,
+Kalamata,Ofi Crete,2026-10-18 00:00:00,goals_under_35,78.9,PRO_DERIVED,
 Kortrijk,Mechelen,2026-10-23 00:00:00,goals_under_35,72.2,PRO_DERIVED,
 Lazio,Parma,2026-10-24 00:00:00,goals_under_35,65.2,PRO_DERIVED,
 Lecce,Juventus,2026-10-25 00:00:00,goals_under_35,68.2,PRO_DERIVED,
