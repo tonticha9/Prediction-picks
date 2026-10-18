@@ -17,6 +17,9 @@ kikomo cha zamani cha dakika 80. Sasa:
   - kikomo cha kusubiri = dakika 150 (muda unapimwa kwa saa halisi, si kwa kuhesabu usingizi),
   - onyo (::warning::) Kaggle ikipita dakika 45,
   - muda halisi wa Kaggle unaandikwa kwenye muhtasari wa run (GITHUB_STEP_SUMMARY).
+
+v3 (Oct 18 2026): inaripoti hali ya kivuli cha v8 (predictions_v8.csv + v8_health.json)
+kwenye muhtasari wa run. HIARI kabisa - ikikosekana, hakuna kinachovunjika.
 """
 import os
 import sys
@@ -65,6 +68,32 @@ def run_kaggle_cmd(args, allow_fail=False):
         return None
     print(f"❌ Imeshindwa baada ya majaribio {MAX_RETRIES_PER_CALL}: {last_err}")
     sys.exit(1)
+
+
+def report_v8_shadow():
+    """Ripoti hali ya kivuli cha v8. HIARI - haivunji chochote."""
+    v8_path = os.path.join('kaggle_output', 'predictions_v8.csv')
+    health_path = os.path.join('kaggle_output', 'v8_health.json')
+    if not os.path.exists(v8_path):
+        print("ℹ️ predictions_v8.csv haipo (kivuli cha v8 bado hakijaongezwa kwenye notebook, au kimeshindwa) - sawa.")
+        return
+    print(f"✅ predictions_v8.csv (kivuli cha v8): {os.path.getsize(v8_path):,} bytes")
+    if not os.path.exists(health_path):
+        return
+    try:
+        with open(health_path) as f:
+            h = json.load(f)
+        line = (f"v8 muundo: {h.get('passed')}/{h.get('total')} PASS | mechi {h.get('fixtures')} | "
+                f"masoko yaliyo-calibrate leo {h.get('recalibrated')} | {h.get('version')}")
+        print("   " + line)
+        write_summary("### " + line)
+        bad = [c.get('name') for c in h.get('checks', []) if not c.get('ok')]
+        if bad:
+            msg = "v8 ukaguzi ulioshindwa: " + "; ".join(bad)
+            print("::warning::" + msg)
+            write_summary("- " + msg)
+    except Exception as e:
+        print(f"⚠️ v8_health.json haisomeki: {e}")
 
 
 def main():
@@ -185,6 +214,9 @@ def main():
             print(f"    itaweka header tu kwenye data/{fname}.")
         else:
             print(f"✅ {fname}: {os.path.getsize(path):,} bytes")
+
+    # Kivuli cha v8 (hiari)
+    report_v8_shadow()
 
     try:
         df_pred = pd.read_csv(predictions_path)
