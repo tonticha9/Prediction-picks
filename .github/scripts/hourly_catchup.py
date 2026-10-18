@@ -34,6 +34,18 @@ v4 (STATS KUTOKA football-data.co.uk):
     MIN_ROWS, job inasimama (haiandiki juu ya historia).
   - Mechi za football-data zisizolingana na dataset zinaleta ::warning:: (majina/tarehe).
 
+v5 (ODDS ZA BET365 ZA HISTORIA):
+  - Safu 10 MPYA zenye kiambishi 'fdo_' (football-data odds), ili pipeline ya v6 isizichukue
+    kwa bahati mbaya:
+      fdo_B365H / D / A        = odds za 1X2 za Bet365 (kabla ya mechi)
+      fdo_B365O25 / U25        = Bet365 over/under 2.5
+      fdo_AvgH / D / A         = wastani wa soko 1X2 (BbAv* kwa misimu ya zamani)
+      fdo_AvgO25 / U25         = wastani wa soko over/under 2.5
+  - Dataset ikikosa safu fdo_B365H (mara ya kwanza): inajaza historia YOTE (2014 hadi sasa).
+    Baada ya hapo: msimu huu na uliopita (kama stats). Inajaza SEHEMU TUPU tu.
+  - Odds zisizo na maana (chini ya 1.01 au zaidi ya 100) zinakuwa tupu.
+  - Ripoti ya uthabiti: coverage kwa msimu + overround ya 1X2 (inaonekana kwenye logi).
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
@@ -68,6 +80,24 @@ FD_FIRST_SEASON = 2014
 FD_NUM = ['HS', 'AS', 'HST', 'AST', 'HC', 'AC', 'HY', 'AY', 'HR', 'AR', 'HF', 'AF']
 CARD_COLS = ['HY', 'AY', 'HR', 'AR']
 NOSTAT_COLS = ['HC', 'AC', 'HS', 'AS', 'HST', 'AST']
+
+# v5: odds za football-data -> safu zenye kiambishi 'fdo_'.
+# Kila safu ina orodha ya majina ya chanzo (la kwanza lenye thamani linatumika).
+FDO_MAP = {
+    'fdo_B365H':   ['B365H'],
+    'fdo_B365D':   ['B365D'],
+    'fdo_B365A':   ['B365A'],
+    'fdo_B365O25': ['B365>2.5'],
+    'fdo_B365U25': ['B365<2.5'],
+    'fdo_AvgH':    ['AvgH', 'BbAvH'],
+    'fdo_AvgD':    ['AvgD', 'BbAvD'],
+    'fdo_AvgA':    ['AvgA', 'BbAvA'],
+    'fdo_AvgO25':  ['Avg>2.5', 'BbAv>2.5'],
+    'fdo_AvgU25':  ['Avg<2.5', 'BbAv<2.5'],
+}
+FDO_COLS = list(FDO_MAP.keys())
+ODDS_MIN = 1.01
+ODDS_MAX = 100.0
 
 
 def fetch_api_key_from_admin():
@@ -310,7 +340,7 @@ def warn_new_team_names(df_existing, df_new):
 
 
 # ============================================================
-# STATS KUTOKA football-data.co.uk (v4)
+# STATS + ODDS KUTOKA football-data.co.uk (v4 + v5)
 # ============================================================
 
 def _k(n):
@@ -327,7 +357,8 @@ def tkey(name):
 
 
 def fetch_football_data(seasons):
-    """Pakua faili za ligi zote kwa misimu iliyotolewa (2014 = msimu 14/15)."""
+    """Pakua faili za ligi zote kwa misimu iliyotolewa (2014 = msimu 14/15).
+    v5: pia odds za Bet365 na wastani wa soko (safu fdo_*)."""
     frames = []
     headers = {'User-Agent': 'Mozilla/5.0'}
     for s in seasons:
@@ -350,7 +381,15 @@ def fetch_football_data(seasons):
                 x[c] = pd.to_numeric(x[c], errors='coerce') if c in x.columns else np.nan
             if 'Referee' not in x.columns:
                 x['Referee'] = np.nan
-            frames.append(x[['league', 'Date', 'HomeTeam', 'AwayTeam'] + FD_NUM + ['Referee']])
+            # v5: odds -> fdo_* (chanzo la kwanza lenye thamani; thamani zisizo na maana = tupu)
+            for out_col, srcs in FDO_MAP.items():
+                s_odds = pd.Series(np.nan, index=x.index, dtype='float64')
+                for src in srcs:
+                    if src in x.columns:
+                        s_odds = s_odds.fillna(pd.to_numeric(x[src], errors='coerce'))
+                x[out_col] = s_odds.where((s_odds >= ODDS_MIN) & (s_odds <= ODDS_MAX))
+            frames.append(x[['league', 'Date', 'HomeTeam', 'AwayTeam']
+                            + FD_NUM + ['Referee'] + FDO_COLS])
             ok += 1
             time.sleep(0.2)
         print(f"   football-data msimu {s}/{s + 1}: ligi {ok}/{len(LEAGUE_MAP)}")
@@ -365,16 +404,41 @@ def fetch_football_data(seasons):
 
 
 def football_data_mode(df):
-    """Rudisha (full, do_sync). full=True: dataset haina HF bado (au FD_FULL=1)."""
-    full = ('HF' not in df.columns) or os.environ.get('FD_FULL') == '1'
+    """Rudisha (full, do_sync). full=True: dataset haina HF au fdo_B365H bado (au FD_FULL=1)."""
+    full = (('HF' not in df.columns) or ('fdo_B365H' not in df.columns)
+            or os.environ.get('FD_FULL') == '1')
     manual = os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch'
     forced = os.environ.get('FD_SYNC') == '1'
     scheduled = datetime.utcnow().hour % 6 == 0
     return full, (full or manual or forced or scheduled)
 
 
+def print_odds_coverage(df):
+    """Ripoti fupi kwenye logi: coverage ya odds kwa msimu + ukaguzi wa overround."""
+    d = pd.to_datetime(df['Date'], errors='coerce')
+    season = d.dt.year.where(d.dt.month >= 7, d.dt.year - 1)
+    played = d <= pd.Timestamp(date.today())
+    print("   Bet365 odds coverage (mechi zilizochezwa):")
+    for s in sorted(season[played].dropna().unique()):
+        m = played & (season == s)
+        n = int(m.sum())
+        if n == 0:
+            continue
+        p1 = df.loc[m, 'fdo_B365H'].notna().mean() * 100
+        p2 = df.loc[m, 'fdo_B365O25'].notna().mean() * 100
+        print(f"     {int(s)}/{str(int(s) + 1)[2:]}: 1X2 {p1:.0f}% | O/U 2.5 {p2:.0f}% (n={n})")
+    h, dr, a = df['fdo_B365H'], df['fdo_B365D'], df['fdo_B365A']
+    ok = h.notna() & dr.notna() & a.notna()
+    if ok.any():
+        ov = 1 / h[ok] + 1 / dr[ok] + 1 / a[ok]
+        bad = ((ov < 1.0) | (ov > 1.25)).mean() * 100
+        print(f"   Overround ya B365 1X2: wastani {ov.mean():.3f}; nje ya 1.00-1.25: {bad:.2f}%")
+        if bad > 1.0:
+            print(f"::warning::Odds za B365: {bad:.1f}% ziko nje ya overround ya kawaida (1.00-1.25) - angalia data.")
+
+
 def sync_stats_from_football_data(df_in, full):
-    """Jaza SEHEMU TUPU za stats (na HF/AF/Referee) kutoka football-data.
+    """Jaza SEHEMU TUPU za stats (na HF/AF/Referee) na odds (fdo_*) kutoka football-data.
     Haibadilishi thamani zilizopo. Pia inabadilisha kadi 'sifuri za uongo' kuwa tupu.
     Inarudisha (df, idadi_ya_mabadiliko, maelezo)."""
     df = df_in.copy()
@@ -385,6 +449,10 @@ def sync_stats_from_football_data(df_in, full):
     if 'Referee' not in df.columns:
         df['Referee'] = np.nan
     for c in FD_NUM:
+        df[c] = pd.to_numeric(df[c], errors='coerce')
+    for c in FDO_COLS:
+        if c not in df.columns:
+            df[c] = np.nan
         df[c] = pd.to_numeric(df[c], errors='coerce')
     df['Referee'] = df['Referee'].astype('object')
 
@@ -397,7 +465,7 @@ def sync_stats_from_football_data(df_in, full):
     seasons = list(range(FD_FIRST_SEASON, cur + 1)) if full else [cur - 1, cur]
     mask = season.isin(seasons)
     label = f"kamili {seasons[0]}-{cur}" if full else f"msimu {cur - 1}-{cur}"
-    print(f"\n📊 Usawazishaji wa stats kutoka football-data ({label})...")
+    print(f"\n📊 Usawazishaji wa stats + odds kutoka football-data ({label})...")
 
     changes = 0
 
@@ -420,6 +488,7 @@ def sync_stats_from_football_data(df_in, full):
     hk = df['HomeTeam'].map(tkey)
     ak = df['AwayTeam'].map(tkey)
 
+    fill_cols = FD_NUM + FDO_COLS
     used = set()
     filled = 0
     for i in df.index[mask]:
@@ -435,7 +504,7 @@ def sync_stats_from_football_data(df_in, full):
                 break
         if f is None:
             continue
-        for c in FD_NUM:
+        for c in fill_cols:
             v = getattr(f, c)
             if pd.isna(df.at[i, c]) and not pd.isna(v):
                 df.at[i, c] = v
@@ -445,7 +514,14 @@ def sync_stats_from_football_data(df_in, full):
             df.at[i, 'Referee'] = ref.strip()
             filled += 1
     changes += filled
-    print(f"   Seli zilizojazwa: {filled:,}")
+    print(f"   Seli zilizojazwa (stats + odds): {filled:,}")
+
+    # Ripoti ya odds (coverage kwa msimu + overround)
+    if full or filled:
+        try:
+            print_odds_coverage(df)
+        except Exception as e:
+            print(f"::warning::Ripoti ya odds imeshindwa (haiathiri data): {e}")
 
     # 3) Mechi za football-data zisizolingana na dataset (zaidi ya siku 3 zilizopita)
     cutoff = pd.Timestamp(date.today() - timedelta(days=3))
@@ -694,7 +770,7 @@ def main():
             need_upload = True
             reasons.append(f"+{len(df_new_unique)} mechi")
 
-    # Stats kutoka football-data (kamili mara ya kwanza; kisha msimu huu na uliopita)
+    # Stats + odds kutoka football-data (kamili mara ya kwanza; kisha msimu huu na uliopita)
     full, do_sync = football_data_mode(df_results)
     if do_sync:
         try:
