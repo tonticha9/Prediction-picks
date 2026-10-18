@@ -8,6 +8,10 @@
 #
 # v2 (Oct 15 2026): kikomo cha job kimeongezwa hadi dakika 170 (Kaggle inaweza kuchukua
 # hadi dakika 150), na 'concurrency' inazuia nightly mbili kuendeshwa pamoja.
+#
+# v3 (Oct 18 2026): kivuli cha v8 - archive_shadow.py inahifadhi predictions_v8.csv na
+# archive ya v6/v8 kwenye repo (commit moja, deploy moja). Hiari kabisa: ikikosekana
+# au ikishindwa, hakuna kinachovunjika.
 
 name: Nightly Predictions Update
 
@@ -79,12 +83,18 @@ jobs:
             fi
           done
 
+          # Kivuli cha v8 (HIARI - haivunji chochote ikishindwa)
+          python .github/scripts/archive_shadow.py || echo "::warning::archive_shadow imeshindwa (haiathiri app)."
+
       - name: Commit and push updated data
         if: env.SKIP_UPDATE != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/predictions.csv data/value_bets.csv data/combos.csv
+          # Faili za kivuli (zikiwepo tu)
+          if [ -f data/predictions_v8.csv ]; then git add data/predictions_v8.csv || true; fi
+          if [ -d shadow ]; then git add shadow || true; fi
           git diff --staged --quiet || git commit -m "Auto-update predictions $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
 
