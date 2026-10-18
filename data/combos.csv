@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Lincoln vs Burnley: dc_12 @1.33 + West Ham vs Southampton: dc_12 @1.22,1.62,68.6
-3,3,Le Havre vs Auxerre: dc_1x @1.36 + Brest vs Nice: dc_1x @1.36 + Lincoln vs Burnley: dc_12 @1.33,2.46,45.0
-5,6,Nijmegen vs Groningen: dc_1x @1.36 + West Ham vs Southampton: dc_12 @1.22 + Zwolle vs Go Ahead Eagles: dc_x2 @1.28 + Le Havre vs Auxerre: dc_1x @1.36 + Lincoln vs Burnley: dc_12 @1.33 + Wolves vs Portsmouth: dc_1x @1.14,4.38,28.0
-7,6,Angers vs Lorient: dc_x2 @1.50 + Psv Eindhoven vs Feyenoord: dc_12 @1.22 + Valencia vs Villarreal: dc_12 @1.28 + Getafe vs Vallecano: dc_x2 @1.36 + Preston vs West Brom: dc_x2 @1.30 + Le Havre vs Auxerre: dc_1x @1.36,5.63,17.2
+2,2,Lincoln vs Burnley: dc_12 @1.33 + West Ham vs Southampton: dc_12 @1.22,1.62,69.4
+3,3,Parma vs Torino: dc_12 @1.36 + Angers vs Lorient: dc_x2 @1.50 + West Ham vs Southampton: dc_12 @1.22,2.49,45.2
+5,5,Lincoln vs Burnley: dc_12 @1.33 + Angers vs Lorient: dc_x2 @1.50 + Zwolle vs Go Ahead Eagles: dc_x2 @1.28 + Monaco vs Lille: dc_1x @1.33 + Aston Villa vs Man City: dc_x2 @1.18,4.01,27.3
+7,6,Sunderland vs Leeds: dc_12 @1.30 + Man United vs Bournemouth: dc_1x @1.25 + Fc Koln vs Schalke 04: dc_1x @1.36 + Angers vs Lorient: dc_x2 @1.50 + Coventry vs Sunderland: dc_x2 @1.44 + Sociedad vs Levante: dc_1x @1.18,5.63,18.2
