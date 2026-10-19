@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Lincoln vs Burnley: dc_12 @1.33 + West Ham vs Southampton: dc_12 @1.22,1.62,69.4
-3,3,Parma vs Torino: dc_12 @1.36 + Angers vs Lorient: dc_x2 @1.50 + West Ham vs Southampton: dc_12 @1.22,2.49,45.2
-5,5,Lincoln vs Burnley: dc_12 @1.33 + Angers vs Lorient: dc_x2 @1.50 + Zwolle vs Go Ahead Eagles: dc_x2 @1.28 + Monaco vs Lille: dc_1x @1.33 + Aston Villa vs Man City: dc_x2 @1.18,4.01,27.3
-7,6,Sunderland vs Leeds: dc_12 @1.30 + Man United vs Bournemouth: dc_1x @1.25 + Fc Koln vs Schalke 04: dc_1x @1.36 + Angers vs Lorient: dc_x2 @1.50 + Coventry vs Sunderland: dc_x2 @1.44 + Sociedad vs Levante: dc_1x @1.18,5.63,18.2
+2,2,St Johnstone vs Motherwell: dc_1x @1.36 + West Ham vs Southampton: dc_12 @1.22,1.66,66.5
+3,3,St Johnstone vs Motherwell: dc_1x @1.36 + Levante vs Ath Bilbao: dc_12 @1.30 + Fc Koln vs Schalke 04: dc_1x @1.36,2.4,45.6
+5,6,Rangers vs St Johnstone: dc_1x @1.06 + Angers vs Lorient: dc_x2 @1.50 + Nijmegen vs Groningen: dc_1x @1.36 + Inter vs Fiorentina: dc_1x @1.10 + Estoril vs Moreirense: dc_1x @1.25 + Cagliari vs Bologna: dc_12 @1.36,4.04,27.9
+7,6,Cardiff vs Birmingham: dc_12 @1.28 + Brest vs Nice: dc_1x @1.36 + Levante vs Ath Bilbao: dc_12 @1.30 + Genoa vs Venezia: dc_1x @1.30 + Coventry vs Sunderland: dc_x2 @1.44 + Portsmouth vs Millwall: dc_12 @1.33,5.63,18.1
