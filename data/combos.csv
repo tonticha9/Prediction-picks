@@ -1,5 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,St Johnstone vs Motherwell: dc_1x @1.36 + West Ham vs Southampton: dc_12 @1.22,1.66,66.5
-3,3,St Johnstone vs Motherwell: dc_1x @1.36 + Levante vs Ath Bilbao: dc_12 @1.30 + Fc Koln vs Schalke 04: dc_1x @1.36,2.4,45.6
-5,6,Rangers vs St Johnstone: dc_1x @1.06 + Angers vs Lorient: dc_x2 @1.50 + Nijmegen vs Groningen: dc_1x @1.36 + Inter vs Fiorentina: dc_1x @1.10 + Estoril vs Moreirense: dc_1x @1.25 + Cagliari vs Bologna: dc_12 @1.36,4.04,27.9
-7,6,Cardiff vs Birmingham: dc_12 @1.28 + Brest vs Nice: dc_1x @1.36 + Levante vs Ath Bilbao: dc_12 @1.30 + Genoa vs Venezia: dc_1x @1.30 + Coventry vs Sunderland: dc_x2 @1.44 + Portsmouth vs Millwall: dc_12 @1.33,5.63,18.1
+2,2,Lyon vs Angers: home_win @1.36 + Wolves vs Watford: dc_12 @1.18,1.6,66.2
+3,2,Lorient vs Brest: goals_under_25 @1.80 + Fc Koln vs Schalke 04: dc_1x @1.36,2.45,44.1
+5,4,Genoa vs Venezia: dc_1x @1.30 + Aberdeen vs Falkirk: dc_1x @1.28 + Lorient vs Brest: goals_under_25 @1.80 + Valencia vs Villarreal: dc_x2 @1.36,4.07,26.0
+7,6,Preston vs West Brom: dc_x2 @1.28 + Konyaspor vs Genclerbirligi: dc_1x @1.22 + Falkirk vs Kilmarnock: dc_1x @1.25 + Lorient vs Brest: goals_under_25 @1.80 + Charlton vs Norwich: dc_12 @1.28 + Asteras Tripolis vs Levadeiakos: dc_1x @1.25,5.62,19.0
+10,6,Vallecano vs Celta: dc_12 @1.36 + Lorient vs Brest: goals_under_25 @1.80 + Hull vs Brentford: dc_12 @1.25 + Union Berlin vs Fc Koln: dc_1x @1.50 + Betis vs Malaga: home_win @1.38 + Racing Santander vs Espanol: dc_12 @1.28,8.11,10.7
