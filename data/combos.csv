@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Chelsea vs Man United: dc_1x @1.28 + Man United vs Bournemouth: dc_1x @1.25,1.6,68.6
-3,4,Dundee vs Kilmarnock: dc_1x @1.28 + Monaco vs Lille: dc_1x @1.36 + West Ham vs Southampton: dc_12 @1.22 + Barcelona vs Real Madrid: dc_12 @1.14,2.42,45.9
-5,6,West Ham vs Southampton: dc_12 @1.22 + Brest vs Nice: dc_1x @1.36 + Chelsea vs Man United: dc_1x @1.28 + Sassuolo vs Lazio: dc_12 @1.30 + Portsmouth vs Millwall: dc_12 @1.33 + Barcelona vs Real Madrid: dc_12 @1.14,4.19,27.9
-7,6,Heerenveen vs Nijmegen: dc_1x @1.28 + Fiorentina vs Atalanta: dc_1x @1.36 + Marseille vs Toulouse: dc_1x @1.25 + Cagliari vs Bologna: dc_12 @1.36 + St Johnstone vs Motherwell: dc_1x @1.36 + Lorient vs Brest: dc_x2 @1.50,6.04,18.8
+2,2,West Ham vs Southampton: dc_12 @1.22 + Fc Koln vs Schalke 04: dc_1x @1.33,1.62,67.0
+3,3,Lincoln vs Burnley: dc_12 @1.30 + West Ham vs Southampton: dc_12 @1.22 + Kalamata vs Iraklis: dc_x2 @1.53,2.43,46.3
+5,5,Ath Bilbao vs Sociedad: dc_1x @1.28 + Ofi Crete vs Atromitos: dc_x2 @1.67 + St Johnstone vs Motherwell: dc_1x @1.36 + Aris vs Atromitos: dc_1x @1.14 + Konyaspor vs Genclerbirligi: dc_1x @1.22,4.04,27.7
+7,6,Cagliari vs Bologna: dc_12 @1.36 + Charlton vs Norwich: dc_12 @1.30 + Brest vs Nice: dc_1x @1.36 + Lincoln vs Burnley: dc_12 @1.30 + Ofi Crete vs Atromitos: dc_x2 @1.67 + Club Brugge vs St Truiden: dc_1x @1.08,5.64,19.3
