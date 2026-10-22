@@ -22,6 +22,12 @@ UFAFANUZI WA MASOKO YA KADI (umeoanishwa na TRAINING — Okt 11 2026):
   - home_more_cards        = (HY + 2*HR) nyumbani > (AY + 2*AR) ugenini
                              (nyekundu inahesabiwa MARA 2, kama training)
 
+MASOKO YA NUSU (imeongezwa Okt 22 2026, yanalingana 100% na training):
+  - home_win_both_halves   = nyumbani ashinde nusu ZOTE MBILI (1H na 2H)
+  - away_win_both_halves   = ugenini ashinde nusu ZOTE MBILI
+  - away_score_both_halves = ugenini afunge bao kwenye nusu zote mbili
+  (awali masoko haya yalihesabiwa VOID daima)
+
 Masoko ya BTTS: btts, home_win_btts, away_win_btts, na X_and_btts (home_win/away_win/dc_*).
 
 evaluate_market(market, row) inarudisha:
@@ -136,6 +142,14 @@ STAT_FUNCS = {
 # Stats ambazo namba ya soko ni THAMANI KAMILI (35 = 35), si 10x (75 = 7.5)
 RAW_THRESHOLD_STATS = ('booking_pts', 'cards')
 
+# Masoko ya nusu (yanahitaji HTHG/HTAG)
+HALF_MARKETS = (
+    'home_win_1h', 'home_win_2h', 'away_win_1h', 'away_win_2h',
+    'home_win_either_half', 'away_win_either_half',
+    'home_score_both_halves',
+    'home_win_both_halves', 'away_win_both_halves', 'away_score_both_halves',
+)
+
 
 # ================================================================
 # Masoko ya moja kwa moja (match result / half-time / booleans)
@@ -179,6 +193,12 @@ def _half_result(market, row):
         return (h_ht < a_ht) or (h_2h < a_2h)
     if market == 'home_score_both_halves':
         return (h_ht > 0) and (h_2h > 0)
+    if market == 'home_win_both_halves':
+        return (h_ht > a_ht) and (h_2h > a_2h)
+    if market == 'away_win_both_halves':
+        return (h_ht < a_ht) and (h_2h < a_2h)
+    if market == 'away_score_both_halves':
+        return (a_ht > 0) and (a_2h > 0)
     return 'unknown'
 
 
@@ -333,9 +353,7 @@ def evaluate_market(market, row):
     if market in ('home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'):
         return _simple_result(market, row)
 
-    if market in ('home_win_1h', 'home_win_2h', 'away_win_1h', 'away_win_2h',
-                  'home_win_either_half', 'away_win_either_half',
-                  'home_score_both_halves'):
+    if market in HALF_MARKETS:
         return _half_result(market, row)
 
     if market in BOOLEAN_MARKETS:
