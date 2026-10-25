@@ -53,6 +53,34 @@ jobs:
         run: |
           kaggle datasets files tonticha/historical-complete-no-gap
 
+      - name: Diagnose download (uchunguzi)
+        continue-on-error: true
+        shell: bash {0}
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          SLUG=tonticha/historical-complete-no-gap
+          echo "=== kaggle version ==="
+          kaggle --version
+          echo
+          echo "=== F: dataset ya umma (uciml/iris) ==="
+          mkdir -p /tmp/f
+          kaggle datasets download -d uciml/iris -p /tmp/f --unzip -o 2>&1 | head -5
+          ls -la /tmp/f
+          echo
+          echo "=== C: faili moja tu (CSV) ya dataset yako ==="
+          mkdir -p /tmp/c
+          kaggle datasets download -d $SLUG -f historical_complete_no_gap.csv -p /tmp/c -o 2>&1 | head -5
+          ls -la /tmp/c
+          echo
+          echo "=== D: kagglehub ==="
+          pip -q install kagglehub
+          python -c "import kagglehub; print(kagglehub.dataset_download('tonticha/historical-complete-no-gap'))" 2>&1 | tail -5
+          echo
+          echo "=== E: curl moja kwa moja ==="
+          curl -s -L -o /tmp/e.zip -w 'HTTP code: %{http_code}\n' -H "Authorization: Bearer $KAGGLE_API_TOKEN" https://www.kaggle.com/api/v1/datasets/download/tonticha/historical-complete-no-gap
+          ls -la /tmp/e.zip
+
       - name: Fetch recent results, update dataset, settle PENDING
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
