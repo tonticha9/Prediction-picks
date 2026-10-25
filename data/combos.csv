@@ -1,6 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,West Ham vs Southampton: dc_12 @1.22 + Fc Koln vs Schalke 04: dc_1x @1.33,1.62,67.3
-3,3,West Ham vs Southampton: dc_12 @1.22 + Falkirk vs Kilmarnock: dc_1x @1.28 + Nice vs Rennes: dc_1x @1.57,2.45,49.1
-5,5,Man City vs Brighton: dc_12 @1.22 + Estrela vs Casa Pia: dc_1x @1.18 + La Coruna vs Osasuna: dc_1x @1.36 + Panetolikos vs Ofi Crete: dc_x2 @1.40 + Nice vs Rennes: dc_1x @1.57,4.3,27.5
-7,5,Iraklis vs Panathinaikos: away_win @1.42 + Lorient vs Brest: dc_x2 @1.50 + Nice vs Rennes: dc_1x @1.57 + RAAL La Louviere vs Waregem: dc_x2 @1.40 + Monza vs Napoli: dc_x2 @1.22,5.71,18.1
-10,6,Ein Frankfurt vs Hamburg: dc_1x @1.18 + Nice vs Rennes: dc_1x @1.57 + Estrela vs Casa Pia: dc_1x @1.18 + Panathinaikos vs Aek: goals_under_25 @1.75 + Kalamata vs Iraklis: goals_under_25 @1.75 + M'Gladbach vs Paderborn: dc_1x @1.28,8.57,11.9
+2,2,La Coruna vs Osasuna: dc_1x @1.36 + Man City vs Brighton: dc_12 @1.22,1.66,65.7
+3,3,Paok vs Asteras Tripolis: dc_1x @1.07 + Ofi Crete vs Atromitos: dc_x2 @1.67 + La Coruna vs Osasuna: dc_1x @1.36,2.43,44.9
+5,4,Ofi Crete vs Atromitos: dc_x2 @1.67 + Asteras Tripolis vs Kalamata: dc_1x @1.25 + Waregem vs Club Brugge: away_win @1.64 + Aris vs Atromitos: dc_1x @1.17,4.01,26.6
+7,6,Coventry vs Sunderland: dc_x2 @1.44 + Marseille vs Toulouse: dc_1x @1.25 + Aris vs Atromitos: dc_1x @1.17 + Sassuolo vs Lazio: dc_12 @1.30 + Troyes vs Le Mans: dc_1x @1.36 + Waregem vs Club Brugge: away_win @1.64,6.11,18.0
