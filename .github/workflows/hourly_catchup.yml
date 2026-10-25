@@ -35,15 +35,27 @@ jobs:
 
       - name: Configure Kaggle credentials
         env:
-          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
-          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
         run: |
+          if [ -z "$KAGGLE_API_TOKEN" ]; then
+            echo "❌ Secret KAGGLE_API_TOKEN haipo au ni tupu"
+            exit 1
+          fi
           mkdir -p ~/.kaggle
-          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
-          chmod 600 ~/.kaggle/kaggle.json
+          printf '%s' "$KAGGLE_API_TOKEN" > ~/.kaggle/access_token
+          chmod 600 ~/.kaggle/access_token
+          echo "✅ Tokeni ya Kaggle imehifadhiwa"
+
+      - name: Check Kaggle access (uchunguzi)
+        continue-on-error: true
+        env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+        run: |
+          kaggle datasets files tonticha/historical-complete-no-gap
 
       - name: Fetch recent results, update dataset, settle PENDING
         env:
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
           ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
           KAGGLE_DATASET_SLUG: tonticha/historical-complete-no-gap
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
