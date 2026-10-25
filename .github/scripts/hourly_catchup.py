@@ -46,6 +46,10 @@ v5 (ODDS ZA BET365 ZA HISTORIA):
   - Odds zisizo na maana (chini ya 1.01 au zaidi ya 100) zinakuwa tupu.
   - Ripoti ya uthabiti: coverage kwa msimu + overround ya 1X2 (inaonekana kwenye logi).
 
+v6 (UPAKUAJI WA AKIBA): Kaggle ikishindwa kupakua dataset NZIMA (404 kwa toleo fulani,
+  wakati kila faili inapakuliwa vizuri), script inapakua faili moja moja
+  (historical_complete_no_gap.csv na team_aliases.json).
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
@@ -55,6 +59,7 @@ import re
 import sys
 import time
 import json
+import zipfile
 import requests
 import pandas as pd
 import numpy as np
@@ -262,6 +267,37 @@ def run_kaggle_cmd(args, fatal=True):
             sys.exit(1)
         return None
     return result.stdout
+
+
+def download_dataset():
+    """Pakua dataset ya sasa kwenye folda 'kaggle_dataset'.
+    Kwanza njia ya kawaida (dataset nzima). Ikishindwa (Kaggle inaweza kujibu 404 kwa
+    upakuaji wa dataset nzima wakati kila faili inapakuliwa vizuri), tumia upakuaji wa
+    faili moja moja."""
+    os.makedirs('kaggle_dataset', exist_ok=True)
+    out = run_kaggle_cmd(['datasets', 'download', '-d', KAGGLE_DATASET,
+                          '-p', 'kaggle_dataset', '--unzip', '-o'], fatal=False)
+    if out is not None and os.path.exists(os.path.join('kaggle_dataset', DATASET_CSV)):
+        return
+
+    print("::warning::Upakuaji wa dataset nzima umeshindwa - natumia upakuaji wa faili moja moja.")
+    for fname in (DATASET_CSV, 'team_aliases.json'):
+        res = run_kaggle_cmd(['datasets', 'download', '-d', KAGGLE_DATASET, '-f', fname,
+                              '-p', 'kaggle_dataset', '-o'], fatal=(fname == DATASET_CSV))
+        if res is None:
+            print(f"::warning::Faili {fname} haikupakuliwa.")
+        else:
+            print(f"   ✅ {fname} imepakuliwa")
+
+    # Ikiwa faili imekuja kama zip, ifungue
+    for z in [f for f in os.listdir('kaggle_dataset') if f.endswith('.zip')]:
+        zp = os.path.join('kaggle_dataset', z)
+        try:
+            with zipfile.ZipFile(zp) as zf:
+                zf.extractall('kaggle_dataset')
+            os.remove(zp)
+        except Exception as e:
+            print(f"::warning::Imeshindwa kufungua {z}: {e}")
 
 
 def check_stuck_fixtures(from_date, to_date):
@@ -707,9 +743,7 @@ def settle_pending(df_results):
 
 def main():
     print("📥 Kupakua historical-complete-no-gap dataset ya sasa...")
-    os.makedirs('kaggle_dataset', exist_ok=True)
-    run_kaggle_cmd(['datasets', 'download', '-d', KAGGLE_DATASET,
-                     '-p', 'kaggle_dataset', '--unzip', '-o'])
+    download_dataset()
 
     csv_files = [f for f in os.listdir('kaggle_dataset') if f.endswith('.csv')]
     if len(csv_files) > 1:
