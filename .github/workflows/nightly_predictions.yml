@@ -12,6 +12,11 @@
 # v3 (Oct 18 2026): kivuli cha v8 - archive_shadow.py inahifadhi predictions_v8.csv na
 # archive ya v6/v8 kwenye repo (commit moja, deploy moja). Hiari kabisa: ikikosekana
 # au ikishindwa, hakuna kinachovunjika.
+#
+# v4 (Oct 25 2026): hatua ya push sasa inavuta mabadiliko mapya ya 'main' kwanza
+# (git pull --rebase) na kujaribu tena hadi mara 5. Hii inazuia kosa la
+# "rejected (fetch first)" wakati workflow nyingine (mfano hourly_catchup)
+# inasukuma commit wakati Kaggle inaendeshwa.
 
 name: Nightly Predictions Update
 
@@ -96,7 +101,23 @@ jobs:
           if [ -f data/predictions_v8.csv ]; then git add data/predictions_v8.csv || true; fi
           if [ -d shadow ]; then git add shadow || true; fi
           git diff --staged --quiet || git commit -m "Auto-update predictions $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push
+
+          # Vuta mabadiliko mapya ya main kisha sukuma; jaribu tena hadi mara 5
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin main && git push; then
+              pushed=1
+              break
+            fi
+            echo "Push jaribio $i limeshindwa, najaribu tena..."
+            git rebase --abort 2>/dev/null || true
+            sleep $((i*5))
+          done
+          if [ "$pushed" != "1" ]; then
+            echo "::error::Push imeshindwa baada ya majaribio 5."
+            exit 1
+          fi
+          echo "✅ Push imefanikiwa."
 
       - name: Trigger app refresh (/api/refresh)
         if: env.SKIP_UPDATE != 'true'
