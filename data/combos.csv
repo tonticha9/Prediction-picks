@@ -1,5 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,La Coruna vs Osasuna: dc_1x @1.36 + Man City vs Brighton: dc_12 @1.22,1.66,65.7
-3,3,Paok vs Asteras Tripolis: dc_1x @1.07 + Ofi Crete vs Atromitos: dc_x2 @1.67 + La Coruna vs Osasuna: dc_1x @1.36,2.43,44.9
-5,4,Ofi Crete vs Atromitos: dc_x2 @1.67 + Asteras Tripolis vs Kalamata: dc_1x @1.25 + Waregem vs Club Brugge: away_win @1.64 + Aris vs Atromitos: dc_1x @1.17,4.01,26.6
-7,6,Coventry vs Sunderland: dc_x2 @1.44 + Marseille vs Toulouse: dc_1x @1.25 + Aris vs Atromitos: dc_1x @1.17 + Sassuolo vs Lazio: dc_12 @1.30 + Troyes vs Le Mans: dc_1x @1.36 + Waregem vs Club Brugge: away_win @1.64,6.11,18.0
+2,2,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Estoril vs Moreirense: dc_12 @1.28,1.7,86.0
+3,4,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Estoril vs Moreirense: dc_12 @1.28 + Man City vs Brighton: dc_1x @1.20 + Atalanta vs Frosinone: dc_1x @1.28,2.61,63.2
+5,6,Hoffenheim vs Leverkusen: dc_x2 @1.40 + Aris vs Panetolikos: dc_12 @1.22 + Estoril vs Moreirense: dc_12 @1.28 + Club Brugge vs St Truiden: dc_1x @1.11 + Frosinone vs Lecce: dc_12 @1.28 + Asteras Tripolis vs Kalamata: dc_12 @1.33,4.13,45.7
+7,6,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Psv Eindhoven vs Feyenoord: dc_1x @1.36 + For Sittard vs Excelsior: dc_1x @1.44 + Sassuolo vs Lazio: dc_x2 @1.36 + Konyaspor vs Genclerbirligi: dc_12 @1.30 + Galatasaray vs Fenerbahce: dc_12 @1.25,5.76,30.7
+10,6,Goztep vs Corum: dc_1x @1.36 + Hearts vs Rangers: dc_12 @1.28 + Waregem vs Club Brugge: away_win @1.64 + Hull vs Ipswich: dc_1x @1.50 + Volos Nfc vs Kifisia: dc_1x @1.40 + La Coruna vs Osasuna: dc_1x @1.36,8.15,17.1
