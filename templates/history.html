@@ -17,6 +17,7 @@
   .dl-down { color:var(--red); font-weight:700; }
   .roi-big { font-size:28px; font-weight:800; }
   .roi-day { display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,.07); text-decoration:none; color:inherit; font-size:13px; }
+  .caution-flag { font-size:12px; color:#f59e0b; margin-top:3px; }
 </style>
 
 {% macro result_badge(result) %}
@@ -171,7 +172,9 @@
   {% if not shown %}<div class="empty-state">Hakuna value bets kwa tarehe hii.</div>{% endif %}
 
   {% for r in shown %}
-  <div class="table-row" style="border-left-color: var(--indigo);">
+  {# Tahadhari: EV >= 40% AU edge >= 20 #}
+  {% set caution = (r.ev is not none and r.ev >= 40) or (r.edge is not none and r.edge >= 20) %}
+  <div class="table-row" style="border-left-color: {{ '#f59e0b' if caution else 'var(--indigo)' }};">
     <div style="font-size:13px; min-width:0;">
       <b>{{ r.home }} vs {{ r.away }}</b>{% if r.score %} <span style="color:var(--text-dim);">({{ r.score }})</span>{% endif %} — {{ r.market }}
       <div style="color:var(--text-dim); margin-top:2px;">
@@ -180,6 +183,7 @@
         {% if r.edge is not none %} · Edge: {{ r.edge }}%{% endif %}
         {% if r.ev is not none %} · EV: {{ r.ev }}%{% endif %}
       </div>
+      {% if caution %}<div class="caution-flag">⚠️ Tahadhari: model na bookmaker walitofautiana sana.</div>{% endif %}
       {% if r.actual %}<div class="mk-actual">📊 {{ r.actual }}</div>{% endif %}
     </div>
     <div style="text-align:right;">
