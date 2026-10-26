@@ -122,7 +122,7 @@
   {% endfor %}
 
 {% elif tier == 'value_bets' %}
-  {% set shown = value_bets_list|rejectattr('market', 'equalto', 'dc_12')|list %}
+  {% set shown = value_bets_list %}
   {% set vr = value_roi(selected_date) if value_roi is defined else none %}
 
   {% if vr and vr.n %}
