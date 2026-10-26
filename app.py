@@ -513,28 +513,35 @@ def record_predictions_pending():
 # PICHA YA KILA SIKU (DAILY SNAPSHOT) kwa ajili ya History.
 # Kila siku tunahifadhi NAKALA KAMILI ya kile model ilichoona siku hiyo
 # (mechi zote za leo + zijazo, na probability/odds/tier za siku hiyo).
-# Refresh ikiendeshwa mara nyingi siku moja, ya mwisho ya siku inashinda.
+# Refresh ikiendeshwa mara nyingi siku moja, ya mwisho ya siku inashinda:
+# safu zilizotoka kwenye data ya sasa ZINAFUTWA ili picha ya siku iwe
+# sawa kabisa na kile dashboard inachoonyesha.
 # ================================================================
 def record_daily_snapshot():
     today = today_eat()
     new_count = 0
     updated_count = 0
+    removed_count = 0
 
     for cache_key, section in SECTION_MAP.items():
         df = _cache.get(cache_key)
-        if df is None or len(df) == 0:
+        if df is None:
             continue
         df = df[df['match_date'].dt.date >= today]
-        if len(df) == 0:
+        # predictions tupu = huenda ni hitilafu ya data: usifute picha ya siku.
+        # value_bets tupu ni halali ("NO PICK TODAY"): picha inasafishwa.
+        if len(df) == 0 and section != 'value_bet':
             continue
 
         existing = {}
         for r in PredictionDaily.query.filter_by(snap_date=today, section=section).all():
             existing[(r.match_date, r.home_team, r.away_team, r.market)] = r
 
+        seen = set()
         new_objs = []
         for row in df.to_dict('records'):
             key = (_to_dt(row['match_date']), row['HomeTeam'], row['AwayTeam'], row['market'])
+            seen.add(key)
             prob = _clean_num(row.get('probability_%'))
             odds = _clean_num(row.get('real_odds'))
             tier = _clean_str(row.get('pro_tier'))
@@ -555,12 +562,19 @@ def record_daily_snapshot():
                 existing[key] = obj
                 new_count += 1
 
+        # Futa safu za picha ya LEO ambazo hazipo tena kwenye data ya sasa
+        for key, r in list(existing.items()):
+            if key not in seen:
+                db.session.delete(r)
+                removed_count += 1
+
         if new_objs:
             db.session.add_all(new_objs)
 
-    if new_count or updated_count:
+    if new_count or updated_count or removed_count:
         db.session.commit()
-    print(f'[record_daily_snapshot] mpya={new_count} zilizosasishwa={updated_count}')
+    print(f'[record_daily_snapshot] mpya={new_count} zilizosasishwa={updated_count} '
+          f'zilizofutwa={removed_count}')
     return new_count
 
 
@@ -573,15 +587,66 @@ def _history_dates(section):
     return sorted({d.strftime('%Y-%m-%d') for d in (d1 | d2)}, reverse=True)
 
 
+def _live_value_rows(day):
+    """
+    Value bets za LEO kama zinavyoonekana kwenye ukurasa wa Value Bets
+    (data ile ile ya value_bets.csv). Matokeo yanaunganishwa kutoka
+    PredictionRecord; ambayo mechi haijaisha inabaki PENDING.
+    """
+    df = get_data().get('value_bets')
+    if df is None or len(df) == 0:
+        return []
+    df = df[df['match_date'].dt.date == day]
+    if len(df) == 0:
+        return []
+
+    min_md = _to_dt(df['match_date'].min())
+    max_md = _to_dt(df['match_date'].max())
+    res_map = {}
+    q = db.session.query(
+        PredictionRecord.match_date, PredictionRecord.home_team,
+        PredictionRecord.away_team, PredictionRecord.market,
+        PredictionRecord.result, PredictionRecord.first_probability
+    ).filter(
+        PredictionRecord.section == 'value_bet',
+        PredictionRecord.match_date >= min_md,
+        PredictionRecord.match_date <= max_md
+    ).all()
+    for md, home, away, market, result, first_prob in q:
+        res_map[(md, home, away, market)] = (result, first_prob)
+
+    rows = []
+    for row in df.to_dict('records'):
+        md = _to_dt(row['match_date'])
+        result, first_prob = res_map.get(
+            (md, row['HomeTeam'], row['AwayTeam'], row['market']), ('PENDING', None))
+        rows.append(SimpleNamespace(
+            home_team=row['HomeTeam'], away_team=row['AwayTeam'], match_date=md,
+            market=row['market'], probability=_clean_num(row.get('probability_%')),
+            real_odds=_clean_num(row.get('real_odds')), pro_tier=_clean_str(row.get('pro_tier')),
+            result=result or 'PENDING', first_probability=first_prob,
+        ))
+    return rows
+
+
 def _history_rows(section, day):
     """
     Safu za History kwa siku moja.
+    - Value bets za LEO: zinasomwa moja kwa moja kutoka data ya live ili ziwe
+      SAWA KABISA na ukurasa wa Value Bets (zinasubiri matokeo = PENDING).
     - Kama kuna picha ya siku hiyo: tumia probability/odds/tier za SIKU HIYO,
       na matokeo (WON/LOST/VOID) yanaunganishwa kutoka PredictionRecord.
       Zinaonyeshwa MECHI ZA SIKU HIYO TU (match_date == day).
     - Kama hakuna (siku za zamani, mfano Sept 14-20): tumia njia ya zamani.
     Kila safu ina first_probability (kwa mshale wa kupanda/kushuka).
     """
+    if section == 'value_bet' and day == today_eat():
+        try:
+            return _live_value_rows(day)
+        except Exception as e:
+            db.session.rollback()
+            print(f'[_history_rows] live value bets imeshindwa, natumia picha ya siku: {e}')
+
     all_snaps = PredictionDaily.query.filter_by(snap_date=day, section=section).all()
     if not all_snaps:
         return PredictionRecord.query.filter_by(section=section, shown_date=day).all()
@@ -1553,7 +1618,12 @@ def history():
                            'win_rate': round(won / (won + lost) * 100, 1) if (won + lost) > 0 else None}
 
             elif tier == 'value_bets':
-                for r in sorted(records, key=lambda r: -(r.probability or 0)):
+                # Mpangilio sawa na ukurasa wa Value Bets: EV kubwa kwanza
+                def _ev_key(r):
+                    e = calc_ev(r.probability, r.real_odds)
+                    return -(e if e is not None else -1e9)
+
+                for r in sorted(records, key=_ev_key):
                     mr = find_match_result(results, r.home_team, r.away_team, r.match_date)
                     score = None
                     if mr is not None and mr.fthg is not None and mr.ftag is not None:
