@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Estoril vs Moreirense: dc_12 @1.28,1.7,86.0
-3,4,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Estoril vs Moreirense: dc_12 @1.28 + Man City vs Brighton: dc_1x @1.20 + Atalanta vs Frosinone: dc_1x @1.28,2.61,63.2
-5,6,Hoffenheim vs Leverkusen: dc_x2 @1.40 + Aris vs Panetolikos: dc_12 @1.22 + Estoril vs Moreirense: dc_12 @1.28 + Club Brugge vs St Truiden: dc_1x @1.11 + Frosinone vs Lecce: dc_12 @1.28 + Asteras Tripolis vs Kalamata: dc_12 @1.33,4.13,45.7
-7,6,Asteras Tripolis vs Kalamata: dc_12 @1.33 + Psv Eindhoven vs Feyenoord: dc_1x @1.36 + For Sittard vs Excelsior: dc_1x @1.44 + Sassuolo vs Lazio: dc_x2 @1.36 + Konyaspor vs Genclerbirligi: dc_12 @1.30 + Galatasaray vs Fenerbahce: dc_12 @1.25,5.76,30.7
-10,6,Goztep vs Corum: dc_1x @1.36 + Hearts vs Rangers: dc_12 @1.28 + Waregem vs Club Brugge: away_win @1.64 + Hull vs Ipswich: dc_1x @1.50 + Volos Nfc vs Kifisia: dc_1x @1.40 + La Coruna vs Osasuna: dc_1x @1.36,8.15,17.1
+2,2,Galatasaray vs Fenerbahce: dc_12 @1.25 + Aberdeen vs Falkirk: dc_12 @1.28,1.6,78.7
+3,2,Augsburg vs Freiburg: dc_1x @1.67 + Erzurum Bb vs Corum: dc_1x @1.47,2.45,54.5
+5,4,Aberdeen vs Falkirk: dc_12 @1.28 + Lorient vs Brest: dc_1x @1.50 + Galatasaray vs Fenerbahce: dc_12 @1.25 + Augsburg vs Freiburg: dc_1x @1.67,4.01,39.9
+7,6,Erzurum Bb vs Corum: dc_1x @1.47 + Aberdeen vs Falkirk: dc_12 @1.28 + Elversberg vs Mainz: dc_x2 @1.36 + Fiorentina vs Atalanta: dc_12 @1.30 + Augsburg vs Freiburg: dc_1x @1.67 + Arsenal vs Hull: dc_1x @1.02,5.67,28.0
+10,6,Marseille vs Toulouse: dc_12 @1.25 + Fiorentina vs Atalanta: dc_12 @1.30 + Panetolikos vs Ofi Crete: dc_x2 @1.40 + Hull vs Ipswich: dc_1x @1.50 + Telstar vs Utrecht: dc_1x @1.57 + Kortrijk vs Mechelen: dc_1x @1.53,8.2,19.0
