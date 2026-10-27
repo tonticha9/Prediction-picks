@@ -3,12 +3,14 @@
 
 MODE=retrain : anza notebook auto-retrain-release kwenye Kaggle, subiri, pakua output,
                soma release_gate.json, na (PUBLISH=yes tu) chapisha toleo jipya la
-               dataset v6b-release ikiwa gate = RELEASE_READY.
+               dataset v6b-release ikiwa gate imepita (pass = true).
 MODE=rollback: chapisha faili zilizohifadhiwa kwenye rollback_files/ kama toleo jipya.
 
 Usalama (fail-safe): ikiwa kuna shaka yoyote, HAICHAPISHI - production inabaki ilivyo.
 
 v1 (Oct 27 2026)
+v2 (Oct 27 2026): gate inasomwa kama JSON ("pass": true/false, "fails": [...]).
+                  Muundo usiojulikana = kosa jekundu (exit 1), si kimya.
 """
 import os
 import sys
@@ -95,12 +97,24 @@ def check_release_dir(d):
 
 
 def gate_is_ready(gate_text):
+    """Rudisha (ready, maelezo, muundo_unajulikana)."""
+    try:
+        g = json.loads(gate_text)
+    except Exception:
+        g = None
+    if isinstance(g, dict) and isinstance(g.get('pass'), bool):
+        fails = g.get('fails') or []
+        if g['pass'] and not fails:
+            return True, f"gate pass=true, fails=0, masoko {g.get('n_markets')}, data_end {g.get('data_end')}", False
+        if g['pass'] and fails:
+            return False, f"gate pass=true lakini fails si tupu: {fails}", False
+        return False, f"gate pass=false, fails={fails}", False
     t = gate_text.upper()
     if 'RELEASE_BLOCKED' in t:
-        return False, "gate imesema RELEASE_BLOCKED"
+        return False, "gate imesema RELEASE_BLOCKED", False
     if 'RELEASE_READY' in t:
-        return True, "gate imesema RELEASE_READY"
-    return False, "muundo wa release_gate.json haujulikani (hakuna RELEASE_READY wala RELEASE_BLOCKED)"
+        return True, "gate imesema RELEASE_READY", False
+    return False, "muundo wa release_gate.json haujulikani", True
 
 
 def run_retrain_notebook():
@@ -243,10 +257,13 @@ def do_retrain():
     print(gate_text[:3000])
     print("===== mwisho =====\n")
 
-    ready, why = gate_is_ready(gate_text)
+    ready, why, unknown = gate_is_ready(gate_text)
     print(("✅ " if ready else "🛑 ") + why)
+    if unknown:
+        write_summary(f"### Retrain: {why} - HAKUNA kilichochapishwa (angalia script)")
+        sys.exit(1)
     if not ready:
-        write_summary(f"### Retrain: RELEASE_BLOCKED / haijulikani - production inabaki ilivyo ({why})")
+        write_summary(f"### Retrain: gate imezuia - production inabaki ilivyo ({why})")
         sys.exit(0)
 
     man_path = find_file(OUT_DIR, 'MANIFEST.json')
