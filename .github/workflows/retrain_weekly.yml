@@ -1,0 +1,93 @@
+# .github/workflows/retrain_weekly.yml
+#
+# Retrain ya kila wiki: inaendesha notebook auto-retrain-release kwenye Kaggle,
+# inasoma release_gate.json, na INACHAPISHA toleo jipya la dataset v6b-release
+# TU kama gate imesema RELEASE_READY. Nightly inachukua toleo jipya yenyewe.
+#
+# Njia za kuendesha kwa mkono (Run workflow):
+#   mode=retrain, publish=no   -> jaribio kavu (hakuna kinachochapishwa)
+#   mode=retrain, publish=yes  -> retrain + chapisha ikiwa gate imepita
+#   mode=rollback, rollback_run_id=<id> -> rudisha toleo lililohifadhiwa na run hiyo
+#
+# v1 (Oct 27 2026)
+
+name: Weekly Retrain Release
+
+on:
+  # Fungua mistari miwili hii BAADA ya jaribio la kwanza kufanikiwa:
+  # schedule:
+  #   - cron: '0 18 * * 0'   # Jumapili 18:00 UTC = 21:00 EAT (kabla ya nightly ya 22:00 UTC)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'retrain au rollback'
+        type: choice
+        options: [retrain, rollback]
+        default: retrain
+      publish:
+        description: 'Chapisha kama gate imepita? (no = jaribio kavu)'
+        type: choice
+        options: ['no', 'yes']
+        default: 'no'
+      rollback_run_id:
+        description: 'Kwa rollback tu: run id ya retrain iliyohifadhi toleo la zamani'
+        type: string
+        default: ''
+
+concurrency:
+  group: retrain-weekly
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle pandas
+
+      - name: Configure Kaggle credentials
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Download saved release (rollback only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: prev-release
+          path: rollback_files
+          run-id: ${{ inputs.rollback_run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Retrain / publish / rollback
+        env:
+          MODE: ${{ inputs.mode || 'retrain' }}
+          PUBLISH: ${{ github.event_name == 'schedule' && 'yes' || inputs.publish }}
+          KAGGLE_RETRAIN_SLUG: tonticha/auto-retrain-release
+          KAGGLE_RELEASE_DATASET: tonticha/v6b-release
+        run: python .github/scripts/retrain_and_publish.py
+
+      - name: Save previous release + gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prev-release
+          path: |
+            backup_prev/
+            kaggle_retrain_output/release_gate.json
+          if-no-files-found: ignore
+          retention-days: 30
