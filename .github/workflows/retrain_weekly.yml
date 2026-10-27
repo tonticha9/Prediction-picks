@@ -2,7 +2,10 @@
 #
 # Retrain ya kila wiki: inaendesha notebook auto-retrain-release kwenye Kaggle,
 # inasoma release_gate.json, na INACHAPISHA toleo jipya la dataset v6b-release
-# TU kama gate imesema RELEASE_READY. Nightly inachukua toleo jipya yenyewe.
+# TU kama gate imepita. Nightly inachukua toleo jipya yenyewe.
+#
+# Ratiba: kila Jumatatu 18:00 UTC (21:00 EAT), saa moja kabla ya nightly (22:00 UTC).
+# Run ya ratiba INACHAPISHA kiotomatiki gate ikipita.
 #
 # Njia za kuendesha kwa mkono (Run workflow):
 #   mode=retrain, publish=no   -> jaribio kavu (hakuna kinachochapishwa)
@@ -10,13 +13,13 @@
 #   mode=rollback, rollback_run_id=<id> -> rudisha toleo lililohifadhiwa na run hiyo
 #
 # v1 (Oct 27 2026)
+# v2 (Oct 27 2026): ratiba ya kila Jumatatu imewashwa.
 
 name: Weekly Retrain Release
 
 on:
-  # Fungua mistari miwili hii BAADA ya jaribio la kwanza kufanikiwa:
-  # schedule:
-  #   - cron: '0 18 * * 0'   # Jumapili 18:00 UTC = 21:00 EAT (kabla ya nightly ya 22:00 UTC)
+  schedule:
+    - cron: '0 18 * * 1'   # Jumatatu 18:00 UTC = 21:00 EAT
   workflow_dispatch:
     inputs:
       mode:
