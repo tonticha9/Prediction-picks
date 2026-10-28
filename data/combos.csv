@@ -1,7 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Groningen vs Sparta Rotterdam: dc_12 @1.22 + Asteras Tripolis vs Kalamata: dc_12 @1.33,1.62,72.3
-3,2,Augsburg vs Freiburg: dc_1x @1.67 + Hull vs Ipswich: dc_1x @1.50,2.5,56.3
-5,4,St Mirren vs Rangers: dc_x2 @1.10 + Aberdeen vs Falkirk: dc_12 @1.30 + Willem Ii vs Zwolle: dc_1x @1.70 + Augsburg vs Freiburg: dc_1x @1.67,4.06,36.5
-7,4,Augsburg vs Freiburg: dc_1x @1.67 + Lecce vs Genoa: dc_x2 @1.44 + Willem Ii vs Zwolle: dc_1x @1.70 + Zwolle vs Den Haag: dc_1x @1.40,5.72,29.9
-10,6,Falkirk vs Celtic: dc_x2 @1.10 + Bournemouth vs Leeds: dc_1x @1.30 + Erzurum Bb vs Corum: dc_1x @1.50 + Augsburg vs Freiburg: dc_1x @1.67 + Valencia vs Real Madrid: dc_x2 @1.12 + Lazio vs Cagliari: goals_over_25 @2.00,8.02,18.8
-15,6,Augsburg vs Freiburg: dc_1x @1.67 + Milan vs Inter: goals_over_25 @1.67 + Paderborn vs Ein Frankfurt: dc_1x @1.67 + Motherwell vs St Mirren: dc_1x @1.25 + Udinese vs Roma: away_win @1.57 + Telstar vs Utrecht: dc_1x @1.57,14.35,10.0
+2,2,Lecce vs Genoa: goals_over_15 @1.44 + Lyon vs Angers: dc_1x @1.12,1.61,70.7
+3,4,Strasbourg vs Auxerre: dc_1x @1.25 + Liverpool vs Arsenal: goals_over_15 @1.25 + Como vs Venezia: dc_1x @1.08 + Lecce vs Genoa: goals_over_15 @1.44,2.43,48.5
+5,5,Genclerbirligi vs Alanyaspor: goals_over_15 @1.33 + Parma vs Udinese: goals_over_15 @1.36 + Gil Vicente vs Guimaraes: goals_over_15 @1.36 + Rb Leipzig vs Augsburg: dc_1x @1.14 + Lecce vs Genoa: goals_over_15 @1.44,4.04,29.7
+7,6,Amedspor vs Eyupspor: dc_1x @1.06 + Lecce vs Genoa: goals_over_15 @1.44 + Getafe vs Sevilla: goals_over_15 @1.53 + Juventus vs Napoli: goals_over_25 @1.91 + Le Mans vs Monaco: dc_x2 @1.22 + Paok vs Asteras Tripolis: dc_1x @1.07,5.82,21.6
