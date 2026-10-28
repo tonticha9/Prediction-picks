@@ -14,6 +14,8 @@
 #
 # v1 (Oct 27 2026)
 # v2 (Oct 27 2026): ratiba ya kila Jumatatu imewashwa.
+# v3 (Oct 28 2026): kila retrain inapochapishwa, tukio linaandikwa kwenye data/retrain_log.json
+#                   (kwa Market Analysis: kabla/baada ya retrain). Hatua hiyo haivunji chochote.
 
 name: Weekly Retrain Release
 
@@ -83,6 +85,35 @@ jobs:
           KAGGLE_RETRAIN_SLUG: tonticha/auto-retrain-release
           KAGGLE_RELEASE_DATASET: tonticha/v6b-release
         run: python .github/scripts/retrain_and_publish.py
+
+      # v3: andika tukio la retrain kwenye repo (hufanya kazi tu kama kitu kilichapishwa)
+      - name: Record retrain event (for Market Analysis)
+        if: success()
+        continue-on-error: true
+        env:
+          MODE: ${{ inputs.mode || 'retrain' }}
+        run: |
+          python .github/scripts/record_retrain_event.py
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f data/retrain_log.json ]; then git add data/retrain_log.json; fi
+          if git diff --staged --quiet; then
+            echo "Hakuna tukio jipya la kuhifadhi."
+            exit 0
+          fi
+          git commit -m "Record retrain event $(date -u +'%Y-%m-%d')"
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin main && git push; then
+              pushed=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i*5))
+          done
+          if [ "$pushed" != "1" ]; then
+            echo "::warning::Tukio la retrain halikusukumwa (haiathiri chochote)."
+          fi
 
       - name: Save previous release + gate report
         if: always()
