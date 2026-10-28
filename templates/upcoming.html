@@ -29,6 +29,17 @@
   {% endif %}
 {% endmacro %}
 
+{# Probability ya model BILA odds (v8) na tofauti yake dhidi ya probability kuu #}
+{% macro v8_badge(v8, main) %}
+  {% if v8 is not none %}
+    {% set d = (v8 - main)|round(1) %}
+    <span style="font-size:0.72em; color:var(--text-dim); white-space:nowrap;">
+      Bila odds: <b>{{ '%.1f'|format(v8) }}%</b>
+      <span style="color:{{ 'seagreen' if d > 0 else ('crimson' if d < 0 else 'gray') }};">({{ ('+%.1f'|format(d)) if d > 0 else ('%.1f'|format(d)) }})</span>
+    </span>
+  {% endif %}
+{% endmacro %}
+
 {% if not matches %}
   <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
 {% endif %}
@@ -49,6 +60,9 @@
         {{ m.best_pick.probability }}%{{ delta_badge(m.best_pick.delta) }}
       </div>
     </div>
+    {% if m.best_pick.v8 is not none %}
+    <div style="margin-top:4px; text-align:right;">{{ v8_badge(m.best_pick.v8, m.best_pick.probability) }}</div>
+    {% endif %}
     <div style="margin-top:8px;">
       <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
     </div>
@@ -69,7 +83,12 @@
       <div class="other-picks" id="upcoming-picks-{{ mi }}-{{ g.key }}">
         {% for p in g.picks %}
         <div class="other-pick-row">
-          <div>{{ p.market }}</div>
+          <div>
+            {{ p.market }}
+            {% if p.v8 is not none %}
+            <div style="margin-top:2px;">{{ v8_badge(p.v8, p.probability) }}</div>
+            {% endif %}
+          </div>
           <div style="display:flex; align-items:center; gap:10px;">
             {% if p.has_odds %}<span style="color:var(--text-dim);">@{{ p.odds }}</span>{% endif %}
             <span class="tier-badge {{ p.tier.class }}">{{ p.probability }}%</span>
