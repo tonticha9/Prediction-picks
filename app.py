@@ -31,11 +31,14 @@ from combo_builder import build_daily_combos, combo_result_from_legs
 
 # Probability ya "bila odds" (v8). Ikikosekana, app inaendelea bila hiyo.
 try:
-    from dual_prob import v8_prob, v8_status
+    from dual_prob import v8_prob, v8_prob_on, v8_status
 except Exception as _e:
     print(f'[WARN] dual_prob imeshindwa kupakia: {type(_e).__name__}: {_e}')
 
     def v8_prob(*args, **kwargs):
+        return None
+
+    def v8_prob_on(*args, **kwargs):
         return None
 
     def v8_status():
@@ -1601,6 +1604,14 @@ def history():
             records = _history_rows(section, day)
             results = load_match_results(day)
 
+            # Probability ya v8 (bila odds): leo/zijazo kutoka faili la live (sawa na Dashboard),
+            # siku zilizopita kutoka archive ya shadow/archive.
+            v8_live_first = day >= today_eat()
+
+            def v8_for(r):
+                return v8_prob_on(r.home_team, r.away_team, r.match_date, r.market,
+                                  snap_day=day, prefer_live=v8_live_first)
+
             if tier == 'predictions':
                 def to_pick(r, mr):
                     return {
@@ -1608,6 +1619,7 @@ def history():
                         'result': r.result,
                         'delta': calc_hist_delta(r.probability, getattr(r, 'first_probability', None)),
                         'actual': actual_text(r.market, mr),
+                        'v8': v8_for(r),
                     }
 
                 groups = {}
@@ -1658,6 +1670,7 @@ def history():
                     score = None
                     if mr is not None and mr.fthg is not None and mr.ftag is not None:
                         score = f'{mr.fthg}-{mr.ftag}'
+                    v8 = v8_for(r)
                     value_bets_list.append({
                         'home': r.home_team, 'away': r.away_team,
                         'date': r.match_date.strftime('%d %b %Y'),
@@ -1666,6 +1679,8 @@ def history():
                         'edge': calc_edge(r.probability, r.real_odds), 'result': r.result,
                         'delta': calc_hist_delta(r.probability, getattr(r, 'first_probability', None)),
                         'actual': actual_text(r.market, mr), 'score': score,
+                        'v8': v8,
+                        'edge_free': calc_edge(v8, r.real_odds) if v8 is not None else None,
                     })
                 won = sum(1 for r in value_bets_list if r['result'] == 'WON')
                 lost = sum(1 for r in value_bets_list if r['result'] == 'LOST')
