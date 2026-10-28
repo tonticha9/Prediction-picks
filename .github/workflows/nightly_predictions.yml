@@ -17,6 +17,10 @@
 # (git pull --rebase) na kujaribu tena hadi mara 5. Hii inazuia kosa la
 # "rejected (fetch first)" wakati workflow nyingine (mfano hourly_catchup)
 # inasukuma commit wakati Kaggle inaendeshwa.
+#
+# v5 (Oct 27 2026): calibration ya kila siku (daily_calibration.py) inarekebisha
+# probability kwa matokeo halisi ya live kabla ya commit. HAIVUNJI nightly: ikishindwa,
+# faili zinabaki kama zilivyotoka Kaggle (continue-on-error).
 
 name: Nightly Predictions Update
 
@@ -90,6 +94,22 @@ jobs:
 
           # Kivuli cha v8 (HIARI - haivunji chochote ikishindwa)
           python .github/scripts/archive_shadow.py || echo "::warning::archive_shadow imeshindwa (haiathiri app)."
+
+      # v5: maktaba za app (ili script ifikie database kama hourly_catchup inavyofanya)
+      - name: Install app requirements (for daily calibration)
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        run: pip install -r requirements.txt
+
+      # v5: calibration ya kila siku. Ikishindwa, faili zinabaki za Kaggle (nightly inaendelea).
+      # Kwa jaribio la kuangalia tu bila kubadilisha faili: CALIB_MODE: shadow
+      - name: Daily calibration (never blocks nightly)
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CALIB_MODE: apply
+        run: python .github/scripts/daily_calibration.py
 
       - name: Commit and push updated data
         if: env.SKIP_UPDATE != 'true'
