@@ -12,10 +12,26 @@
   .am-b { display:inline-block; font-size:12px; padding:3px 8px; border:1px solid var(--border, #333); border-radius:8px; margin:4px 4px 0 0; }
   .am-sec > summary { cursor:pointer; font-weight:700; font-size:15px; padding:10px 0; }
   .am-help { font-size:13px; color:var(--text-dim); margin-bottom:14px; padding:10px 12px; border:1px solid var(--border, #333); border-radius:10px; }
+  .am-story { font-size:13px; margin-top:8px; padding:8px 10px; border-radius:8px; border:1px solid var(--border, #333); line-height:1.45; }
+  .am-story.good { border-color:var(--emerald); }
+  .am-story.bad { border-color:var(--red); }
+  .am-rt { font-size:13px; margin-bottom:14px; padding:10px 12px; border:1px solid var(--indigo); border-radius:10px; }
 </style>
 
 <a href="{{ url_for('admin') }}" style="font-size:13px; color:var(--text-dim); text-decoration:none;">← Admin</a>
 <h2 style="margin:8px 0 14px;">📈 Market Analysis</h2>
+
+{% if retrain_info is defined %}
+  {% set rt = retrain_info() %}
+  {% if rt %}
+  <div class="am-rt">
+    🔁 <b>{{ 'Rollback' if rt.type == 'rollback' else 'Retrain' }} ya mwisho: {{ rt.label }}</b>
+    <span class="am-dim">({% if rt.days_ago == 0 %}leo{% else %}siku {{ rt.days_ago }} zilizopita{% endif %})</span>
+    {% if rt.note %}<div class="am-dim" style="margin-top:4px;">{{ rt.note }}</div>{% endif %}
+    <div class="am-dim" style="margin-top:4px;">Kila kadi ya soko hapa chini ina maelezo ya kabla/baada ya retrain na ya calibration ya kila siku.</div>
+  </div>
+  {% endif %}
+{% endif %}
 
 <div class="am-chips">
   <span class="am-label">Aina:</span>
@@ -41,6 +57,8 @@
     Zinahesabiwa predictions zilizosettlewa tu (WON/LOST). <b>Pengo</b> = win rate halisi ukitoa probability ambayo model ilisema; hasi kubwa ina maana model inajiamini kupita kiasi.
     <b>Uhakika 95%</b> ni mpaka wa chini-juu wa win rate halisi (sampuli ndogo = mpaka mpana).
     <b>ROI</b> ni faida kwa stake ya 1 kwa markets zenye odds. 🟢 imara = calibration nzuri + sampuli 30+ + hakuna dalili za kushuka.
+    <b>Maelezo ya retrain</b> yanalinganisha picks za kabla na baada ya retrain ya mwisho; hayahukumu hadi picks 20+ zikamilike baada yake, na mabadiliko madogo yanaitwa "hayajabadilika" kwa sababu ni kelele.
+    <b>🎯 Calibration ya kila siku</b> inaonyesha kama probability ya soko imerekebishwa leo kwa matokeo halisi ya live.
   </div>
 </details>
 
@@ -104,6 +122,14 @@
           {% if m.trend == 'down' %}<span class="am-bad">▼ Inashuka</span>{% elif m.trend == 'up' %}<span class="am-good">▲ Inapanda</span>{% else %}<span class="am-dim">• Imetulia</span>{% endif %}
           <span class="am-dim">— siku 14 za mwisho {{ m.recent_wr }}% ({{ m.recent_n }}) dhidi ya {{ m.older_wr }}% ({{ m.older_n }})</span>
         </div>
+        {% endif %}
+        {% if market_story is defined %}
+          {% set story = market_story(m.market, min_prob, section) %}
+          {% if story %}
+            {% for s in story %}
+            <div class="am-story {{ s.tone }}">{{ s.text }}</div>
+            {% endfor %}
+          {% endif %}
         {% endif %}
         <div class="am-line am-dim" style="font-size:12px;">{{ m.reasons|join(' · ') }}</div>
       </div>
