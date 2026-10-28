@@ -17,6 +17,14 @@
       <span class="tier-badge {{ b.tier.class }}">{{ b.tier.icon }} {{ b.probability }}%</span>
       <span style="font-size:12px; color:var(--text-dim); margin-left:6px;">@ {{ b.odds }}</span>
     </div>
+    {% if b.v8 is not none %}
+    <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">
+      Bila odds: <b>{{ b.v8 }}%</b>
+      {% if b.edge_free is not none %}
+      · edge: <b style="color:{{ 'seagreen' if b.edge_free > 0 else 'crimson' }};">{{ b.edge_free }}%</b>
+      {% endif %}
+    </div>
+    {% endif %}
     {% if caution %}
     <div class="caution-flag">⚠️ Tahadhari: model na bookmaker wanatofautiana sana.</div>
     {% endif %}
