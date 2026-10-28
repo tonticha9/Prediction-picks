@@ -29,6 +29,18 @@ from match_result_model import MatchResult
 from market_selection import is_market_allowed, select_markets
 from combo_builder import build_daily_combos, combo_result_from_legs
 
+# Probability ya "bila odds" (v8). Ikikosekana, app inaendelea bila hiyo.
+try:
+    from dual_prob import v8_prob, v8_status
+except Exception as _e:
+    print(f'[WARN] dual_prob imeshindwa kupakia: {type(_e).__name__}: {_e}')
+
+    def v8_prob(*args, **kwargs):
+        return None
+
+    def v8_status():
+        return None
+
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 HISTORY_DIR = os.path.join(DATA_DIR, 'history')
@@ -1061,6 +1073,17 @@ def run_health_checks():
             return 'ok', f'Picha ya History ya leo ipo (safu {n}).'
         return 'warn', 'Picha ya History ya leo haijaandikwa - bonyeza Refresh Data.'
 
+    def c_v8():
+        st = v8_status()
+        if not st:
+            return 'warn', ('data/predictions_v8.csv haipo au ni tupu - probability bila odds '
+                            'haitaonekana. Angalia archive_shadow kwenye nightly.')
+        if st['max_day'] < today.strftime('%Y-%m-%d'):
+            return 'warn', (f"Mechi zote za v8 ni za zamani (ya mwisho: {st['max_day']}). "
+                            f"Angalia nightly na archive_shadow.")
+        return 'ok', (f"Probability bila odds ipo: mechi {st['matches']} "
+                      f"({st['min_day']} hadi {st['max_day']}), safu {st['rows']}.")
+
     def c_refresh_job():
         s = _refresh_state
         if s['running']:
@@ -1213,6 +1236,7 @@ def run_health_checks():
     check('AllSportsAPI key', c_api)
     check('Usasishaji wa data', c_snapshot)
     check('Picha ya History ya leo', c_daily_snapshot)
+    check('Probability bila odds (v8)', c_v8)
     check('Refresh ya mwisho', c_refresh_job)
     check('Job A (hourly catchup)', c_job_a)
     check('Faili za data', c_files)
@@ -1360,12 +1384,14 @@ def dashboard():
             'has_odds': pd.notna(best.get('real_odds')), 'odds': best.get('real_odds'),
             'ev': calc_ev(best['probability_%'], best.get('real_odds')) if pd.notna(best.get('real_odds')) else None,
             'delta': calc_delta(best['probability_%'], m['home'], m['away'], m['match_date'], best['market']),
+            'v8': v8_prob(m['home'], m['away'], m['match_date'], best['market']),
         }
         other_picks = [{
             'market': r['market'], 'probability': r['probability_%'],
             'tier': tier_info(r.get('pro_tier')),
             'has_odds': pd.notna(r.get('real_odds')), 'odds': r.get('real_odds'),
             'delta': calc_delta(r['probability_%'], m['home'], m['away'], m['match_date'], r['market']),
+            'v8': v8_prob(m['home'], m['away'], m['match_date'], r['market']),
         } for r in others]
 
         matches.append({
@@ -1415,6 +1441,7 @@ def upcoming():
                     'tier': tier_info(r.get('pro_tier')),
                     'has_odds': pd.notna(r.get('real_odds')), 'odds': r.get('real_odds'),
                     'delta': calc_delta(r['probability_%'], home, away, mdate, r['market']),
+                    'v8': v8_prob(home, away, mdate, r['market']),
                 }
 
             other_list = [with_delta(r) for r in others]
@@ -1443,12 +1470,15 @@ def value_bets():
 
     bets = []
     for _, row in df.iterrows():
+        v8 = v8_prob(row['HomeTeam'], row['AwayTeam'], row['match_date'], row['market'])
         bets.append({
             'home': row['HomeTeam'], 'away': row['AwayTeam'],
             'date': pd.to_datetime(row['match_date']).strftime('%d %b %Y'),
             'market': row['market'], 'probability': row['probability_%'],
             'odds': row['real_odds'], 'ev': row['ev_%'],
             'edge': calc_edge(row['probability_%'], row['real_odds']),
+            'v8': v8,
+            'edge_free': calc_edge(v8, row['real_odds']) if v8 is not None else None,
             'tier': tier_info(row.get('pro_tier')),
         })
 
