@@ -74,10 +74,9 @@ def _key():
 
 
 def _models():
-    m = (os.environ.get('GEMINI_MODEL') or 'gemini-3.5-flash').strip()
-    fb = (os.environ.get('GEMINI_FALLBACK_MODEL') or 'gemini-2.5-flash').strip()
+    m = (os.environ.get('GEMINI_MODEL') or 'gemini-flash-lite-latest').strip()
+    fb = (os.environ.get('GEMINI_FALLBACK_MODEL') or '').strip()
     return [m] + ([fb] if fb and fb != m else [])
-
 
 def _int(v, d=0):
     try:
