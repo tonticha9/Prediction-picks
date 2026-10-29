@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Lecce vs Genoa: goals_over_15 @1.44 + Lyon vs Angers: dc_1x @1.12,1.61,70.8
-3,4,Lincoln vs Birmingham: dc_12 @1.30 + Hoffenheim vs Schalke 04: dc_12 @1.22 + Man City vs Brighton: dc_12 @1.22 + Brighton vs Brentford: dc_1x @1.25,2.42,48.6
-5,5,Lazio vs Cagliari: home_win @1.38 + Sp Braga vs Famalicao: dc_1x @1.18 + Le Havre vs Lorient: goals_over_15 @1.33 + Getafe vs Sevilla: goals_over_15 @1.53 + Motherwell vs St Mirren: dc_1x @1.25,4.14,30.6
-7,6,Amedspor vs Eyupspor: dc_1x @1.06 + Lecce vs Genoa: goals_over_15 @1.44 + Getafe vs Sevilla: goals_over_15 @1.53 + Juventus vs Napoli: goals_over_25 @1.91 + Le Mans vs Monaco: dc_x2 @1.22 + Paok vs Asteras Tripolis: dc_1x @1.07,5.82,21.6
+2,2,Lecce vs Genoa: goals_over_15 @1.44 + Lyon vs Angers: dc_1x @1.12,1.61,70.9
+3,3,Falkirk vs Celtic: dc_x2 @1.10 + Lecce vs Genoa: goals_over_15 @1.44 + Getafe vs Sevilla: goals_over_15 @1.53,2.42,49.3
+5,5,Marseille vs Toulouse: dc_1x @1.28 + Gil Vicente vs Guimaraes: goals_over_15 @1.36 + Liverpool vs Arsenal: goals_over_15 @1.25 + Sociedad vs Vallecano: dc_1x @1.25 + Getafe vs Sevilla: goals_over_15 @1.53,4.16,30.8
+7,6,Lecce vs Genoa: goals_over_15 @1.44 + Nott'M Forest vs Man City: dc_x2 @1.18 + Werder Bremen vs Hoffenheim: dc_12 @1.25 + Aston Villa vs Fulham: dc_1x @1.28 + Lazio vs Cagliari: home_win @1.42 + Getafe vs Sevilla: goals_over_15 @1.53,5.91,20.3
