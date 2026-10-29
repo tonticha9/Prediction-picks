@@ -1,87 +1,160 @@
 {% extends 'base.html' %}
 {% block content %}
 <style>
-  .ai-bar { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
-  .ai-bar select { flex:1; min-width:0; }
-  .ai-badge { font-size:12px; padding:5px 10px; border-radius:999px; border:1px solid var(--border, #333); color:var(--text-dim); }
-  .ai-chat { border:1px solid var(--border, #333); border-radius:14px; padding:12px; min-height:240px; max-height:60vh; overflow-y:auto; margin-bottom:10px; background:rgba(255,255,255,.02); }
-  .ai-msg { margin:10px 0; display:flex; }
-  .ai-msg.user { justify-content:flex-end; }
-  .ai-bubble { max-width:94%; padding:10px 13px; border-radius:16px; font-size:14px; line-height:1.5; word-break:break-word; }
-  .ai-msg.user .ai-bubble { background:var(--indigo); color:#fff; border-bottom-right-radius:4px; }
-  .ai-msg.assistant .ai-bubble { border:1px solid var(--border, #333); border-bottom-left-radius:4px; background:rgba(255,255,255,.03); }
-  .ai-msg.error .ai-bubble { border:1px solid var(--red); color:var(--red); }
-  .ai-bubble p { margin:0 0 8px; }
-  .ai-bubble p:last-child { margin-bottom:0; }
-  .ai-bubble h3, .ai-bubble h4, .ai-bubble h5 { margin:10px 0 6px; font-size:15px; }
-  .ai-bubble ul, .ai-bubble ol { margin:6px 0 8px 20px; padding:0; }
-  .ai-bubble li { margin:3px 0; }
-  .ai-bubble code { background:rgba(127,127,127,.22); padding:1px 5px; border-radius:5px; font-size:13px; }
-  .ai-bubble blockquote { margin:8px 0; padding:6px 10px; border-left:3px solid var(--indigo); color:var(--text-dim); }
-  .ai-bubble hr { border:0; border-top:1px solid var(--border, #333); margin:10px 0; }
-  .ai-tablewrap { overflow-x:auto; margin:8px 0; }
-  .ai-bubble table { border-collapse:collapse; font-size:13px; min-width:100%; }
-  .ai-bubble th, .ai-bubble td { border:1px solid var(--border, #333); padding:5px 8px; text-align:left; white-space:nowrap; }
-  .ai-bubble th { background:rgba(127,127,127,.15); }
-  .ai-chips { display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:6px; }
-  .ai-chip { flex:0 0 auto; padding:7px 12px; border-radius:999px; border:1px solid var(--border, #333); background:transparent; color:inherit; font-size:13px; cursor:pointer; }
-  .ai-input { display:flex; gap:8px; align-items:flex-end; }
-  .ai-input textarea { flex:1; min-width:0; resize:vertical; }
-  .ai-note { font-size:12px; color:var(--text-dim); margin-top:8px; }
-  .ai-empty { color:var(--text-dim); font-size:14px; text-align:center; padding:30px 10px; }
+  .cx { --bd: rgba(255,255,255,.1); --glass: rgba(255,255,255,.05); --g1:#6366f1; --g2:#10b981; --g3:#0ea5e9;
+        position:relative; padding-bottom:170px; }
+  .cx-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; margin-bottom:14px;
+             border-radius:18px; border:1px solid var(--bd); background:linear-gradient(135deg, rgba(99,102,241,.28), rgba(16,185,129,.16) 60%, rgba(14,165,233,.14)); }
+  .cx-title { display:flex; align-items:center; gap:10px; min-width:0; }
+  .cx-title b { display:block; font-size:16px; }
+  .cx-title small { display:block; font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; background:var(--emerald); box-shadow:0 0 8px var(--emerald); }
+  .dot.off { background:var(--red); box-shadow:0 0 8px var(--red); }
+  .orb { flex:0 0 auto; width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #a5b4fc, #6366f1 45%, #10b981); box-shadow:0 0 18px rgba(99,102,241,.7), 0 0 36px rgba(16,185,129,.35); animation:float 4s ease-in-out infinite; }
+  .orb.big { width:78px; height:78px; margin:0 auto 14px; }
+  @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+  .cx-actions { display:flex; gap:6px; align-items:center; }
+  .cx-actions form { margin:0; }
+  .ib { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; border:1px solid var(--bd); background:var(--glass); color:inherit; text-decoration:none; font-size:15px; cursor:pointer; }
+  .ib:active { transform:scale(.94); }
+
+  .empty { text-align:center; padding:26px 6px 10px; }
+  .empty h2 { margin:0 0 6px; font-size:22px; background:linear-gradient(90deg,#a5b4fc,#6ee7b7); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .empty p { margin:0 0 16px; color:var(--text-dim); font-size:13px; }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .chipbtn { padding:9px 13px; border-radius:999px; border:1px solid var(--bd); background:var(--glass); color:inherit; font-size:13px; cursor:pointer; }
+  .chipbtn:active { background:rgba(99,102,241,.3); }
+
+  .m { display:flex; gap:10px; margin:14px 0; align-items:flex-start; animation:pop .25s ease; }
+  @keyframes pop { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  .m.user { justify-content:flex-end; }
+  .av { flex:0 0 32px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 12px rgba(99,102,241,.5); }
+  .bd { min-width:0; max-width:calc(100% - 44px); }
+  .m.user .bd { max-width:86%; }
+  .bubble { font-size:15px; line-height:1.55; word-wrap:break-word; overflow-wrap:anywhere; }
+  .m.user .bubble { padding:10px 14px; border-radius:18px 18px 4px 18px; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; white-space:pre-wrap; box-shadow:0 4px 18px rgba(79,70,229,.35); }
+  .m.assistant .bubble { padding:2px 2px; }
+  .bubble p { margin:0 0 10px; } .bubble p:last-child { margin-bottom:0; }
+  .bubble h2,.bubble h3,.bubble h4,.bubble h5 { margin:14px 0 6px; line-height:1.25; }
+  .bubble h2 { font-size:18px; } .bubble h3 { font-size:16px; } .bubble h4,.bubble h5 { font-size:15px; }
+  .bubble ul,.bubble ol { margin:6px 0 10px; padding-left:22px; } .bubble li { margin:3px 0; }
+  .bubble code { padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.1); font-size:.9em; }
+  .bubble pre { margin:8px 0; padding:12px; border-radius:12px; overflow-x:auto; background:rgba(0,0,0,.4); border:1px solid var(--bd); }
+  .bubble pre code { padding:0; background:none; font-size:12.5px; white-space:pre; }
+  .bubble blockquote { margin:8px 0; padding:6px 12px; border-left:3px solid var(--g1); background:rgba(99,102,241,.1); border-radius:0 10px 10px 0; }
+  .bubble a { color:#93c5fd; }
+  .bubble hr { border:none; border-top:1px solid var(--bd); margin:12px 0; }
+  .tbl { overflow-x:auto; margin:8px 0; border-radius:10px; border:1px solid var(--bd); }
+  .bubble table { border-collapse:collapse; width:100%; font-size:13px; }
+  .bubble th,.bubble td { padding:7px 10px; border-bottom:1px solid var(--bd); text-align:left; white-space:nowrap; }
+  .bubble th { background:rgba(255,255,255,.06); }
+  .tools { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  .tools .chip { font-size:11.5px; padding:4px 10px; border-radius:999px; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
+  .tools .chip.live { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.45; } }
+  .mbar { margin-top:6px; } .mbar button { font-size:12px; color:var(--text-dim); background:none; border:none; padding:4px 6px; cursor:pointer; }
+  .dots i { display:inline-block; width:7px; height:7px; margin:0 2px; border-radius:50%; background:var(--g1); animation:bounce 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay:.15s; } .dots i:nth-child(3) { animation-delay:.3s; }
+  @keyframes bounce { 0%,80%,100% { transform:translateY(0); opacity:.4; } 40% { transform:translateY(-6px); opacity:1; } }
+
+  .cx-composer { position:fixed; left:0; right:0; bottom:0; z-index:30; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(to top, rgba(8,11,24,.96) 60%, rgba(8,11,24,0)); }
+  .cx-in { max-width:820px; margin:0 auto; }
+  .cx-box { display:flex; align-items:flex-end; gap:8px; padding:8px 8px 8px 14px; border-radius:24px; background:rgba(22,27,48,.92); border:1px solid rgba(129,140,248,.5); box-shadow:0 0 0 1px rgba(99,102,241,.2), 0 0 26px rgba(99,102,241,.35); backdrop-filter:blur(10px); }
+  .cx-box:focus-within { box-shadow:0 0 0 1px rgba(129,140,248,.6), 0 0 34px rgba(16,185,129,.4); }
+  .cx-box textarea { flex:1; resize:none; border:none; outline:none; background:transparent; color:inherit; font:inherit; font-size:15px; line-height:1.4; max-height:160px; padding:7px 0; }
+  .send { flex:0 0 40px; width:40px; height:40px; border:none; border-radius:50%; cursor:pointer; color:#fff; font-size:17px; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 16px rgba(99,102,241,.6); }
+  .send:disabled { opacity:.45; box-shadow:none; }
+  .send.stop { background:linear-gradient(135deg,#ef4444,#f97316); }
+  .cx-foot { text-align:center; font-size:11px; color:var(--text-dim); margin-top:6px; }
+  .cx-err { margin:0 auto 8px; max-width:820px; padding:9px 12px; border-radius:12px; font-size:13px; background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.5); color:#fca5a5; }
+  .jump { position:fixed; right:16px; bottom:120px; z-index:31; width:38px; height:38px; border-radius:50%; display:none; align-items:center; justify-content:center; border:1px solid var(--bd); background:rgba(22,27,48,.95); color:#fff; cursor:pointer; }
+
+  .drawer { position:fixed; inset:0; z-index:60; display:none; }
+  .drawer.open { display:block; }
+  .drawer .sh { position:absolute; inset:0; background:rgba(0,0,0,.55); }
+  .drawer .pn { position:absolute; left:0; top:0; bottom:0; width:min(84%,330px); padding:16px 12px; overflow-y:auto; background:#0c1124; border-right:1px solid var(--bd); }
+  .drawer h3 { margin:4px 6px 12px; }
+  .th { display:block; padding:10px 12px; margin-bottom:6px; border-radius:12px; border:1px solid var(--bd); color:inherit; text-decoration:none; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .th.active { border-color:var(--g1); background:rgba(99,102,241,.2); }
+  .th.new { text-align:center; font-weight:700; background:linear-gradient(135deg,rgba(99,102,241,.4),rgba(16,185,129,.3)); }
 </style>
 
-<a href="{{ back_url }}" style="font-size:13px; color:var(--text-dim); text-decoration:none;">← {{ back_label }}</a>
-<h2 style="margin:8px 0 12px;">🤖 {{ title }}</h2>
+<div class="cx" id="cx">
+  <div class="cx-head">
+    <div class="cx-title">
+      <span class="orb" style="width:34px;height:34px;"></span>
+      <div style="min-width:0;">
+        <b>{{ title }}</b>
+        <small>
+          <span class="dot {{ '' if ai_ready else 'off' }}"></span>
+          {% if mode == 'admin' %}{{ model or 'AI' }}{% if search %} · 🌐 {{ search }}{% endif %}
+          {% else %}<span id="remain">{% if remaining is not none %}Ujumbe uliobaki leo: {{ remaining }}/{{ limit }}{% else %}Msaidizi wako{% endif %}</span>{% endif %}
+        </small>
+      </div>
+    </div>
+    <div class="cx-actions">
+      {% if mode == 'admin' %}
+        <button class="ib" type="button" onclick="drawer(true)" title="Mazungumzo">☰</button>
+        <a class="ib" href="{{ url_for('admin_ai', new=1) }}" title="Mazungumzo mapya">✨</a>
+        {% if thread %}
+        <form method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya?')">
+          <input type="hidden" name="thread_id" value="{{ thread.id }}"><button class="ib" title="Futa">🗑️</button>
+        </form>{% endif %}
+      {% else %}
+        <form method="POST" action="{{ url_for('user_ai_clear') }}" onsubmit="return confirm('Futa mazungumzo yote?')">
+          <button class="ib" title="Futa mazungumzo">🗑️</button>
+        </form>
+      {% endif %}
+      <a class="ib" href="{{ back_url }}" title="{{ back_label }}">⬅</a>
+    </div>
+  </div>
 
-{% if not ai_ready %}
-<div class="expiry-warning expiry-critical" style="margin-bottom:12px;">
-  <strong>AI haijawekwa.</strong><br>
-  <span style="font-size:13px;">
-    {% if mode == 'admin' %}Ongeza <code>AI_API_KEY</code>, <code>AI_BASE_URL</code> na <code>AI_MODEL</code> kwenye Render → Environment.{% else %}Msaidizi hajapatikana kwa sasa. Jaribu tena baadaye.{% endif %}
-  </span>
+  {% if not ai_ready %}
+  <div class="cx-err" style="margin-bottom:12px;">⚠️ AI haijawekwa. Weka <b>GEMINI_API_KEY</b> kwenye Render (Environment).</div>
+  {% endif %}
+
+  <div id="empty" class="empty">
+    <div class="orb big"></div>
+    <h2>{{ 'Habari Msanii! 👋' if mode == 'admin' else 'Karibu! 👋' }}</h2>
+    <p>{{ 'Nina ufikiaji wa msimbo, database na data ya mfumo wako. Uliza chochote.' if mode == 'admin' else 'Niulize kuhusu picks, mpira, takwimu au chochote.' }}</p>
+    <div class="chips">
+      {% for s in suggestions %}<button type="button" class="chipbtn" data-q="{{ s }}">{{ s }}</button>{% endfor %}
+    </div>
+  </div>
+
+  <div id="msgs"></div>
+  <div id="bottom"></div>
 </div>
-{% endif %}
 
 {% if mode == 'admin' %}
-<div class="ai-bar">
-  <select id="threadSel" onchange="goThread(this.value)">
-    <option value="">＋ Mazungumzo mapya</option>
-    {% for t in threads %}
-      <option value="{{ t.id }}" {{ 'selected' if thread and thread.id == t.id else '' }}>{{ t.title }}</option>
-    {% endfor %}
-  </select>
-  {% if thread %}
-  <form method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya kabisa?');">
-    <input type="hidden" name="thread_id" value="{{ thread.id }}">
-    <button class="btn btn-secondary" type="submit" style="padding:8px 12px;">🗑️</button>
-  </form>
-  {% endif %}
-</div>
-{% else %}
-<div class="ai-bar">
-  <span class="ai-badge" id="remainBadge">Umebakiza ujumbe {{ remaining }} / {{ limit }} leo</span>
-  <form method="POST" action="{{ url_for('user_ai_clear') }}" onsubmit="return confirm('Futa mazungumzo yako?');" style="margin-left:auto;">
-    <button class="btn btn-secondary" type="submit" style="padding:6px 12px;">🗑️ Futa</button>
-  </form>
+<div class="drawer" id="drawer">
+  <div class="sh" onclick="drawer(false)"></div>
+  <div class="pn">
+    <h3>💬 Mazungumzo</h3>
+    <a class="th new" href="{{ url_for('admin_ai', new=1) }}">✨ Mazungumzo mapya</a>
+    <div id="threadList">
+      {% for t in threads %}
+        <a class="th {{ 'active' if thread and thread.id == t.id else '' }}" href="{{ url_for('admin_ai', t=t.id) }}">{{ t.title or 'Mazungumzo' }}</a>
+      {% endfor %}
+    </div>
+  </div>
 </div>
 {% endif %}
 
-<div id="chat" class="ai-chat"></div>
-<div class="ai-chips" id="chips"></div>
+<button class="jump" id="jump" type="button" onclick="toBottom(true)">↓</button>
 
-<div class="ai-input">
-  <textarea id="msg" rows="2" placeholder="Uliza chochote, au piga story tu..."></textarea>
-  <button class="btn" id="sendBtn" type="button" onclick="sendMsg()">Tuma</button>
+<div class="cx-composer">
+  <div class="cx-err" id="err" hidden></div>
+  <div class="cx-in">
+    <div class="cx-box">
+      <textarea id="inp" rows="1" placeholder="Uliza chochote…" {{ '' if ai_ready else 'disabled' }}></textarea>
+      <button class="send" id="sendBtn" type="button" aria-label="Tuma" {{ '' if ai_ready else 'disabled' }}>➤</button>
+    </div>
+    <div class="cx-foot">AI inaweza kukosea. Hakuna uhakika wa ushindi kwenye utabiri.</div>
+  </div>
 </div>
 
-<div class="ai-note">
-  {% if mode == 'admin' %}
-    Modeli: {{ model }} · Utafutaji wa nje: {{ search or 'umezimwa' }} · Ana data ya sasa ya mfumo lakini hawezi kubadilisha chochote.
-  {% else %}
-    AI inaweza kukosea na si ushauri wa kifedha. Hakuna uhakika wa kushinda. Kamari ni kwa miaka 18+; tumia pesa unayoweza kupoteza tu.
-  {% endif %}
-</div>
+<script id="initial" type="application/json">{{ messages|tojson }}</script>
 {% endblock %}
 
 {% block scripts %}
@@ -89,159 +162,163 @@
 const MODE = {{ mode|tojson }};
 const STREAM_URL = {{ stream_url|tojson }};
 const SEND_URL = {{ send_url|tojson }};
-const BASE_URL = {{ (url_for('admin_ai') if mode == 'admin' else url_for('user_ai'))|tojson }};
-const SUGGESTIONS = {{ suggestions|tojson }};
-const INITIAL = {{ messages|tojson }};
-let threadId = {{ thread.id if thread else 'null' }};
-const chat = document.getElementById('chat');
+let threadId = {{ (thread.id if thread else none)|tojson }};
+const INITIAL = JSON.parse(document.getElementById('initial').textContent || '[]');
+const msgs = document.getElementById('msgs'), inp = document.getElementById('inp');
+const sendBtn = document.getElementById('sendBtn'), emptyEl = document.getElementById('empty');
+const errEl = document.getElementById('err'), jump = document.getElementById('jump');
+const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+let busy = false, ctrl = null, stick = true;
 
-function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-function inline(s) {
-  return s.replace(/`([^`]+)`/g, '<code>$1</code>')
-          .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-          .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<i>$2</i>');
+function drawer(open){ const d = document.getElementById('drawer'); if (d) d.classList.toggle('open', open); }
+
+/* ---------- Markdown salama (HTML inaepukwa kwanza) ---------- */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function inl(s){
+  s = esc(s); const codes = [];
+  s = s.replace(/`([^`\n]+)`/g, (m,c)=>{ codes.push(c); return '\u0000'+(codes.length-1)+'\u0000'; });
+  s = s.replace(/\*\*([^*\n]+?)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=[\s).,;:!?]|$)/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0000(\d+)\u0000/g, (m,i)=>'<code>'+codes[+i]+'</code>');
 }
-function cells(r) { return r.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim()); }
-function md(src) {
-  const lines = esc(src).split('\n');
-  const out = [];
-  let list = null, i = 0;
-  const close = () => { if (list) { out.push('</' + list + '>'); list = null; } };
-  while (i < lines.length) {
-    const ln = lines[i];
-    let m;
-    if (/^\s*$/.test(ln)) { close(); i++; continue; }
-    if ((m = ln.match(/^(#{1,4})\s+(.*)$/))) {
-      close(); const lv = Math.min(m[1].length + 2, 5);
-      out.push('<h' + lv + '>' + inline(m[2]) + '</h' + lv + '>'); i++; continue;
+function cells(r){ return r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(x=>x.trim()); }
+function md(src){
+  const L = String(src).replace(/\r/g,'').split('\n'); const out = []; let i = 0;
+  const isBlock = l => /^(#{1,4})\s+/.test(l) || /^```/.test(l) || /^>\s?/.test(l) || /^\s*([-*•])\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l) || /^\s*---+\s*$/.test(l);
+  while (i < L.length) {
+    const ln = L[i]; let m;
+    if (/^```/.test(ln)) { const b=[]; i++; while (i<L.length && !/^```/.test(L[i])) { b.push(L[i]); i++; } i++; out.push('<pre><code>'+esc(b.join('\n'))+'</code></pre>'); continue; }
+    if (/^\s*$/.test(ln)) { i++; continue; }
+    if ((m = ln.match(/^(#{1,4})\s+(.*)$/))) { const lv = m[1].length+1; out.push('<h'+lv+'>'+inl(m[2])+'</h'+lv+'>'); i++; continue; }
+    if (/^\s*---+\s*$/.test(ln)) { out.push('<hr>'); i++; continue; }
+    if (/^>\s?/.test(ln)) { const b=[]; while (i<L.length && /^>\s?/.test(L[i])) { b.push(L[i].replace(/^>\s?/,'')); i++; } out.push('<blockquote>'+b.map(inl).join('<br>')+'</blockquote>'); continue; }
+    if (/^\s*\|.*\|\s*$/.test(ln) && i+1 < L.length && /^\s*\|?\s*:?-{2,}/.test(L[i+1])) {
+      const head = cells(ln); i += 2; const rows = [];
+      while (i<L.length && /^\s*\|/.test(L[i])) { rows.push(cells(L[i])); i++; }
+      out.push('<div class="tbl"><table><thead><tr>'+head.map(h=>'<th>'+inl(h)+'</th>').join('')+'</tr></thead><tbody>'+
+        rows.map(r=>'<tr>'+r.map(c=>'<td>'+inl(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>'); continue;
     }
-    if (/^\s*([-*_])\1{2,}\s*$/.test(ln)) { close(); out.push('<hr>'); i++; continue; }
-    if (/^\s*\|.*\|\s*$/.test(ln) && i + 1 < lines.length && /^[\s|:\-]+$/.test(lines[i + 1]) && lines[i + 1].includes('-')) {
-      close();
-      const head = cells(ln); i += 2;
-      let html = '<div class="ai-tablewrap"><table><thead><tr>' + head.map(c => '<th>' + inline(c) + '</th>').join('') + '</tr></thead><tbody>';
-      while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) {
-        html += '<tr>' + cells(lines[i]).map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>'; i++;
-      }
-      out.push(html + '</tbody></table></div>'); continue;
-    }
-    if ((m = ln.match(/^\s*[-*•]\s+(.*)$/))) {
-      if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; }
-      out.push('<li>' + inline(m[1]) + '</li>'); i++; continue;
-    }
-    if ((m = ln.match(/^\s*\d+[.)]\s+(.*)$/))) {
-      if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; }
-      out.push('<li>' + inline(m[1]) + '</li>'); i++; continue;
-    }
-    if ((m = ln.match(/^&gt;\s?(.*)$/))) { close(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); i++; continue; }
-    close(); out.push('<p>' + inline(ln) + '</p>'); i++;
+    if (/^\s*([-*•])\s+/.test(ln)) { const b=[]; while (i<L.length && /^\s*([-*•])\s+/.test(L[i])) { b.push(L[i].replace(/^\s*([-*•])\s+/,'')); i++; } out.push('<ul>'+b.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ul>'); continue; }
+    if (/^\s*\d+[.)]\s+/.test(ln)) { const b=[]; while (i<L.length && /^\s*\d+[.)]\s+/.test(L[i])) { b.push(L[i].replace(/^\s*\d+[.)]\s+/,'')); i++; } out.push('<ol>'+b.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ol>'); continue; }
+    const p=[]; while (i<L.length && !/^\s*$/.test(L[i]) && (p.length===0 || !isBlock(L[i]))) { p.push(L[i]); i++; }
+    out.push('<p>'+p.map(inl).join('<br>')+'</p>');
   }
-  close();
   return out.join('');
 }
-function addBubble(role, text, plain) {
-  const wrap = document.createElement('div');
-  wrap.className = 'ai-msg ' + role;
-  const b = document.createElement('div');
-  b.className = 'ai-bubble';
-  if (role === 'assistant' && !plain) b.innerHTML = md(text); else b.textContent = text;
-  wrap.appendChild(b);
-  chat.appendChild(wrap);
-  chat.scrollTop = chat.scrollHeight;
-  return b;
-}
-function setBusy(on) { document.getElementById('sendBtn').disabled = on; }
-function goThread(v) { window.location.href = v ? BASE_URL + '?t=' + v : BASE_URL + '?new=1'; }
 
-async function viaSend(text) {
-  const r = await fetch(SEND_URL, {method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({thread_id: threadId, message: text})});
-  return await r.json();
-}
-function afterDone(meta) {
-  if (meta.thread_id) {
-    const first = (threadId === null);
-    threadId = meta.thread_id;
-    if (first) history.replaceState(null, '', BASE_URL + '?t=' + threadId);
-  }
-  if (meta.remaining !== undefined && meta.remaining !== null) {
-    const b = document.getElementById('remainBadge');
-    if (b) b.textContent = 'Umebakiza ujumbe ' + meta.remaining + ' / {{ limit }} leo';
-  }
-  if (meta.warning) addBubble('error', meta.warning, true);
-}
+/* ---------- UI ---------- */
+function nearBottom(){ return (document.documentElement.scrollHeight - window.scrollY - window.innerHeight) < 170; }
+function toBottom(force){ if (force || stick) window.scrollTo({top: document.documentElement.scrollHeight}); }
+window.addEventListener('scroll', ()=>{ stick = nearBottom(); jump.style.display = stick ? 'none' : 'flex'; });
+function autosize(){ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,160)+'px'; }
+function showErr(t){ errEl.textContent = '⚠️ ' + t; errEl.hidden = false; }
+function hideErr(){ errEl.hidden = true; }
+function setBtn(stop){ sendBtn.classList.toggle('stop', stop); sendBtn.textContent = stop ? '■' : '➤'; sendBtn.disabled = false; }
 
-async function sendMsg(preset) {
-  const ta = document.getElementById('msg');
-  const text = (preset || ta.value).trim();
-  if (!text) return;
-  const hint = document.getElementById('emptyHint'); if (hint) hint.remove();
-  const chips = document.getElementById('chips'); if (chips) chips.style.display = 'none';
-  addBubble('user', text);
-  ta.value = '';
-  setBusy(true);
-  const bubble = addBubble('assistant', '… nafikiri', true);
-  let acc = '', gotData = false;
-  try {
-    const resp = await fetch(STREAM_URL, {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({thread_id: threadId, message: text})});
-    if (!resp.ok || !resp.body) throw new Error('stream-unavailable');
-    const reader = resp.body.getReader();
-    const dec = new TextDecoder();
-    while (true) {
-      const {value, done} = await reader.read();
-      if (done) break;
-      gotData = true;
-      acc += dec.decode(value, {stream: true});
-      const cut = acc.indexOf('\n[[');
-      bubble.innerHTML = md(cut >= 0 ? acc.slice(0, cut) : acc);
-      chat.scrollTop = chat.scrollHeight;
-    }
-    const e = acc.indexOf('\n[[ERR]]');
-    const d = acc.indexOf('\n[[DONE]]');
-    if (e >= 0) {
-      const partial = acc.slice(0, e).trim();
-      if (partial) bubble.innerHTML = md(partial); else bubble.parentElement.remove();
-      addBubble('error', acc.slice(e + 8), true);
-      if (!partial) ta.value = text;
-    } else if (d >= 0) {
-      bubble.innerHTML = md(acc.slice(0, d));
-      try { afterDone(JSON.parse(acc.slice(d + 9) || '{}')); } catch (x) {}
-    }
-  } catch (err) {
-    if (!gotData) {
-      try {
-        const j = await viaSend(text);
-        if (j.ok) { bubble.innerHTML = md(j.reply); afterDone(j); }
-        else { bubble.parentElement.remove(); addBubble('error', j.error || 'Kosa lisilojulikana.', true); ta.value = text; }
-      } catch (e2) {
-        bubble.parentElement.remove();
-        addBubble('error', 'Mtandao umekatika au seva imechelewa.', true); ta.value = text;
-      }
-    } else {
-      addBubble('error', 'Mtandao ulikatika katikati ya jibu.', true);
-    }
-  }
-  setBusy(false);
+function copyText(t){
+  if (navigator.clipboard) return navigator.clipboard.writeText(t);
+  const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove();
 }
-
-(function init() {
-  const chips = document.getElementById('chips');
-  for (const s of SUGGESTIONS) {
-    const b = document.createElement('button');
-    b.type = 'button'; b.className = 'ai-chip'; b.textContent = s;
-    b.onclick = () => sendMsg(s.replace(/^[^\p{L}\p{N}]+/u, ''));
-    chips.appendChild(b);
-  }
-  if (INITIAL.length === 0) {
-    const d = document.createElement('div');
-    d.id = 'emptyHint'; d.className = 'ai-empty';
-    d.textContent = 'Karibu! Gusa pendekezo hapa chini au andika swali lako.';
-    chat.appendChild(d);
+function addMsg(role, content){
+  const w = document.createElement('div'); w.className = 'm ' + role;
+  if (role === 'assistant') {
+    w.innerHTML = '<div class="av">🤖</div><div class="bd"><div class="tools"></div><div class="bubble"></div><div class="mbar"></div></div>';
+    w._raw = content || '';
+    if (content) { w.querySelector('.bubble').innerHTML = md(content); addCopy(w); }
   } else {
-    chips.style.display = 'none';
-    for (const m of INITIAL) addBubble(m.role, m.content);
+    w.innerHTML = '<div class="bd"><div class="bubble"></div></div>';
+    w.querySelector('.bubble').textContent = content;
   }
-})();
+  msgs.appendChild(w); return w;
+}
+function addCopy(w){
+  const bar = w.querySelector('.mbar'); if (!bar || bar.firstChild) return;
+  const b = document.createElement('button'); b.textContent = '📋 Nakili';
+  b.onclick = ()=>{ copyText(w._raw); b.textContent = '✅ Imenakiliwa'; setTimeout(()=>b.textContent='📋 Nakili', 1500); };
+  bar.appendChild(b);
+}
+function setTools(w, labels, live){
+  w.querySelector('.tools').innerHTML = labels.map((l,i)=>'<span class="chip'+(live && i===labels.length-1 ? ' live' : '')+'">'+esc(l)+'</span>').join('');
+}
+
+/* ---------- Mtiririko ---------- */
+const PARTIALS = ['\n[[DONE]]', '\n[[ERR]]', '[[TOOL]]'];
+function parseStream(buf){
+  let tools = [], text = buf.replace(/\n?\[\[TOOL\]\]([\s\S]*?)\[\[\/TOOL\]\]\n?/g, (m,l)=>{ tools.push(l.trim()); return ''; });
+  let err = null, meta = null, done = false, i = text.indexOf('\n[[ERR]]');
+  if (i >= 0) { err = text.slice(i+8).trim(); text = text.slice(0, i); }
+  i = text.indexOf('\n[[DONE]]');
+  if (i >= 0) { done = true; try { meta = JSON.parse(text.slice(i+9)); } catch(e) { meta = {}; } text = text.slice(0, i); }
+  const t = text.lastIndexOf('[[TOOL]]'); if (t >= 0) text = text.slice(0, t);
+  for (const p of PARTIALS) for (let k = p.length-1; k >= 1; k--) if (text.endsWith(p.slice(0,k))) { text = text.slice(0, text.length-k); break; }
+  return {text, tools, err, meta, done};
+}
+
+async function send(forced){
+  if (busy) { if (ctrl) ctrl.abort(); return; }
+  const text = (forced || inp.value).trim(); if (!text) return;
+  hideErr(); emptyEl.style.display = 'none';
+  const uw = addMsg('user', text); inp.value = ''; autosize();
+  const w = addMsg('assistant', ''); const bubble = w.querySelector('.bubble');
+  bubble.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
+  busy = true; setBtn(true); ctrl = new AbortController(); stick = true; toBottom(true);
+  let last = {text:'', tools:[]}, raf = false;
+  const paint = ()=>{ raf = false;
+    if (last.tools.length) setTools(w, last.tools, true);
+    if (last.text) { bubble.innerHTML = md(last.text); w._raw = last.text; }
+    toBottom(false); };
+  const fail = (msg)=>{ uw.remove(); w.remove(); inp.value = text; autosize(); showErr(msg); if (!msgs.children.length) emptyEl.style.display = ''; };
+  try {
+    const res = await fetch(STREAM_URL, {method:'POST', credentials:'same-origin', signal: ctrl.signal,
+      headers:{'Content-Type':'application/json'}, body: JSON.stringify({message:text, thread_id: threadId})});
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    let final;
+    if (!res.body) {
+      const r2 = await fetch(SEND_URL, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body: JSON.stringify({message:text, thread_id: threadId})});
+      const j = await r2.json();
+      final = j.ok === false ? {err: j.error, text:'', tools:[], done:false} : parseStream((j.reply||'') + '\n[[DONE]]' + JSON.stringify(j));
+    } else {
+      const reader = res.body.getReader(), dec = new TextDecoder(); let buf = '';
+      for (;;) {
+        const {value, done} = await reader.read(); if (done) break;
+        buf += dec.decode(value, {stream:true});
+        last = parseStream(buf);
+        if (last.err) break;
+        if (!raf) { raf = true; requestAnimationFrame(paint); }
+      }
+      final = parseStream(buf);
+    }
+    if (final.err) { fail(final.err); return; }
+    last = final; paint();
+    if (!final.text.trim()) { fail('AI haikurudisha jibu. Jaribu tena.'); return; }
+    w._raw = final.text.trim(); bubble.innerHTML = md(w._raw); setTools(w, final.tools, false); addCopy(w);
+    const meta = final.meta || {};
+    if (meta.thread_id && !threadId) {
+      threadId = meta.thread_id;
+      if (MODE === 'admin') {
+        history.replaceState(null, '', '?t=' + threadId);
+        const list = document.getElementById('threadList');
+        if (list) { const a = document.createElement('a'); a.className = 'th active'; a.href = '?t=' + threadId; a.textContent = text.slice(0,40); list.prepend(a); }
+      }
+    }
+    if (meta.remaining !== undefined && meta.remaining !== null) {
+      const r = document.getElementById('remain'); if (r) r.textContent = 'Ujumbe uliobaki leo: ' + meta.remaining;
+    }
+    if (meta.warning) showErr(meta.warning);
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      if (!last.text) { w.remove(); } else { w._raw = last.text; bubble.innerHTML = md(last.text) + '<p><em>(imesitishwa)</em></p>'; }
+    } else { fail('Hitilafu ya mtandao. Angalia mtandao wako kisha jaribu tena.'); }
+  } finally { busy = false; ctrl = null; setBtn(false); toBottom(false); }
+}
+
+sendBtn.addEventListener('click', ()=>send());
+inp.addEventListener('input', autosize);
+inp.addEventListener('keydown', e=>{ if (e.key === 'Enter' && !e.shiftKey && !coarse) { e.preventDefault(); send(); } });
+document.querySelectorAll('.chipbtn').forEach(b=>b.addEventListener('click', ()=>send(b.dataset.q)));
+
+INITIAL.forEach(m=>addMsg(m.role === 'assistant' ? 'assistant' : 'user', m.content));
+if (INITIAL.length) { emptyEl.style.display = 'none'; setTimeout(()=>toBottom(true), 50); }
 </script>
 {% endblock %}
