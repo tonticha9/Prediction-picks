@@ -23,7 +23,11 @@
     <a href="{{ url_for('upcoming') }}" class="{{ 'active' if page=='upcoming' else '' }}">📅 Zijazo</a>
     <a href="{{ url_for('value_bets') }}" class="{{ 'active' if page=='value_bets' else '' }}">💰 Value Bets</a>
     <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
-    <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
+
+    {# Kitufe cha History: admin anaweza kukizima kwa watumiaji, au kwa kila mtu (Admin → Udhibiti wa History) #}
+    {% if history_nav_visible is not defined or history_nav_visible %}
+      <a href="{{ url_for('history') }}" class="{{ 'active' if page=='history' else '' }}">🕒 History</a>
+    {% endif %}
 
     {# Kitufe cha AI: admin anakiona kila wakati; watumiaji wengine ni admin akiwasha kwenye Admin → AI #}
     {% if ai_nav_visible %}
