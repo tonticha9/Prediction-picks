@@ -73,11 +73,15 @@ def _key():
     return (os.environ.get('GEMINI_API_KEY') or '').strip()
 
 
-def _models():
-    m = (os.environ.get('GEMINI_MODEL') or 'gemini-flash-lite-latest').strip()
-    fb = (os.environ.get('GEMINI_FALLBACK_MODEL') or '').strip()
-    return [m] + ([fb] if fb and fb != m else [])
 
+def _models():
+    m = (os.environ.get('GEMINI_MODEL') or 'gemini-1.5-flash').strip()
+    fb = (os.environ.get('GEMINI_FALLBACK_MODEL') or 'gemini-2.0-flash').strip()
+    # Inatengeneza orodha bila kurudia model moja mara mbili
+    models = [m]
+    if fb and fb != m:
+        models.append(fb)
+    return models
 def _int(v, d=0):
     try:
         return int(v)
