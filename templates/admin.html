@@ -1,56 +1,62 @@
 {% extends 'base.html' %}
 {% block content %}
 {% set ai = ai_info() if ai_info is defined else {} %}
+{% set gem = gem_ok is defined and gem_ok %}
+{% set hf = history_flags() if gem else none %}
+{% set unread = inbox_unread() if gem else 0 %}
 <style>
-  .ad-hero { border-radius:20px; padding:20px 18px; margin-bottom:16px; border:1px solid rgba(255,255,255,.1);
-             background:linear-gradient(135deg, rgba(99,102,241,.32), rgba(16,185,129,.2) 60%, rgba(14,165,233,.16)); }
-  .ad-hero h2 { margin:0 0 6px; font-size:22px; }
-  .ad-hero p { margin:0; font-size:13px; color:var(--text-dim); }
-  .ad-pill { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:700; border:1px solid rgba(255,255,255,.14); }
-  .ad-pill.ok { background:rgba(16,185,129,.18); color:var(--emerald); }
-  .ad-pill.warn { background:rgba(245,158,11,.18); color:#f59e0b; }
-  .ad-pill.error { background:rgba(239,68,68,.18); color:var(--red); }
-  .ad-stats { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:16px; }
-  .ad-stat { padding:12px 10px; border-radius:14px; text-align:center; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
-  .ad-stat b { display:block; font-size:20px; }
-  .ad-stat span { font-size:11px; color:var(--text-dim); }
+  .ad-hero { position:relative; overflow:hidden; border-radius:22px; padding:22px 18px; margin-bottom:16px; border:1px solid rgba(255,255,255,.12);
+             background:linear-gradient(135deg, rgba(99,102,241,.4), rgba(16,185,129,.24) 60%, rgba(14,165,233,.2)); box-shadow:0 0 40px rgba(99,102,241,.25); }
+  .ad-hero::after { content:''; position:absolute; right:-40px; top:-40px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle, rgba(165,180,252,.5), transparent 70%); }
+  .ad-hero h2 { margin:0 0 6px; font-size:23px; }
+  .ad-hero p { margin:0; font-size:13px; color:var(--text-dim); max-width:80%; }
+  .ad-pill { display:inline-flex; align-items:center; gap:6px; margin-top:14px; padding:7px 13px; border-radius:999px; font-size:13px; font-weight:700; border:1px solid rgba(255,255,255,.14); }
+  .ad-pill.ok { background:rgba(16,185,129,.2); color:var(--emerald); }
+  .ad-pill.warn { background:rgba(245,158,11,.2); color:#f59e0b; }
+  .ad-pill.error { background:rgba(239,68,68,.2); color:var(--red); }
+  .ad-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+  .ad-stat { padding:13px 8px; border-radius:16px; text-align:center; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); }
+  .ad-stat b { display:block; font-size:21px; } .ad-stat span { font-size:11px; color:var(--text-dim); }
   .ad-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
-  .ad-tile { display:block; padding:14px 12px; border-radius:16px; text-decoration:none; color:inherit; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09); }
-  .ad-tile:active { transform:scale(.98); }
-  .ad-tile .ic { font-size:24px; }
-  .ad-tile b { display:block; margin-top:6px; font-size:14px; }
-  .ad-tile small { color:var(--text-dim); font-size:12px; }
-  .ad-sec { margin-bottom:12px; border-radius:16px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.03); overflow:hidden; }
-  .ad-sec > summary { list-style:none; cursor:pointer; padding:14px 16px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
+  .ad-tile { position:relative; display:block; padding:15px 13px; border-radius:18px; text-decoration:none; color:inherit; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); transition:transform .15s, box-shadow .15s; }
+  .ad-tile:active { transform:scale(.97); } .ad-tile:hover { box-shadow:0 0 22px rgba(99,102,241,.3); }
+  .ad-tile .ic { display:inline-flex; width:40px; height:40px; align-items:center; justify-content:center; border-radius:12px; font-size:21px; background:linear-gradient(135deg, rgba(99,102,241,.4), rgba(16,185,129,.3)); }
+  .ad-tile b { display:block; margin-top:8px; font-size:14px; } .ad-tile small { color:var(--text-dim); font-size:12px; }
+  .ad-badge { position:absolute; top:10px; right:10px; min-width:22px; height:22px; padding:0 6px; border-radius:999px; background:var(--red); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .ad-sec { margin-bottom:12px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.035); overflow:hidden; }
+  .ad-sec > summary { list-style:none; cursor:pointer; padding:15px 16px; font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px; }
   .ad-sec > summary::-webkit-details-marker { display:none; }
   .ad-sec > summary::after { content:'▾'; margin-left:auto; color:var(--text-dim); transition:transform .2s; }
   .ad-sec[open] > summary::after { transform:rotate(180deg); }
-  .ad-sec[open] > summary { border-bottom:1px solid rgba(255,255,255,.07); }
+  .ad-sec[open] > summary { border-bottom:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); }
   .ad-body { padding:14px 16px 16px; }
   .ad-sub { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:14px 0 8px; }
-  .ad-hint { font-size:12px; color:var(--text-dim); margin-top:4px; }
+  .ad-hint { font-size:12px; color:var(--text-dim); margin-top:4px; line-height:1.5; }
+  .ad-chip { font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; background:rgba(255,255,255,.1); }
+  .ad-chip.on { background:rgba(16,185,129,.22); color:var(--emerald); } .ad-chip.off { background:rgba(239,68,68,.22); color:var(--red); }
   .ad-check { padding:10px 12px; border-radius:12px; margin-bottom:8px; font-size:13px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); }
-  .ad-check.ok { border-left:4px solid var(--emerald); }
-  .ad-check.warn { border-left:4px solid #f59e0b; }
-  .ad-check.error { border-left:4px solid var(--red); }
+  .ad-check.ok { border-left:4px solid var(--emerald); } .ad-check.warn { border-left:4px solid #f59e0b; } .ad-check.error { border-left:4px solid var(--red); }
   .ad-check small { display:block; opacity:.85; margin-top:3px; font-size:12px; }
   .ad-switch { display:flex; align-items:center; gap:12px; padding:10px 0; cursor:pointer; position:relative; }
   .ad-switch input { position:absolute; opacity:0; width:0; height:0; }
-  .ad-slider { flex:0 0 46px; height:26px; border-radius:999px; background:rgba(255,255,255,.18); position:relative; transition:background .2s; }
-  .ad-slider::after { content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:transform .2s; }
-  .ad-switch input:checked + .ad-slider { background:var(--emerald); }
-  .ad-switch input:checked + .ad-slider::after { transform:translateX(20px); }
-  .ad-switch-text { font-size:14px; }
-  .ad-savebar { position:sticky; bottom:10px; z-index:5; padding:10px; border-radius:16px; background:rgba(10,14,28,.92); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(8px); margin-top:6px; }
+  .ad-slider { flex:0 0 48px; height:27px; border-radius:999px; background:rgba(255,255,255,.18); position:relative; transition:background .2s; }
+  .ad-slider::after { content:''; position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:#fff; transition:transform .2s; }
+  .ad-switch input:checked + .ad-slider { background:var(--emerald); box-shadow:0 0 12px rgba(16,185,129,.5); }
+  .ad-switch input:checked + .ad-slider::after { transform:translateX(21px); }
+  .ad-switch-text { font-size:14px; } .ad-switch-text small { display:block; color:var(--text-dim); font-size:12px; }
+  .ad-savebar { position:sticky; bottom:10px; z-index:5; padding:10px; border-radius:16px; background:rgba(10,14,28,.93); border:1px solid rgba(255,255,255,.12); backdrop-filter:blur(8px); margin-top:6px; }
   .ad-savebar .btn { width:100%; }
   .ad-usage { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:10px 0; }
-  .ad-usage div { padding:10px; border-radius:12px; background:rgba(255,255,255,.04); text-align:center; font-size:12px; color:var(--text-dim); }
+  .ad-usage div { padding:10px; border-radius:12px; background:rgba(255,255,255,.05); text-align:center; font-size:12px; color:var(--text-dim); }
   .ad-usage b { display:block; font-size:18px; color:inherit; }
+  .ad-msg { padding:11px 12px; border-radius:12px; margin-bottom:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:13px; }
+  .ad-msg.new { border-left:4px solid var(--red); }
+  .ad-msg small { display:block; color:var(--text-dim); font-size:11px; margin-bottom:4px; }
 </style>
 
 <div class="ad-hero">
   <h2>⚙️ Admin Panel</h2>
-  <p>Dhibiti Braiton Picks: hali ya mfumo, mipangilio, AI na data.</p>
+  <p>Dhibiti Braiton Picks: hali ya mfumo, History, AI, mipangilio na data.</p>
   <span class="ad-pill {{ health_summary.level }}">
     {% if health_summary.level == 'ok' %}✔️{% elif health_summary.level == 'warn' %}⚠️{% else %}❌{% endif %}
     {{ health_summary.text }}
@@ -65,7 +71,7 @@
 
 <div class="ad-grid">
   {% if admin_tools_ok %}
-  <a class="ad-tile" href="{{ url_for('admin_ai') }}"><span class="ic">🤖</span><b>Admin AI</b><small>Mshauri wako wa mfumo</small></a>
+  <a class="ad-tile" href="{{ url_for('admin_ai') }}"><span class="ic">🤖</span><b>Admin AI</b><small>Gemini: anajua mfumo wako</small></a>
   <a class="ad-tile" href="{{ url_for('admin_markets') }}"><span class="ic">📈</span><b>Market Analysis</b><small>Markets imara na dhaifu</small></a>
   {% endif %}
   <a class="ad-tile" href="{{ url_for('admin_users') }}"><span class="ic">👥</span><b>Watumiaji</b><small>Orodha na usimamizi</small></a>
@@ -74,7 +80,59 @@
       <span class="ic">🔄</span><b>Refresh Data</b><small>Sasisha CSV na History</small>
     </button>
   </form>
+  {% if gem %}
+  <a class="ad-tile" href="#inbox"><span class="ic">📥</span><b>Ujumbe</b><small>Kutoka kwa watumiaji</small>{% if unread %}<span class="ad-badge">{{ unread }}</span>{% endif %}</a>
+  <a class="ad-tile" href="#history"><span class="ic">🕒</span><b>History</b><small>{{ 'Imefichwa kwa wote' if hf.hidden_all else ('Imezimwa kwa watumiaji' if hf.users_off else 'Inaonekana kwa wote') }}</small></a>
+  {% endif %}
 </div>
+
+{% if gem %}
+<details class="ad-sec" id="history" {{ 'open' if (hf.users_off or hf.hidden_all) else '' }}>
+  <summary>🕒 Udhibiti wa History
+    <span class="ad-chip {{ 'off' if hf.users_off or hf.hidden_all else 'on' }}">Watumiaji: {{ 'hawaoni' if hf.users_off or hf.hidden_all else 'wanaona' }}</span>
+    <span class="ad-chip {{ 'off' if hf.hidden_all else 'on' }}">Admin: {{ 'haoni' if hf.hidden_all else 'anaona' }}</span>
+  </summary>
+  <div class="ad-body">
+    <form method="POST" action="{{ url_for('admin_history_switch') }}">
+      <label class="ad-switch">
+        <input type="checkbox" name="users_off" value="1" {{ 'checked' if hf.users_off else '' }}>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">Zima History kwa watumiaji wote<small>Kitufe kinatoweka na ukurasa unazuiwa. Admin bado anaona.</small></span>
+      </label>
+      <label class="ad-switch">
+        <input type="checkbox" name="hidden_all" value="1" {{ 'checked' if hf.hidden_all else '' }}>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">Ficha History kwa kila mtu, pamoja na admin<small>Hadi uwashe tena hapa. Ukurasa wa Admin unabaki kufikika kila wakati.</small></span>
+      </label>
+      <div class="ad-hint" style="margin-bottom:10px;">Takwimu za History hazibadilishwi: swichi hizi zinaficha au kuonyesha ukurasa tu. AI ya watumiaji pia hairuhusiwi kutoa matokeo ya History ukizima.</div>
+      <button class="btn" type="submit">Hifadhi swichi za History</button>
+    </form>
+  </div>
+</details>
+
+<details class="ad-sec" id="inbox" {{ 'open' if unread else '' }}>
+  <summary>📥 Ujumbe wa watumiaji {% if unread %}<span class="ad-chip off">{{ unread }} mpya</span>{% endif %}</summary>
+  <div class="ad-body">
+    {% set items = inbox_items(20) %}
+    {% if not items %}
+      <div class="ad-hint">Hakuna ujumbe bado. Watumiaji wanaweza kukutumia ujumbe kupitia AI.</div>
+    {% endif %}
+    {% for m in items %}
+      <div class="ad-msg {{ '' if m.is_read else 'new' }}">
+        <small>{{ m.email }} · {{ m.created|eat('%d %b %H:%M') }}{% if not m.is_read %} · MPYA{% endif %}</small>
+        {{ m.message }}
+        {% if not m.is_read %}
+        <form method="POST" action="{{ url_for('admin_inbox_read') }}" style="margin-top:8px;">
+          <input type="hidden" name="id" value="{{ m.id }}"><button class="btn btn-secondary" type="submit">Imesomwa</button>
+        </form>{% endif %}
+      </div>
+    {% endfor %}
+    {% if unread > 1 %}
+    <form method="POST" action="{{ url_for('admin_inbox_read') }}"><button class="btn btn-secondary" type="submit">Weka zote kama zimesomwa</button></form>
+    {% endif %}
+  </div>
+</details>
+{% endif %}
 
 <details class="ad-sec" id="health" {{ 'open' if health_summary.level != 'ok' else '' }}>
   <summary>🩺 Hali ya Mfumo <small style="font-weight:400; color:var(--text-dim);">{{ health_summary.ok }}/{{ health|length }} sawa</small></summary>
@@ -110,20 +168,15 @@
         </select>
       </div>
       <div class="ad-sub">Idadi ya markets</div>
-      <div class="form-group">
-        <label>Dashboard / Zijazo (Other Picks)</label>
-        <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0">
-      </div>
-      <div class="form-group">
-        <label>History (Other Picks)</label>
-        <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0">
-      </div>
+      <div class="form-group"><label>Dashboard / Zijazo (Other Picks)</label>
+        <input type="number" name="max_markets" value="{{ settings.max_markets_per_match }}" min="0"></div>
+      <div class="form-group"><label>History (Other Picks)</label>
+        <input type="number" name="history_max_markets" value="{{ settings.history_max_markets }}" min="0"></div>
       <label class="ad-switch">
         <input type="checkbox" name="allow_dc_best" value="1" {{ 'checked' if allow_dc_best else '' }}>
         <span class="ad-slider"></span>
-        <span class="ad-switch-text">Ruhusu dc_1x / dc_x2 kuwa Best Pick</span>
+        <span class="ad-switch-text">Ruhusu dc_1x / dc_x2 kuwa Best Pick<small>dc_12 haiwi Best Pick kamwe, na haitumiki kwenye Value Bets.</small></span>
       </label>
-      <div class="ad-hint">dc_12 haiwi Best Pick kamwe, na haitumiki kwenye Value Bets.</div>
     </div>
   </details>
 
@@ -171,24 +224,21 @@
       <label class="ad-switch">
         <input type="checkbox" name="public_enabled" value="1" {{ 'checked' if ai.public_enabled else '' }}>
         <span class="ad-slider"></span>
-        <span class="ad-switch-text">Onyesha kitufe cha AI kwa watumiaji wote</span>
+        <span class="ad-switch-text">Onyesha kitufe cha AI kwa watumiaji wote<small>Kikizimwa, ni admin pekee anayeona kitufe cha AI.</small></span>
       </label>
-      <div class="ad-hint">Kikizimwa, ni admin pekee anayeona kitufe cha AI (akiwa ameingia kwa email na password yake).</div>
-
       <div class="ad-sub">Vikomo vya siku (huanza upya usiku wa manane EAT)</div>
       <div class="form-group"><label>Ujumbe kwa kila mtumiaji kwa siku</label>
         <input type="number" name="user_limit" value="{{ ai.user_limit }}" min="0" max="500"></div>
       <div class="form-group"><label>Ujumbe wa jumla wa watumiaji wote kwa siku</label>
         <input type="number" name="global_limit" value="{{ ai.global_limit }}" min="0" max="20000">
         <div class="ad-hint">Linalinda kikomo cha bure cha mtoa huduma wa AI. Admin hana kikomo.</div></div>
-
       <div class="ad-usage">
         <div><b>{{ ai.used_global }}</b>ujumbe wa watumiaji leo</div>
         <div><b>{{ ai.users_today }}</b>watumiaji walioutumia leo</div>
       </div>
       <div class="ad-hint" style="margin-bottom:10px;">
-        Modeli: {{ ai.model }} · Utafutaji wa nje: {{ ai.search or 'umezimwa' }} ·
-        Key: {{ 'imewekwa ✔️' if ai.ai_ready else 'haijawekwa ❌' }}
+        Injini: {{ ai.engine or 'Groq' }} · Modeli: {{ ai.model }} · Utafutaji: {{ ai.search or 'umezimwa' }} ·
+        Key: {{ 'imewekwa ✔️' if ai.ai_ready else 'haijawekwa ❌ (weka GEMINI_API_KEY kwenye Render)' }}
       </div>
       <button class="btn" type="submit">Hifadhi mipangilio ya AI</button>
     </form>
@@ -199,9 +249,7 @@
 <details class="ad-sec" id="api">
   <summary>🔑 AllSportsAPI Key</summary>
   <div class="ad-body">
-    <p class="ad-hint" style="margin:0 0 10px;">
-      Inatumiwa na Job A kupitia endpoint ya siri. Kaggle ina key yake kwenye Kaggle Secrets: ibadilishe huko pia.
-    </p>
+    <p class="ad-hint" style="margin:0 0 10px;">Inatumiwa na Job A kupitia endpoint ya siri. Kaggle ina key yake kwenye Kaggle Secrets: ibadilishe huko pia.</p>
     <form method="POST">
       <input type="hidden" name="action" value="update_api">
       <div class="form-group"><label>AllSportsAPI Key</label>
@@ -216,9 +264,7 @@
 <details class="ad-sec" id="data">
   <summary>🗂️ Data</summary>
   <div class="ad-body">
-    <p class="ad-hint" style="margin:0 0 10px;">
-      Baada ya kupakia CSV mpya kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).
-    </p>
+    <p class="ad-hint" style="margin:0 0 10px;">Baada ya kupakia CSV mpya kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).</p>
     <form method="POST" action="{{ url_for('admin_refresh') }}">
       <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
     </form>
