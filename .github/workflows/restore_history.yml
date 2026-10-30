@@ -1,0 +1,45 @@
+# .github/workflows/restore_history.yml
+# MOJA KWA MOJA: inarudisha History ya siku chache kutoka git history
+# kwenda database mpya. Endesha kwa mkono tu (workflow_dispatch).
+
+name: Restore History From Git
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Siku ngapi zirudishwe'
+        default: '7'
+      dry_run:
+        description: 'yes = onyesha tu, usiandike database'
+        type: choice
+        options:
+          - 'no'
+          - 'yes'
+        default: 'no'
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout (git history yote)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas sqlalchemy psycopg2-binary
+
+      - name: Restore history
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DAYS: ${{ github.event.inputs.days }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: python .github/scripts/restore_history_from_git.py
