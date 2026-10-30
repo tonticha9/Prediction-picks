@@ -8,6 +8,9 @@ mpya kwa kusoma data/predictions.csv na data/value_bets.csv kutoka git history.
 - HAITUMII AllSportsAPI. Matokeo (WON/LOST) yanajazwa na Job A baadaye.
 - Salama kuendeshwa mara nyingi: haiongezi rekodi zilizokwisha kuwepo.
 
+v2: URL ya database inalazimishwa kutumia dereva wa psycopg2 (SQLAlchemy mpya
+    ilikuwa inajaribu 'psycopg' v3 ambayo haipo).
+
 Env vars: DATABASE_URL (lazima), DAYS (default 7), DRY_RUN (yes/no),
           MAX_DAYS_AHEAD (default 3)
 """
@@ -31,8 +34,12 @@ CHUNK = 2000
 if not DB_URL:
     print("❌ DATABASE_URL haipo (angalia GitHub Secrets).")
     sys.exit(1)
+
+# Lazimisha dereva wa psycopg2 (si psycopg v3)
 if DB_URL.startswith('postgres://'):
-    DB_URL = 'postgresql://' + DB_URL[len('postgres://'):]
+    DB_URL = 'postgresql+psycopg2://' + DB_URL[len('postgres://'):]
+elif DB_URL.startswith('postgresql://'):
+    DB_URL = 'postgresql+psycopg2://' + DB_URL[len('postgresql://'):]
 
 
 # ------------------------------------------------------------------ git
