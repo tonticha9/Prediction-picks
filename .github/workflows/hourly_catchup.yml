@@ -1,13 +1,15 @@
 # .github/workflows/hourly_catchup.yml
 #
-# JOB A — Kila saa: inavuta mechi zilizokwisha, inasasisha dataset ya
-# Kaggle, inasettle PENDING zote, na kuandika matokeo halisi kwa History.
+# JOB A — Kila dakika 30: inavuta mechi zilizokwisha, inasasisha dataset ya
+# Kaggle, inasettle PENDING zote, inaandika matokeo halisi kwa History,
+# na inasasisha saa za kuanza kwa mechi (EAT).
+# v7: kila dakika 30, diagnostic steps zimeondolewa, sync ya saa za mechi.
 
 name: Hourly Catchup
 
 on:
   schedule:
-    - cron: '15 * * * *'   # Dakika 15 baada ya kila saa (UTC)
+    - cron: '5,35 * * * *'   # dakika 5 na 35 za kila saa (UTC)
   workflow_dispatch:
 
 concurrency:
@@ -46,41 +48,6 @@ jobs:
           chmod 600 ~/.kaggle/access_token
           echo "✅ Tokeni ya Kaggle imehifadhiwa"
 
-      - name: Check Kaggle access (uchunguzi)
-        continue-on-error: true
-        env:
-          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-        run: |
-          kaggle datasets files tonticha/historical-complete-no-gap
-
-      - name: Diagnose download (uchunguzi)
-        continue-on-error: true
-        shell: bash {0}
-        env:
-          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
-        run: |
-          SLUG=tonticha/historical-complete-no-gap
-          echo "=== kaggle version ==="
-          kaggle --version
-          echo
-          echo "=== F: dataset ya umma (uciml/iris) ==="
-          mkdir -p /tmp/f
-          kaggle datasets download -d uciml/iris -p /tmp/f --unzip -o 2>&1 | head -5
-          ls -la /tmp/f
-          echo
-          echo "=== C: faili moja tu (CSV) ya dataset yako ==="
-          mkdir -p /tmp/c
-          kaggle datasets download -d $SLUG -f historical_complete_no_gap.csv -p /tmp/c -o 2>&1 | head -5
-          ls -la /tmp/c
-          echo
-          echo "=== D: kagglehub ==="
-          pip -q install kagglehub
-          python -c "import kagglehub; print(kagglehub.dataset_download('tonticha/historical-complete-no-gap'))" 2>&1 | tail -5
-          echo
-          echo "=== E: curl moja kwa moja ==="
-          curl -s -L -o /tmp/e.zip -w 'HTTP code: %{http_code}\n' -H "Authorization: Bearer $KAGGLE_API_TOKEN" https://www.kaggle.com/api/v1/datasets/download/tonticha/historical-complete-no-gap
-          ls -la /tmp/e.zip
-
       - name: Fetch recent results, update dataset, settle PENDING
         env:
           KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
@@ -96,3 +63,14 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python .github/scripts/sync_match_results.py
+
+      - name: Sync fixture kickoff times (EAT)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          FORCE_TIMES: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
+        run: python .github/scripts/sync_fixture_times.py
