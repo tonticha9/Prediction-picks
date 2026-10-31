@@ -1,4 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Moreirense vs Estrela: dc_x2 @1.40 + Man City vs Brighton: dc_12 @1.20,1.68,68.5
-3,3,Lecce vs Genoa: goals_over_15 @1.44 + Tottenham vs Crystal Palace: dc_1x @1.14 + Getafe vs Sevilla: goals_over_15 @1.53,2.51,48.9
-5,5,Volos Nfc vs Kifisia: goals_over_15 @1.33 + Troyes vs Le Mans: goals_over_15 @1.25 + Sociedad vs Vallecano: dc_1x @1.22 + Lecce vs Genoa: goals_over_15 @1.44 + Moreirense vs Estrela: dc_x2 @1.40,4.09,30.3
+2,2,Motherwell vs St Mirren: dc_1x @1.25 + Brighton vs Brentford: dc_1x @1.28,1.6,67.9
+3,4,Lazio vs Cagliari: dc_1x @1.10 + Panetolikos vs Ofi Crete: goals_over_15 @1.33 + Getafe vs Sevilla: goals_over_15 @1.53 + Trabzonspor vs Gaziantep: dc_1x @1.12,2.51,47.6
+5,5,Hoffenheim vs Schalke 04: dc_12 @1.22 + Getafe vs Sevilla: goals_over_15 @1.53 + Kalamata vs Iraklis: goals_over_15 @1.36 + Erzurum Bb vs Corum: goals_over_15 @1.30 + Lincoln vs Birmingham: dc_12 @1.28,4.22,29.5
+7,6,Elche vs Valencia: goals_over_15 @1.30 + Buyuksehyr vs Samsunspor: dc_1x @1.22 + Ofi Crete vs Atromitos: dc_1x @1.36 + Watford vs Lincoln: dc_12 @1.28 + Getafe vs Sevilla: goals_over_15 @1.53 + Vallecano vs Celta: goals_over_15 @1.36,5.74,19.9
