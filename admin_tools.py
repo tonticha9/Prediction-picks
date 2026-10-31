@@ -44,7 +44,7 @@ VERDICT_ORDER = {'strong': 0, 'watch': 1, 'weak': 2, 'nodata': 3}
 VERDICT_ICON = {'strong': '🟢', 'watch': '🟡', 'weak': '🔴', 'nodata': '⚪'}
 MIN_SAMPLE = 20
 GOOD_SAMPLE = 30
-PLUGINS = ('retrain_tools', 'gemini_ai')   # faili za ziada zinazopakiwa kama zipo (mf. retrain_tools.py)
+PLUGINS = ('retrain_tools', 'gemini_ai', 'fixture_times')   # faili za ziada zinazopakiwa kama zipo (mf. retrain_tools.py)
 
 # ================================================================
 # MODELI (jedwali mpya zinatengenezwa na db.create_all())
