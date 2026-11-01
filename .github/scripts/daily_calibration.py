@@ -1,7 +1,16 @@
 """
 .github/scripts/daily_calibration.py
 
-CALIBRATION YA KILA SIKU KWA MATOKEO HALISI YA LIVE (v1, Oct 27 2026)
+CALIBRATION YA KILA SIKU KWA MATOKEO HALISI YA LIVE (v1 Oct 27 2026, v2 Nov 1 2026)
+
+v2 (Nov 1 2026): kazi ya kuboresha MODELI yenyewe (probability za kweli):
+  - FAMILIA: masoko ya aina moja (cards, corners, sot, team_goals, goals_total, result, combo)
+    yanashirikiana data. Soko lenye sampuli ndogo (>= 30) linaweza kupata marekebisho ya familia.
+  - UTOFAUTISHAJI: slope sasa inaweza kuwa HASI (hadi -0.60). Soko ambalo namba yake haitofautishi
+    mshindi na mshindwa linavutwa karibu na kiwango chake cha msingi (badala ya kuonyesha 89%).
+  - Kila marekebisho yanapita mtihani wa holdout wa wakati (paired z-test) kabla ya kutumika;
+    soko lisilo na ushahidi HALIBADILISHWI. Majaribio ya simulation: v2 inaboresha log loss mara
+    mbili ya v1 na haidhuru dunia isiyo na tatizo.
 
 Inaendeshwa kwenye nightly_predictions.yml BAADA ya kunakili faili za Kaggle kwenye data/
 na KABLA ya commit. Kazi yake: probability ya kila soko ibaki ya kweli
@@ -48,15 +57,18 @@ MODE = os.environ.get('CALIB_MODE', 'apply').strip().lower()
 
 # ---------- VIGEZO ----------
 WINDOW_DAYS = 150          # rekodi za mechi za siku hizi za mwisho
-MIN_N = 120                # sampuli ya chini kwa soko (baada ya kuchanganya jozi)
-Z_MIN = 2.0                # |z| ya pengo la jumla lazima ifikie hii
+MIN_N = 120                # soko lenyewe: sampuli ya chini ya kufanya marekebisho yake binafsi
+MIN_N_PARTIAL = 30         # soko lenye >= hii linaweza kupata marekebisho ya FAMILIA
+MIN_N_FAMILY = 150         # familia nzima: sampuli ya chini
 HOLDOUT_FRAC = 0.35        # sehemu mpya zaidi ya data inayotumika kujaribu (haitumiki kufundisha)
+Z_GAIN = 1.0               # paired z ya faida ya log loss kwenye holdout
 MIN_HOLDOUT_GAIN = 0.0002  # log loss ya holdout lazima ishuke angalau hii
 TAU_B = 60.0               # nguvu ya shrinkage ya shift (kubwa = polepole)
-TAU_S = 40.0               # nguvu ya shrinkage ya slope (slope inajifunza tu ikiwa data ni nyingi)
-B_CAP, S_CAP = 0.60, 0.30  # kikomo cha shift (logit) na slope
+TAU_S = 40.0               # nguvu ya shrinkage ya slope
+B_CAP = 0.60               # kikomo cha shift (logit)
+S_LO, S_HI = -0.60, 0.30   # slope: hasi = namba zinavutwa karibu na kiwango cha msingi
 MIN_EFFECT = 0.03          # wastani wa |marekebisho| (logit) chini ya hii = hakuna haja
-MAX_DP = 0.08              # marekebisho ya probability ya safu moja hayazidi pointi 8
+MAX_DP = 0.10              # marekebisho ya probability ya safu moja hayazidi pointi 10
 TAPER = 0.5                # nje ya masafa yaliyofundishwa, marekebisho yanapungua hadi 0 ndani ya logit 0.5
 P_CLIP = (0.01, 0.99)
 MATCH_TOL = 0.0015         # kulinganisha probability iliyohifadhiwa na 'applied' ya log
@@ -97,32 +109,43 @@ def canon(market):
     return m, False
 
 
-def fit_shift(x, y):
-    """Logistic regression ndogo yenye shrinkage kuelekea 'hakuna marekebisho'.
-    logit(p') = x + b + s * (x - c). Inarudisha (b, s, c)."""
-    c = float(np.mean(x))
+def family(cm):
+    m = str(cm)
+    if '_and_' in m: return 'combo'
+    if m.startswith(('yellows_', 'booking_pts_', 'cards_range_')) or m in (
+            'both_teams_carded', 'both_teams_2plus_cards', 'any_red_card', 'no_cards_ft', 'home_more_cards'):
+        return 'cards'
+    if m.startswith('corners_'): return 'corners'
+    if m.startswith('sot_'): return 'sot'
+    if m.startswith(('home_goals_', 'away_goals_')): return 'team_goals'
+    if m.startswith('goals_') or m == 'btts': return 'goals_total'
+    if m in ('home_win', 'away_win', 'dc_12', 'dc_1x', 'dc_x2'): return 'result'
+    return 'other'
+
+
+def ll_vec(y, p):
+    p = np.clip(p, 1e-4, 1 - 1e-4)
+    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
+
+
+def fit_shift(x, y, c, b0=0.0, s0=0.0, tau_b=TAU_B, tau_s=TAU_S):
     z = x - c
-    b = s = 0.0
+    b, s = b0, s0
     for _ in range(40):
         pp = sigm(x + b + s * z)
         r = pp - y
         w = pp * (1 - pp)
-        g = np.array([r.sum() + TAU_B * b, (r * z).sum() + TAU_S * s])
-        H = np.array([[w.sum() + TAU_B, (w * z).sum()],
-                      [(w * z).sum(), (w * z * z).sum() + TAU_S]])
-        try:
-            step = np.linalg.solve(H, g)
-        except np.linalg.LinAlgError:
-            break
-        b -= step[0]
-        s -= step[1]
-        if np.max(np.abs(step)) < 1e-9:
-            break
-    return float(np.clip(b, -B_CAP, B_CAP)), float(np.clip(s, -S_CAP, S_CAP)), c
+        g = np.array([r.sum() + tau_b * (b - b0), (r * z).sum() + tau_s * (s - s0)])
+        H = np.array([[w.sum() + tau_b, (w * z).sum()],
+                      [(w * z).sum(), (w * z * z).sum() + tau_s]])
+        try: step = np.linalg.solve(H, g)
+        except np.linalg.LinAlgError: break
+        b -= step[0]; s -= step[1]
+        if np.max(np.abs(step)) < 1e-9: break
+    return float(np.clip(b, -B_CAP, B_CAP)), float(np.clip(s, S_LO, S_HI))
 
 
 def delta(x, par):
-    """Marekebisho (logit) ya kila x. Nje ya masafa yaliyofundishwa yanapungua hadi 0."""
     x = np.asarray(x, dtype=float)
     lo, hi = par['lo'], par['hi']
     xc = np.clip(x, lo, hi)
@@ -131,46 +154,122 @@ def delta(x, par):
     return d * np.clip(1.0 - dist / TAPER, 0.0, 1.0)
 
 
-def make_params(x, y):
-    b, s, c = fit_shift(x, y)
-    return {'b': b, 's': s, 'c': c, 'lo': float(np.percentile(x, 3)), 'hi': float(np.percentile(x, 97))}
+def adjusted(x, par):
+    d = delta(x, par)
+    p = sigm(x)
+    p2 = sigm(x + d)
+    return np.clip(p2, p - MAX_DP, p + MAX_DP)
 
 
-def analyse_market(p, y):
-    """p, y zimepangwa kwa muda (za zamani kwanza). Rudisha (ripoti, params au None)."""
+def paired_gain(y, p0, p1):
+    d = ll_vec(y, p0) - ll_vec(y, p1)
+    n = len(d)
+    gain = float(np.mean(d))
+    sd = float(np.std(d, ddof=1)) if n > 2 else 0.0
+    z = gain / (sd / np.sqrt(n)) if sd > 0 else 0.0
+    return gain, float(z)
+
+
+def analyse_family(g):
+    """g: DataFrame cm,p,y,t (one family). Rudisha (b_f, s_f) au None, ripoti."""
+    g = g.sort_values('t')
+    n = len(g)
+    rep = {'n': n, 'status': 'TOO_FEW', 'gain': None, 'z': None}
+    if n < MIN_N_FAMILY:
+        return None, rep
+    x = logit(g['p'].values); y = g['y'].values
+    k = int(n * (1 - HOLDOUT_FRAC))
+    cm = g['cm'].values
+    cm_tr = pd.Series(x[:k]).groupby(cm[:k]).mean()
+    c_tr = np.array([cm_tr.get(m, np.mean(x[:k])) for m in cm])
+    b, s = fit_shift(x[:k], y[:k], c_tr[:k])
+    p0 = sigm(x[k:])
+    p1 = np.clip(sigm(x[k:] + b + s * (x[k:] - c_tr[k:])), p0 - MAX_DP, p0 + MAX_DP)
+    gain, z = paired_gain(y[k:], p0, p1)
+    rep['gain'], rep['z'] = gain, z
+    if not (gain >= MIN_HOLDOUT_GAIN and z >= Z_GAIN):
+        rep['status'] = 'NO_HOLDOUT_GAIN'
+        return None, rep
+    cm_all = pd.Series(x).groupby(cm).mean()
+    c_all = np.array([cm_all[m] for m in cm])
+    b, s = fit_shift(x, y, c_all)
+    if np.mean(np.abs(b + s * (x - c_all))) < MIN_EFFECT:
+        rep['status'] = 'TINY'
+        return None, rep
+    rep['status'] = 'APPLY'
+    return {'b': b, 's': s}, rep
+
+
+def _mkpar(xx, bb, ss):
+    return {'b': float(bb), 's': float(ss), 'c': float(np.mean(xx)),
+            'lo': float(np.percentile(xx, 3)), 'hi': float(np.percentile(xx, 97))}
+
+
+def analyse_market(p, y, fam):
+    """p, y zimepangwa kwa muda (za zamani kwanza). fam = {'b','s'} ya familia au None.
+    Rudisha (ripoti, params au None)."""
     n = len(p)
     rep = {'n': int(n), 'mean_p': float(np.mean(p)) if n else None,
            'win_rate': float(np.mean(y)) if n else None, 'gap_pts': None, 'z': None,
-           'b': 0.0, 's': 0.0, 'holdout_gain': None, 'status': 'TOO_FEW', 'applied': 0}
+           'b': 0.0, 's': 0.0, 'holdout_gain': None, 'gain_z': None, 'status': 'TOO_FEW', 'applied': 0}
     if n == 0:
         return rep, None
     rep['gap_pts'] = float((np.mean(y) - np.mean(p)) * 100)
     var = float(np.sum(p * (1 - p)))
     rep['z'] = float((np.sum(y) - np.sum(p)) / np.sqrt(var)) if var > 0 else 0.0
-    if n < MIN_N:
-        return rep, None
-    if abs(rep['z']) < Z_MIN:
-        rep['status'] = 'NO_SIGNAL'
+    if n < MIN_N_PARTIAL:
         return rep, None
     x = logit(p)
+    c = float(np.mean(x))
+    best = None
     k = int(n * (1 - HOLDOUT_FRAC))
-    if k >= 40 and n - k >= 40:
-        pt = make_params(x[:k], y[:k])
-        xh, yh = x[k:], y[k:]
-        gain = logloss(yh, sigm(xh)) - logloss(yh, sigm(xh + delta(xh, pt)))
-        rep['holdout_gain'] = float(gain)
-        if gain < MIN_HOLDOUT_GAIN:
-            rep['status'] = 'NO_HOLDOUT_GAIN'
-            return rep, None
-    par = make_params(x, y)
-    rep['b'], rep['s'] = par['b'], par['s']
-    eff = float(np.mean(np.abs(delta(x, par))))
-    if eff < MIN_EFFECT:
+    if n >= MIN_N and k >= 40 and n - k >= 30:
+        b0, s0 = (fam['b'], fam['s']) if fam else (0.0, 0.0)
+        bt, st = fit_shift(x[:k], y[:k], float(np.mean(x[:k])), b0, s0)
+        gain, z = paired_gain(y[k:], sigm(x[k:]), adjusted(x[k:], _mkpar(x[:k], bt, st)))
+        rep['holdout_gain'], rep['gain_z'] = gain, z
+        if gain >= MIN_HOLDOUT_GAIN and z >= Z_GAIN:
+            bf, sf = fit_shift(x, y, c, b0, s0)
+            best = _mkpar(x, bf, sf)
+            rep['b'], rep['s'], rep['status'] = bf, sf, 'APPLY'
+    if best is None and fam is not None:
+        if n >= 60 and k >= 20 and n - k >= 20:
+            gain, z = paired_gain(y[k:], sigm(x[k:]), adjusted(x[k:], _mkpar(x[:k], fam['b'], fam['s'])))
+            rep['holdout_gain'], rep['gain_z'] = gain, z
+            if z <= -Z_GAIN:
+                rep['status'] = 'FAMILY_HARMS'
+                return rep, None
+        best = _mkpar(x, fam['b'], fam['s'])
+        rep['b'], rep['s'], rep['status'] = fam['b'], fam['s'], 'FAMILY'
+    if best is None:
+        rep['status'] = 'NO_SIGNAL'
+        return rep, None
+    if float(np.mean(np.abs(delta(x, best)))) < MIN_EFFECT:
         rep['status'] = 'TINY'
         return rep, None
-    rep['status'] = 'APPLY'
     rep['applied'] = 1
-    return rep, par
+    return rep, best
+
+
+def fit_all(train):
+    """Rudisha (ripoti za masoko, params za masoko, ripoti za familia)."""
+    reports, params, fam_reports = {}, {}, {}
+    if len(train) == 0:
+        return reports, params, fam_reports
+    train = train.copy()
+    train['fam'] = [family(m) for m in train['cm']]
+    fams = {}
+    for f, g in train.groupby('fam'):
+        fp, frep = analyse_family(g)
+        fams[f] = fp
+        fam_reports[f] = frep
+    for m, g in train.groupby('cm'):
+        g = g.sort_values('t')
+        rep, par = analyse_market(g['p'].values, g['y'].values, fams.get(family(m)))
+        reports[m] = rep
+        if par is not None:
+            params[m] = par
+    return reports, params, fam_reports
 
 
 def apply_to_predictions(pred, params):
@@ -183,8 +282,7 @@ def apply_to_predictions(pred, params):
             continue
         p = out[i] / 100.0
         pc = 1 - p if inv else p
-        pc2 = float(sigm(logit(pc) + delta(logit(pc), par)))
-        pc2 = float(np.clip(pc2, pc - MAX_DP, pc + MAX_DP))
+        pc2 = float(adjusted(np.array([float(logit(pc))]), par)[0])
         pc2 = float(np.clip(pc2, P_CLIP[0], P_CLIP[1]))
         p2 = 1 - pc2 if inv else pc2
         out[i] = round(p2 * 100, 1)
@@ -216,17 +314,6 @@ def build_training_frame(settled, log):
     d['y'] = np.where(inv, 1 - d['y'], d['y'])
     d['t'] = pd.to_datetime(d['match_date'])
     return d[['cm', 'p', 'y', 't']]
-
-
-def fit_all(train):
-    reports, params = {}, {}
-    for m, g in train.groupby('cm'):
-        g = g.sort_values('t')
-        rep, par = analyse_market(g['p'].values, g['y'].values)
-        reports[m] = rep
-        if par is not None:
-            params[m] = par
-    return reports, params
 
 
 # ================================================================
@@ -424,7 +511,7 @@ def run(store=None, today=None):
         train = build_training_frame(settled, log)
         print(f"   Rekodi zilizokamilika (siku {WINDOW_DAYS}): {len(settled):,} | masoko (jozi zimeunganishwa): "
               f"{train['cm'].nunique() if len(train) else 0}")
-        reports, params = fit_all(train)
+        reports, params, fam_reports = fit_all(train)
 
         pred_new = pred_raw.copy()
         pred_new['probability_%'] = apply_to_predictions(pred_raw, params)
@@ -452,8 +539,11 @@ def run(store=None, today=None):
             return
 
         # Ripoti kwenye logi
-        n_apply = sum(1 for r in reports.values() if r['status'] == 'APPLY')
+        n_apply = sum(1 for r in reports.values() if r['status'] in ('APPLY', 'FAMILY'))
         print(f"   Masoko yaliyochambuliwa: {len(reports)} | yenye marekebisho: {n_apply} | safu zilizobadilika leo: {moved:,}")
+        for f, fr in sorted(fam_reports.items()):
+            gz = '' if fr.get('z') is None else f" gain={fr['gain']:+.4f} z={fr['z']:+.1f}"
+            print(f"   familia {f:12s} n={fr['n']:5d}  {fr['status']}{gz}")
         shown = sorted(reports.items(), key=lambda kv: -(kv[1]['n'] or 0))[:25]
         print(f"   {'soko':34s} {'n':>5s} {'ilisema':>8s} {'ilishinda':>9s} {'pengo':>7s} {'z':>6s}  hali")
         for m, r in shown:
