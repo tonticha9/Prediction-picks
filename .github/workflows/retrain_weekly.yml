@@ -16,6 +16,7 @@
 # v2 (Oct 27 2026): ratiba ya kila Jumatatu imewashwa.
 # v3 (Oct 28 2026): kila retrain inapochapishwa, tukio linaandikwa kwenye data/retrain_log.json
 #                   (kwa Market Analysis: kabla/baada ya retrain). Hatua hiyo haivunji chochote.
+# v4 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
 
 name: Weekly Retrain Release
 
@@ -58,7 +59,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Kaggle CLI
-        run: pip install kaggle pandas
+        run: pip install kaggle pandas six
 
       - name: Configure Kaggle credentials
         env:
