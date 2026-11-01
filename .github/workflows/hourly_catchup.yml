@@ -4,6 +4,7 @@
 # Kaggle, inasettle PENDING zote, inaandika matokeo halisi kwa History,
 # na inasasisha saa za kuanza kwa mechi (EAT).
 # v7: kila dakika 30, diagnostic steps zimeondolewa, sync ya saa za mechi.
+# v8 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
 
 name: Hourly Catchup
 
@@ -32,7 +33,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install kaggle requests
+          pip install kaggle requests six
           pip install -r requirements.txt
 
       - name: Configure Kaggle credentials
