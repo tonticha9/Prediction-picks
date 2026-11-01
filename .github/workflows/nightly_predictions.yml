@@ -21,6 +21,8 @@
 # v5 (Oct 27 2026): calibration ya kila siku (daily_calibration.py) inarekebisha
 # probability kwa matokeo halisi ya live kabla ya commit. HAIVUNJI nightly: ikishindwa,
 # faili zinabaki kama zilivyotoka Kaggle (continue-on-error).
+#
+# v6 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
 
 name: Nightly Predictions Update
 
@@ -49,7 +51,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Kaggle CLI
-        run: pip install kaggle pandas
+        run: pip install kaggle pandas six
 
       - name: Configure Kaggle credentials
         env:
