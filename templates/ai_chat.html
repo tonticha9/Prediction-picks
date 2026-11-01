@@ -3,34 +3,48 @@
 <style>
   .cx { --bd: rgba(255,255,255,.1); --glass: rgba(255,255,255,.05); --g1:#6366f1; --g2:#10b981; --g3:#0ea5e9;
         position:relative; padding-bottom:170px; }
-  .cx-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 14px; margin-bottom:14px;
-             border-radius:18px; border:1px solid var(--bd); background:linear-gradient(135deg, rgba(99,102,241,.28), rgba(16,185,129,.16) 60%, rgba(14,165,233,.14)); }
-  .cx-title { display:flex; align-items:center; gap:10px; min-width:0; }
-  .cx-title b { display:block; font-size:16px; }
+
+  /* ---------- Header isiyopotea (sticky chini ya topbar) ---------- */
+  .cx-head { position:sticky; top:calc(var(--tb, 72px) + 6px); z-index:40; display:flex; align-items:center; justify-content:space-between; gap:8px;
+             padding:9px 10px 9px 12px; margin-bottom:14px; border-radius:18px; border:1px solid var(--bd);
+             background-color:#0A0F1E;
+             background-image:linear-gradient(135deg, rgba(99,102,241,.30), rgba(16,185,129,.16) 60%, rgba(14,165,233,.14));
+             box-shadow:0 8px 24px rgba(0,0,0,.35); }
+  .cx-title { display:flex; align-items:center; gap:9px; min-width:0; flex:1 1 auto; }
+  .cx-title b { display:block; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cx-title small { display:block; font-size:11px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; background:var(--emerald); box-shadow:0 0 8px var(--emerald); }
   .dot.off { background:var(--red); box-shadow:0 0 8px var(--red); }
-  .orb { flex:0 0 auto; width:38px; height:38px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #a5b4fc, #6366f1 45%, #10b981); box-shadow:0 0 18px rgba(99,102,241,.7), 0 0 36px rgba(16,185,129,.35); animation:float 4s ease-in-out infinite; }
+  .orb { flex:0 0 auto; width:34px; height:34px; border-radius:50%; background:radial-gradient(circle at 30% 30%, #a5b4fc, #6366f1 45%, #10b981); box-shadow:0 0 18px rgba(99,102,241,.7), 0 0 36px rgba(16,185,129,.35); animation:float 4s ease-in-out infinite; }
   .orb.big { width:78px; height:78px; margin:0 auto 14px; }
   @keyframes float { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
-  .cx-actions { display:flex; gap:6px; align-items:center; }
+  .cx-actions { display:flex; gap:5px; align-items:center; flex:0 0 auto; }
   .cx-actions form { margin:0; }
-  .ib { width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; border:1px solid var(--bd); background:var(--glass); color:inherit; text-decoration:none; font-size:15px; cursor:pointer; }
+  .cx-actions [hidden] { display:none !important; }
+  .ib { height:36px; min-width:36px; padding:0 9px; display:inline-flex; align-items:center; justify-content:center; gap:6px; border-radius:12px;
+        border:1px solid var(--bd); background:var(--glass); color:inherit; text-decoration:none; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .ib span { display:none; }
+  .ib:hover { background:rgba(255,255,255,.1); }
   .ib:active { transform:scale(.94); }
+  .ib.pri { background:linear-gradient(135deg, rgba(99,102,241,.55), rgba(16,185,129,.4)); border-color:rgba(129,140,248,.55); }
+  .ib.danger:hover { background:rgba(239,68,68,.22); border-color:rgba(239,68,68,.55); color:#fca5a5; }
+  .ib svg, .ab svg, .jump svg, .send svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:0 0 auto; }
+  @media (min-width:600px) { .ib span { display:inline; } .ib { padding:0 12px; } }
+  @media (max-width:400px) { .cx-title .orb { display:none; } }
 
   .empty { text-align:center; padding:26px 6px 10px; }
   .empty h2 { margin:0 0 6px; font-size:22px; background:linear-gradient(90deg,#a5b4fc,#6ee7b7); -webkit-background-clip:text; background-clip:text; color:transparent; }
   .empty p { margin:0 0 16px; color:var(--text-dim); font-size:13px; }
   .chips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
-  .chipbtn { padding:9px 13px; border-radius:999px; border:1px solid var(--bd); background:var(--glass); color:inherit; font-size:13px; cursor:pointer; }
+  .chipbtn { padding:9px 13px; border-radius:999px; border:1px solid var(--bd); background:var(--glass); color:inherit; font-size:13px; cursor:pointer; font-family:inherit; }
   .chipbtn:active { background:rgba(99,102,241,.3); }
 
-  .m { display:flex; gap:10px; margin:14px 0; align-items:flex-start; animation:pop .25s ease; }
+  .m { display:flex; gap:10px; margin:14px 0; align-items:flex-start; animation:pop .25s ease; scroll-margin-top:var(--stack, 170px); }
   @keyframes pop { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   .m.user { justify-content:flex-end; }
   .av { flex:0 0 32px; width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 12px rgba(99,102,241,.5); }
   .bd { min-width:0; max-width:calc(100% - 44px); }
-  .m.user .bd { max-width:86%; }
+  .m.user .bd { max-width:86%; display:flex; flex-direction:column; align-items:flex-end; }
   .bubble { font-size:15px; line-height:1.55; word-wrap:break-word; overflow-wrap:anywhere; }
   .m.user .bubble { padding:10px 14px; border-radius:18px 18px 4px 18px; background:linear-gradient(135deg,#4f46e5,#7c3aed); color:#fff; white-space:pre-wrap; box-shadow:0 4px 18px rgba(79,70,229,.35); }
   .m.assistant .bubble { padding:2px 2px; }
@@ -39,8 +53,9 @@
   .bubble h2 { font-size:18px; } .bubble h3 { font-size:16px; } .bubble h4,.bubble h5 { font-size:15px; }
   .bubble ul,.bubble ol { margin:6px 0 10px; padding-left:22px; } .bubble li { margin:3px 0; }
   .bubble code { padding:1px 6px; border-radius:6px; background:rgba(255,255,255,.1); font-size:.9em; }
-  .bubble pre { margin:8px 0; padding:12px; border-radius:12px; overflow-x:auto; background:rgba(0,0,0,.4); border:1px solid var(--bd); }
+  .bubble pre { position:relative; margin:8px 0; padding:12px; border-radius:12px; overflow-x:auto; background:rgba(0,0,0,.4); border:1px solid var(--bd); }
   .bubble pre code { padding:0; background:none; font-size:12.5px; white-space:pre; }
+  .cpy { position:absolute; top:6px; right:6px; font-size:11px; padding:3px 8px; border-radius:8px; border:1px solid var(--bd); background:rgba(255,255,255,.08); color:var(--text-dim); cursor:pointer; font-family:inherit; }
   .bubble blockquote { margin:8px 0; padding:6px 12px; border-left:3px solid var(--g1); background:rgba(99,102,241,.1); border-radius:0 10px 10px 0; }
   .bubble a { color:#93c5fd; }
   .bubble hr { border:none; border-top:1px solid var(--bd); margin:12px 0; }
@@ -52,9 +67,14 @@
   .tools .chip { font-size:11.5px; padding:4px 10px; border-radius:999px; border:1px solid rgba(16,185,129,.4); background:rgba(16,185,129,.12); color:#6ee7b7; }
   .tools .chip.live { animation:pulse 1s infinite; }
   @keyframes pulse { 50% { opacity:.45; } }
-  .mbar { margin-top:6px; } .mbar button { font-size:12px; color:var(--text-dim); background:none; border:none; padding:4px 6px; cursor:pointer; }
+  .mbar { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-top:6px; }
+  .ab { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--text-dim); background:none; border:1px solid transparent; border-radius:9px; padding:4px 8px; cursor:pointer; font-family:inherit; }
+  .ab:hover { background:rgba(255,255,255,.07); border-color:var(--bd); color:inherit; }
+  .ab svg { width:14px; height:14px; }
+  .mbar .meta { font-size:11px; color:var(--text-dim); margin-left:4px; }
   .dots i { display:inline-block; width:7px; height:7px; margin:0 2px; border-radius:50%; background:var(--g1); animation:bounce 1.2s infinite; }
   .dots i:nth-child(2) { animation-delay:.15s; } .dots i:nth-child(3) { animation-delay:.3s; }
+  .wait { margin-left:8px; font-size:12px; color:var(--text-dim); }
   @keyframes bounce { 0%,80%,100% { transform:translateY(0); opacity:.4; } 40% { transform:translateY(-6px); opacity:1; } }
 
   .cx-composer { position:fixed; left:0; right:0; bottom:0; z-index:30; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(to top, rgba(8,11,24,.96) 60%, rgba(8,11,24,0)); }
@@ -62,18 +82,22 @@
   .cx-box { display:flex; align-items:flex-end; gap:8px; padding:8px 8px 8px 14px; border-radius:24px; background:rgba(22,27,48,.92); border:1px solid rgba(129,140,248,.5); box-shadow:0 0 0 1px rgba(99,102,241,.2), 0 0 26px rgba(99,102,241,.35); backdrop-filter:blur(10px); }
   .cx-box:focus-within { box-shadow:0 0 0 1px rgba(129,140,248,.6), 0 0 34px rgba(16,185,129,.4); }
   .cx-box textarea { flex:1; resize:none; border:none; outline:none; background:transparent; color:inherit; font:inherit; font-size:15px; line-height:1.4; max-height:160px; padding:7px 0; }
-  .send { flex:0 0 40px; width:40px; height:40px; border:none; border-radius:50%; cursor:pointer; color:#fff; font-size:17px; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 16px rgba(99,102,241,.6); }
+  .send { flex:0 0 40px; width:40px; height:40px; border:none; border-radius:50%; cursor:pointer; color:#fff; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--g1),var(--g2)); box-shadow:0 0 16px rgba(99,102,241,.6); }
   .send:disabled { opacity:.45; box-shadow:none; }
   .send.stop { background:linear-gradient(135deg,#ef4444,#f97316); }
+  .send.stop svg { fill:currentColor; }
   .cx-foot { text-align:center; font-size:11px; color:var(--text-dim); margin-top:6px; }
   .cx-err { margin:0 auto 8px; max-width:820px; padding:9px 12px; border-radius:12px; font-size:13px; background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.5); color:#fca5a5; }
-  .jump { position:fixed; right:16px; bottom:120px; z-index:31; width:38px; height:38px; border-radius:50%; display:none; align-items:center; justify-content:center; border:1px solid var(--bd); background:rgba(22,27,48,.95); color:#fff; cursor:pointer; }
+  .jump { position:fixed; right:16px; bottom:128px; z-index:31; width:40px; height:40px; border-radius:50%; display:none; align-items:center; justify-content:center; border:1px solid var(--bd); background:rgba(22,27,48,.96); color:#fff; cursor:pointer; box-shadow:0 6px 18px rgba(0,0,0,.45); }
+  .jump.new { border-color:var(--g2); animation:glow 1.2s infinite; }
+  @keyframes glow { 50% { box-shadow:0 0 0 6px rgba(16,185,129,.22); } }
 
-  .drawer { position:fixed; inset:0; z-index:60; display:none; }
+  .drawer { position:fixed; inset:0; z-index:110; display:none; }
   .drawer.open { display:block; }
   .drawer .sh { position:absolute; inset:0; background:rgba(0,0,0,.55); }
   .drawer .pn { position:absolute; left:0; top:0; bottom:0; width:min(84%,330px); padding:16px 12px; overflow-y:auto; background:#0c1124; border-right:1px solid var(--bd); }
   .drawer h3 { margin:4px 6px 12px; }
+  .dsearch { width:100%; box-sizing:border-box; margin:0 0 10px; padding:9px 12px; border-radius:12px; border:1px solid var(--bd); background:var(--glass); color:inherit; font:inherit; font-size:13px; outline:none; }
   .th { display:block; padding:10px 12px; margin-bottom:6px; border-radius:12px; border:1px solid var(--bd); color:inherit; text-decoration:none; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .th.active { border-color:var(--g1); background:rgba(99,102,241,.2); }
   .th.new { text-align:center; font-weight:700; background:linear-gradient(135deg,rgba(99,102,241,.4),rgba(16,185,129,.3)); }
@@ -82,7 +106,7 @@
 <div class="cx" id="cx">
   <div class="cx-head">
     <div class="cx-title">
-      <span class="orb" style="width:34px;height:34px;"></span>
+      <span class="orb"></span>
       <div style="min-width:0;">
         <b>{{ title }}</b>
         <small>
@@ -94,18 +118,27 @@
     </div>
     <div class="cx-actions">
       {% if mode == 'admin' %}
-        <button class="ib" type="button" onclick="drawer(true)" title="Mazungumzo">☰</button>
-        <a class="ib" href="{{ url_for('admin_ai', new=1) }}" title="Mazungumzo mapya">✨</a>
-        {% if thread %}
-        <form method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya?')">
-          <input type="hidden" name="thread_id" value="{{ thread.id }}"><button class="ib" title="Futa">🗑️</button>
-        </form>{% endif %}
+        <button class="ib" type="button" onclick="drawer(true)" title="Mazungumzo yote" aria-label="Mazungumzo yote">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Orodha</span></button>
+        <a class="ib pri" href="{{ url_for('admin_ai', new=1) }}" title="Mazungumzo mapya" aria-label="Mazungumzo mapya">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Mpya</span></a>
+      {% endif %}
+      <button class="ib" type="button" onclick="exportChat()" title="Pakua mazungumzo" aria-label="Pakua mazungumzo">
+        <svg viewBox="0 0 24 24"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg><span>Pakua</span></button>
+      {% if mode == 'admin' %}
+        <form id="delForm" method="POST" action="{{ url_for('admin_ai_delete') }}" onsubmit="return confirm('Futa mazungumzo haya?')" {{ '' if thread else 'hidden' }}>
+          <input type="hidden" id="delTid" name="thread_id" value="{{ thread.id if thread else '' }}">
+          <button class="ib danger" title="Futa mazungumzo" aria-label="Futa mazungumzo">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span>Futa</span></button>
+        </form>
       {% else %}
         <form method="POST" action="{{ url_for('user_ai_clear') }}" onsubmit="return confirm('Futa mazungumzo yote?')">
-          <button class="ib" title="Futa mazungumzo">🗑️</button>
+          <button class="ib danger" title="Futa mazungumzo" aria-label="Futa mazungumzo">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"/></svg><span>Futa</span></button>
         </form>
       {% endif %}
-      <a class="ib" href="{{ back_url }}" title="{{ back_label }}">⬅</a>
+      <a class="ib" href="{{ back_url }}" title="{{ back_label }}" aria-label="{{ back_label }}">
+        <svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg><span>{{ back_label }}</span></a>
     </div>
   </div>
 
@@ -132,6 +165,7 @@
   <div class="pn">
     <h3>💬 Mazungumzo</h3>
     <a class="th new" href="{{ url_for('admin_ai', new=1) }}">✨ Mazungumzo mapya</a>
+    <input class="dsearch" id="dsearch" type="search" placeholder="Tafuta mazungumzo…" autocomplete="off">
     <div id="threadList">
       {% for t in threads %}
         <a class="th {{ 'active' if thread and thread.id == t.id else '' }}" href="{{ url_for('admin_ai', t=t.id) }}">{{ t.title or 'Mazungumzo' }}</a>
@@ -141,14 +175,15 @@
 </div>
 {% endif %}
 
-<button class="jump" id="jump" type="button" onclick="toBottom(true)">↓</button>
+<button class="jump" id="jump" type="button" onclick="toBottom(true)" aria-label="Shuka chini" title="Shuka chini">
+  <svg viewBox="0 0 24 24"><path d="M12 5v14m0 0l-6-6m6 6l6-6"/></svg></button>
 
 <div class="cx-composer">
   <div class="cx-err" id="err" hidden></div>
   <div class="cx-in">
     <div class="cx-box">
       <textarea id="inp" rows="1" placeholder="Uliza chochote…" {{ '' if ai_ready else 'disabled' }}></textarea>
-      <button class="send" id="sendBtn" type="button" aria-label="Tuma" {{ '' if ai_ready else 'disabled' }}>➤</button>
+      <button class="send" id="sendBtn" type="button" aria-label="Tuma" {{ '' if ai_ready else 'disabled' }}></button>
     </div>
     <div class="cx-foot">AI inaweza kukosea. Hakuna uhakika wa ushindi kwenye utabiri.</div>
   </div>
@@ -168,9 +203,26 @@ const msgs = document.getElementById('msgs'), inp = document.getElementById('inp
 const sendBtn = document.getElementById('sendBtn'), emptyEl = document.getElementById('empty');
 const errEl = document.getElementById('err'), jump = document.getElementById('jump');
 const coarse = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
-let busy = false, ctrl = null, stick = true;
+let busy = false, ctrl = null;
+
+const SEND_SVG = '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+const STOP_SVG = '<svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+const COPY_SVG = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/></svg>';
+const EDIT_SVG = '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>';
 
 function drawer(open){ const d = document.getElementById('drawer'); if (d) d.classList.toggle('open', open); }
+const ds = document.getElementById('dsearch');
+if (ds) ds.addEventListener('input', ()=>{ const q = ds.value.trim().toLowerCase();
+  document.querySelectorAll('#threadList .th').forEach(a=>{ a.style.display = (!q || a.textContent.toLowerCase().includes(q)) ? '' : 'none'; }); });
+
+/* ---------- Mpangilio: urefu wa topbar + header (kwa sticky na scroll) ---------- */
+function setStack(){
+  const tb = document.querySelector('.topbar'), h = document.querySelector('.cx-head');
+  const tbh = tb ? tb.offsetHeight : 72;
+  document.documentElement.style.setProperty('--tb', tbh + 'px');
+  document.documentElement.style.setProperty('--stack', (tbh + (h ? h.offsetHeight : 60) + 22) + 'px');
+}
+window.addEventListener('resize', setStack); setStack();
 
 /* ---------- Markdown salama (HTML inaepukwa kwanza) ---------- */
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -188,7 +240,7 @@ function md(src){
   const isBlock = l => /^(#{1,4})\s+/.test(l) || /^```/.test(l) || /^>\s?/.test(l) || /^\s*([-*•])\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l) || /^\s*---+\s*$/.test(l);
   while (i < L.length) {
     const ln = L[i]; let m;
-    if (/^```/.test(ln)) { const b=[]; i++; while (i<L.length && !/^```/.test(L[i])) { b.push(L[i]); i++; } i++; out.push('<pre><code>'+esc(b.join('\n'))+'</code></pre>'); continue; }
+    if (/^```/.test(ln)) { const b=[]; i++; while (i<L.length && !/^```/.test(L[i])) { b.push(L[i]); i++; } i++; out.push('<pre><button type="button" class="cpy">Nakili</button><code>'+esc(b.join('\n'))+'</code></pre>'); continue; }
     if (/^\s*$/.test(ln)) { i++; continue; }
     if ((m = ln.match(/^(#{1,4})\s+(.*)$/))) { const lv = m[1].length+1; out.push('<h'+lv+'>'+inl(m[2])+'</h'+lv+'>'); i++; continue; }
     if (/^\s*---+\s*$/.test(ln)) { out.push('<hr>'); i++; continue; }
@@ -207,18 +259,23 @@ function md(src){
   return out.join('');
 }
 
-/* ---------- UI ---------- */
+/* ---------- UI (hakuna scroll ya kiotomatiki wakati jibu linaandikwa) ---------- */
 function nearBottom(){ return (document.documentElement.scrollHeight - window.scrollY - window.innerHeight) < 170; }
-function toBottom(force){ if (force || stick) window.scrollTo({top: document.documentElement.scrollHeight}); }
-window.addEventListener('scroll', ()=>{ stick = nearBottom(); jump.style.display = stick ? 'none' : 'flex'; });
+function toBottom(force){ if (force) window.scrollTo({top: document.documentElement.scrollHeight, behavior:'smooth'}); }
+function updateJump(){ const away = !nearBottom() && msgs.children.length > 0; jump.style.display = away ? 'flex' : 'none'; if (!away) jump.classList.remove('new'); }
+window.addEventListener('scroll', updateJump, {passive:true});
 function autosize(){ inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,160)+'px'; }
 function showErr(t){ errEl.textContent = '⚠️ ' + t; errEl.hidden = false; }
 function hideErr(){ errEl.hidden = true; }
-function setBtn(stop){ sendBtn.classList.toggle('stop', stop); sendBtn.textContent = stop ? '■' : '➤'; sendBtn.disabled = false; }
+function setBtn(stop){ sendBtn.classList.toggle('stop', stop); sendBtn.innerHTML = stop ? STOP_SVG : SEND_SVG; sendBtn.disabled = false; }
 
 function copyText(t){
   if (navigator.clipboard) return navigator.clipboard.writeText(t);
   const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); document.execCommand('copy'); a.remove();
+}
+function mkBtn(html, label, fn){
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'ab'; b.innerHTML = html + '<span>' + label + '</span>';
+  b.onclick = fn; return b;
 }
 function addMsg(role, content){
   const w = document.createElement('div'); w.className = 'm ' + role;
@@ -227,19 +284,42 @@ function addMsg(role, content){
     w._raw = content || '';
     if (content) { w.querySelector('.bubble').innerHTML = md(content); addCopy(w); }
   } else {
-    w.innerHTML = '<div class="bd"><div class="bubble"></div></div>';
+    w.innerHTML = '<div class="bd"><div class="bubble"></div><div class="mbar"></div></div>';
     w.querySelector('.bubble').textContent = content;
+    const bar = w.querySelector('.mbar');
+    bar.appendChild(mkBtn(EDIT_SVG, 'Rudia', ()=>{ inp.value = content; autosize(); inp.focus(); }));
   }
   msgs.appendChild(w); return w;
 }
-function addCopy(w){
-  const bar = w.querySelector('.mbar'); if (!bar || bar.firstChild) return;
-  const b = document.createElement('button'); b.textContent = '📋 Nakili';
-  b.onclick = ()=>{ copyText(w._raw); b.textContent = '✅ Imenakiliwa'; setTimeout(()=>b.textContent='📋 Nakili', 1500); };
+function addCopy(w, secs){
+  const bar = w.querySelector('.mbar'); if (!bar) return; bar.innerHTML = '';
+  const b = mkBtn(COPY_SVG, 'Nakili', ()=>{ copyText(w._raw); const s = b.querySelector('span'); s.textContent = 'Imenakiliwa ✓'; setTimeout(()=>s.textContent='Nakili', 1500); });
   bar.appendChild(b);
+  if (secs) { const m = document.createElement('span'); m.className = 'meta'; m.textContent = '⏱ ' + secs + 's'; bar.appendChild(m); }
 }
 function setTools(w, labels, live){
   w.querySelector('.tools').innerHTML = labels.map((l,i)=>'<span class="chip'+(live && i===labels.length-1 ? ' live' : '')+'">'+esc(l)+'</span>').join('');
+}
+msgs.addEventListener('click', e=>{
+  const t = e.target;
+  if (t.classList && t.classList.contains('cpy')) {
+    const code = t.parentElement.querySelector('code'); copyText(code ? code.textContent : '');
+    t.textContent = 'Imenakiliwa ✓'; setTimeout(()=>t.textContent = 'Nakili', 1500);
+  }
+});
+
+function exportChat(){
+  const parts = [];
+  msgs.querySelectorAll('.m').forEach(m=>{
+    const u = m.classList.contains('user');
+    const t = u ? m.querySelector('.bubble').textContent : (m._raw || m.querySelector('.bubble').textContent);
+    if (t && t.trim()) parts.push((u ? 'Wewe: ' : 'AI: ') + t.trim());
+  });
+  if (!parts.length) { showErr('Hakuna mazungumzo ya kupakua.'); return; }
+  const blob = new Blob([parts.join('\n\n---\n\n')], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = 'braiton-ai-' + new Date().toISOString().slice(0,10) + '.txt';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 }
 
 /* ---------- Mtiririko ---------- */
@@ -261,13 +341,18 @@ async function send(forced){
   hideErr(); emptyEl.style.display = 'none';
   const uw = addMsg('user', text); inp.value = ''; autosize();
   const w = addMsg('assistant', ''); const bubble = w.querySelector('.bubble');
-  bubble.innerHTML = '<span class="dots"><i></i><i></i><i></i></span>';
-  busy = true; setBtn(true); ctrl = new AbortController(); stick = true; toBottom(true);
+  bubble.innerHTML = '<span class="dots"><i></i><i></i><i></i></span><span class="wait">0s</span>';
+  busy = true; setBtn(true); ctrl = new AbortController();
+  const t0 = Date.now();
+  const tick = setInterval(()=>{ const el = bubble.querySelector('.wait'); if (el) el.textContent = Math.round((Date.now()-t0)/1000) + 's'; }, 1000);
+  /* Mara moja tu: swali lako liwe juu ya skrini, jibu lisome kutoka mwanzo. Hakuna kufuata maneno. */
+  requestAnimationFrame(()=>uw.scrollIntoView({behavior:'smooth', block:'start'}));
   let last = {text:'', tools:[]}, raf = false;
   const paint = ()=>{ raf = false;
     if (last.tools.length) setTools(w, last.tools, true);
     if (last.text) { bubble.innerHTML = md(last.text); w._raw = last.text; }
-    toBottom(false); };
+    if (!nearBottom()) jump.classList.add('new');
+    updateJump(); };
   const fail = (msg)=>{ uw.remove(); w.remove(); inp.value = text; autosize(); showErr(msg); if (!msgs.children.length) emptyEl.style.display = ''; };
   try {
     const res = await fetch(STREAM_URL, {method:'POST', credentials:'same-origin', signal: ctrl.signal,
@@ -292,7 +377,8 @@ async function send(forced){
     if (final.err) { fail(final.err); return; }
     last = final; paint();
     if (!final.text.trim()) { fail('AI haikurudisha jibu. Jaribu tena.'); return; }
-    w._raw = final.text.trim(); bubble.innerHTML = md(w._raw); setTools(w, final.tools, false); addCopy(w);
+    w._raw = final.text.trim(); bubble.innerHTML = md(w._raw); setTools(w, final.tools, false);
+    addCopy(w, Math.round((Date.now()-t0)/1000));
     const meta = final.meta || {};
     if (meta.thread_id && !threadId) {
       threadId = meta.thread_id;
@@ -300,6 +386,8 @@ async function send(forced){
         history.replaceState(null, '', '?t=' + threadId);
         const list = document.getElementById('threadList');
         if (list) { const a = document.createElement('a'); a.className = 'th active'; a.href = '?t=' + threadId; a.textContent = text.slice(0,40); list.prepend(a); }
+        const df = document.getElementById('delForm'), dt = document.getElementById('delTid');
+        if (df && dt) { dt.value = threadId; df.hidden = false; }
       }
     }
     if (meta.remaining !== undefined && meta.remaining !== null) {
@@ -308,9 +396,9 @@ async function send(forced){
     if (meta.warning) showErr(meta.warning);
   } catch (e) {
     if (e.name === 'AbortError') {
-      if (!last.text) { w.remove(); } else { w._raw = last.text; bubble.innerHTML = md(last.text) + '<p><em>(imesitishwa)</em></p>'; }
+      if (!last.text) { w.remove(); } else { w._raw = last.text; bubble.innerHTML = md(last.text) + '<p><em>(imesitishwa)</em></p>'; addCopy(w); }
     } else { fail('Hitilafu ya mtandao. Angalia mtandao wako kisha jaribu tena.'); }
-  } finally { busy = false; ctrl = null; setBtn(false); toBottom(false); }
+  } finally { clearInterval(tick); busy = false; ctrl = null; setBtn(false); updateJump(); }
 }
 
 sendBtn.addEventListener('click', ()=>send());
@@ -318,7 +406,8 @@ inp.addEventListener('input', autosize);
 inp.addEventListener('keydown', e=>{ if (e.key === 'Enter' && !e.shiftKey && !coarse) { e.preventDefault(); send(); } });
 document.querySelectorAll('.chipbtn').forEach(b=>b.addEventListener('click', ()=>send(b.dataset.q)));
 
+setBtn(false);
 INITIAL.forEach(m=>addMsg(m.role === 'assistant' ? 'assistant' : 'user', m.content));
-if (INITIAL.length) { emptyEl.style.display = 'none'; setTimeout(()=>toBottom(true), 50); }
+if (INITIAL.length) { emptyEl.style.display = 'none'; setTimeout(()=>{ window.scrollTo({top: document.documentElement.scrollHeight}); updateJump(); }, 50); }
 </script>
 {% endblock %}
