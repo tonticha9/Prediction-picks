@@ -1,3 +1,4 @@
+# v2 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
 name: Weekly Retrain v8
 
 on:
@@ -28,7 +29,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Kaggle CLI
-        run: pip install kaggle
+        run: pip install kaggle six
 
       - name: Retrain + gate + chapisha
         env:
