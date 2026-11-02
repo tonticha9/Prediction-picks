@@ -1,6 +1,7 @@
 """
 admin_api_key.py: plugin ya Admin.
 - Ukurasa /admin/api-key : admin anaweka au kubadilisha API key ya AllSportsAPI (inahifadhiwa kwenye DB)
+- Kitufe cha 🔑 kinaelea kwenye ukurasa wa /admin kinachoelekea ukurasa huo
 - Endpoint /api/internal/allsports-key : Kaggle (seli A1) inachukua key hapa kwa kutumia header
   X-Kaggle-Token. Token inalinganishwa na variable ya Render KAGGLE_LINK_TOKEN.
 - Kinga: majaribio 5 yakikosea kutoka IP moja = kuzuiwa dakika 15.
@@ -16,6 +17,13 @@ TOKEN_ENV = 'KAGGLE_LINK_TOKEN'
 MAX_FAILS = 5
 BLOCK_SECONDS = 900
 _FAILS = {}
+
+BUTTON_HTML = (
+    '<a href="/admin/api-key" style="position:fixed;right:14px;bottom:14px;z-index:9999;'
+    'background:#2563eb;color:#fff;padding:12px 16px;border-radius:999px;'
+    'font:600 15px system-ui,sans-serif;text-decoration:none;'
+    'box-shadow:0 4px 14px rgba(0,0,0,.4)">🔑 API Key</a>'
+)
 
 PAGE = """<!doctype html><html lang="sw"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -73,6 +81,19 @@ def register(app, admin_only, app_ns):
         ks = f'imehifadhiwa (…{key[-4:]}, urefu {len(key)})' if key else 'haipo'
         ts = 'imewekwa ✅' if (os.environ.get(TOKEN_ENV) or '').strip() else 'HAIJAWEKWA ❌'
         return ks, ts
+
+    @app.after_request
+    def _inject_api_key_button(resp):
+        # Weka kitufe cha 🔑 kwenye ukurasa wa /admin tu. Ikishindwa, ukurasa hauathiriki.
+        try:
+            if (request.path.rstrip('/') == '/admin' and resp.status_code == 200
+                    and resp.mimetype == 'text/html'):
+                html = resp.get_data(as_text=True)
+                if '</body>' in html and '/admin/api-key' not in html:
+                    resp.set_data(html.replace('</body>', BUTTON_HTML + '</body>', 1))
+        except Exception:
+            pass
+        return resp
 
     @app.route('/admin/api-key', methods=['GET', 'POST'])
     @admin_only
