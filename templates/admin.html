@@ -4,6 +4,9 @@
 {% set gem = gem_ok is defined and gem_ok %}
 {% set hf = history_flags() if gem else none %}
 {% set unread = inbox_unread() if gem else 0 %}
+{% set ops = ops_status() if ops_status is defined else [] %}
+{% set ops_n = ops_open_count() if ops_open_count is defined else 0 %}
+{% set bp = bp_state() if bp_state is defined else none %}
 <style>
   .ad-hero { position:relative; overflow:hidden; border-radius:22px; padding:22px 18px; margin-bottom:16px; border:1px solid rgba(255,255,255,.12);
              background:linear-gradient(135deg, rgba(99,102,241,.4), rgba(16,185,129,.24) 60%, rgba(14,165,233,.2)); box-shadow:0 0 40px rgba(99,102,241,.25); }
@@ -14,6 +17,18 @@
   .ad-pill.ok { background:rgba(16,185,129,.2); color:var(--emerald); }
   .ad-pill.warn { background:rgba(245,158,11,.2); color:#f59e0b; }
   .ad-pill.error { background:rgba(239,68,68,.2); color:var(--red); }
+  .ad-alert { display:block; margin-bottom:12px; padding:13px 15px; border-radius:16px; background:rgba(239,68,68,.18); border:1px solid rgba(239,68,68,.5); color:#fecaca; font-weight:700; font-size:14px; text-decoration:none; }
+  .ad-nav { display:flex; gap:8px; overflow-x:auto; padding:2px 0 12px; margin-bottom:4px; -webkit-overflow-scrolling:touch; }
+  .ad-nav a { flex:0 0 auto; padding:8px 13px; border-radius:999px; font-size:13px; font-weight:700; text-decoration:none; color:inherit; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
+  .ad-nav a:active { transform:scale(.96); }
+  .ad-sys { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .ad-syscard { display:block; padding:12px; border-radius:16px; text-decoration:none; color:inherit; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-left:4px solid var(--emerald); }
+  .ad-syscard.warn { border-left-color:#f59e0b; }
+  .ad-syscard.error { border-left-color:var(--red); background:rgba(239,68,68,.08); }
+  .ad-syscard b { display:flex; align-items:center; gap:6px; font-size:13px; word-break:break-word; }
+  .ad-syscard small { display:block; margin-top:4px; color:var(--text-dim); font-size:11px; line-height:1.4; }
+  .ad-dot { flex:0 0 9px; width:9px; height:9px; border-radius:50%; background:var(--emerald); }
+  .ad-syscard.warn .ad-dot { background:#f59e0b; } .ad-syscard.error .ad-dot { background:var(--red); }
   .ad-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
   .ad-stat { padding:13px 8px; border-radius:16px; text-align:center; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); }
   .ad-stat b { display:block; font-size:21px; } .ad-stat span { font-size:11px; color:var(--text-dim); }
@@ -52,15 +67,31 @@
   .ad-msg { padding:11px 12px; border-radius:12px; margin-bottom:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:13px; }
   .ad-msg.new { border-left:4px solid var(--red); }
   .ad-msg small { display:block; color:var(--text-dim); font-size:11px; margin-bottom:4px; }
+  .ad-select { width:100%; padding:11px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.05); color:inherit; font-size:14px; }
 </style>
 
 <div class="ad-hero">
   <h2>⚙️ Admin Panel</h2>
-  <p>Dhibiti Braiton Picks: hali ya mfumo, History, AI, mipangilio na data.</p>
+  <p>Dhibiti Braiton Picks: hali ya mfumo mzima, History, AI, mipangilio na data.</p>
   <span class="ad-pill {{ health_summary.level }}">
     {% if health_summary.level == 'ok' %}✔️{% elif health_summary.level == 'warn' %}⚠️{% else %}❌{% endif %}
     {{ health_summary.text }}
   </span>
+</div>
+
+{% if ops_n %}
+<a class="ad-alert" href="/admin/ops">🚨 Matatizo {{ ops_n }} yanahitaji umakini (GitHub, Kaggle, Render au app). Bonyeza kuona.</a>
+{% endif %}
+
+<div class="ad-nav">
+  <a href="#ops">🛰️ Mfumo</a>
+  <a href="#health">🩺 Hali</a>
+  <a href="#bestpick">🎚️ Best Pick</a>
+  <a href="#picks">🎯 Picks</a>
+  <a href="#combos">🧩 Combos</a>
+  {% if admin_tools_ok %}<a href="#ai">🤖 AI</a>{% endif %}
+  <a href="#api">🔑 API Key</a>
+  <a href="#data">🗂️ Data</a>
 </div>
 
 <div class="ad-stats">
@@ -69,7 +100,22 @@
   <div class="ad-stat"><b>{% if days_left is not none %}{{ days_left }}d{% else %}—{% endif %}</b><span>API key inaisha</span></div>
 </div>
 
+<div class="ad-sub" id="ops" style="margin-top:4px;">🛰️ Mfumo mzima (GitHub · Kaggle · Render · API)</div>
+<div class="ad-sys">
+  {% for r in ops %}
+  <a class="ad-syscard {{ r.level }}" href="/admin/ops">
+    <b><span class="ad-dot"></span>{{ r.name }}</b>
+    <small>{{ r.text }} · {{ r.when|eat('%d %b %H:%M') }}</small>
+  </a>
+  {% endfor %}
+  {% if not ops %}
+  <div class="ad-hint" style="grid-column:1 / -1;">Bado hakuna ripoti kutoka GitHub au mlinzi wa Render. Weka <b>ops_report.yml</b> na <b>watchdog.yml</b> kwenye .github/workflows/.</div>
+  {% endif %}
+</div>
+
 <div class="ad-grid">
+  <a class="ad-tile" href="/admin/ops"><span class="ic">🚨</span><b>Matukio</b><small>Kinachofeli popote</small>{% if ops_n %}<span class="ad-badge">{{ ops_n }}</span>{% endif %}</a>
+  <a class="ad-tile" href="#bestpick"><span class="ic">🎚️</span><b>Best Pick</b><small>Zima masoko</small></a>
   {% if admin_tools_ok %}
   <a class="ad-tile" href="{{ url_for('admin_ai') }}"><span class="ic">🤖</span><b>Admin AI</b><small>Gemini: anajua mfumo wako</small></a>
   <a class="ad-tile" href="{{ url_for('admin_markets') }}"><span class="ic">📈</span><b>Market Analysis</b><small>Markets imara na dhaifu</small></a>
@@ -146,6 +192,46 @@
     {% endfor %}
   </div>
 </details>
+
+{% if bp %}
+<details class="ad-sec" id="bestpick" {{ 'open' if (bp.groups_off or bp.markets_off) else '' }}>
+  <summary>🎚️ Best Pick: zima masoko
+    <span class="ad-chip {{ 'off' if (bp.groups_off or bp.markets_off) else 'on' }}">{{ (bp.groups_off|length + bp.markets_off|length) }} yamezimwa</span>
+  </summary>
+  <div class="ad-body">
+    <form method="POST" action="/admin/bestpick/save">
+      <div class="ad-hint" style="margin-bottom:8px;">Soko lililozimwa HALICHAGULIWI kuwa Best Pick. Linaonekana kwenye Other Picks tu. Mechi ambayo masoko yake yote yanayovuka vigezo yamezimwa haitaonekana kwenye Best Picks.</div>
+
+      <div class="ad-sub">Makundi (washa = yanaweza kuwa Best Pick)</div>
+      {% for g in bp.groups %}
+      <label class="ad-switch">
+        <input type="checkbox" name="allow_group" value="{{ g.key }}" {{ 'checked' if g.allowed else '' }}>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">{{ g.icon }} {{ g.label }}<small>{{ 'Inaweza kuwa Best Pick' if g.allowed else 'Other Picks tu' }}</small></span>
+      </label>
+      {% endfor %}
+
+      <div class="ad-sub">Masoko mahususi yaliyozimwa (ondoa tiki kuyaruhusu tena)</div>
+      {% for m in bp.markets_off %}
+      <label class="ad-switch">
+        <input type="checkbox" name="off_market" value="{{ m }}" checked>
+        <span class="ad-slider"></span>
+        <span class="ad-switch-text">{{ m }}<small>Other Picks tu</small></span>
+      </label>
+      {% endfor %}
+      {% if not bp.markets_off %}<div class="ad-hint">Hakuna soko mahususi lililozimwa.</div>{% endif %}
+
+      <div class="ad-sub">Zima soko jingine</div>
+      <select class="ad-select" name="add_market">
+        <option value="">— chagua soko —</option>
+        {% for m in bp.options %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+      <div class="ad-hint" style="margin:8px 0 10px;">Mabadiliko yanaathiri Dashboard, Zijazo na History (zote zinatumia uchaguzi uleule wa Best Pick).</div>
+      <button class="btn" type="submit">💾 Hifadhi Best Pick</button>
+    </form>
+  </div>
+</details>
+{% endif %}
 
 <form method="POST" id="settingsForm">
   <input type="hidden" name="action" value="update_settings">
