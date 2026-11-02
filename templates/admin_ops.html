@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+  .op-hero { border-radius:20px; padding:18px; margin-bottom:14px; border:1px solid rgba(255,255,255,.12);
+             background:linear-gradient(135deg, rgba(239,68,68,.22), rgba(99,102,241,.25)); }
+  .op-hero h2 { margin:0 0 6px; font-size:21px; }
+  .op-hero p { margin:0; font-size:13px; color:var(--text-dim); }
+  .op-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .op-actions form { margin:0; }
+  .op-sys { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+  .op-card { padding:12px; border-radius:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-left:4px solid var(--emerald); }
+  .op-card.warn { border-left-color:#f59e0b; } .op-card.error { border-left-color:var(--red); background:rgba(239,68,68,.08); }
+  .op-card b { display:block; font-size:13px; word-break:break-word; }
+  .op-card small { display:block; margin-top:4px; color:var(--text-dim); font-size:11px; line-height:1.4; }
+  .op-card a { color:#7dd3fc; font-size:12px; }
+  .op-title { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-dim); margin:18px 0 8px; }
+  .op-ev { padding:12px; border-radius:14px; margin-bottom:8px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-left:4px solid var(--red); font-size:13px; }
+  .op-ev.warn { border-left-color:#f59e0b; } .op-ev.old { opacity:.6; border-left-color:rgba(255,255,255,.25); }
+  .op-ev small { display:block; color:var(--text-dim); font-size:11px; margin-top:3px; }
+  .op-ev a { color:#7dd3fc; }
+  .op-btn { appearance:none; border:0; cursor:pointer; padding:9px 13px; border-radius:12px; font-size:13px; font-weight:700; color:#fff; background:linear-gradient(135deg,#6366f1,#10b981); }
+  .op-btn.ghost { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); }
+  .op-btn.small { padding:6px 10px; font-size:12px; margin-top:8px; }
+</style>
+
+<div class="op-hero">
+  <h2>🚨 Matukio ya Mfumo</h2>
+  <p>Kitu chochote kikifeli kwenye GitHub, Kaggle, Render au app kinaonekana hapa.</p>
+</div>
+
+<div class="op-actions">
+  <form method="POST" action="/admin/ops/resolve">
+    <button class="op-btn" type="submit">✅ Weka yote kuwa yametatuliwa</button>
+  </form>
+  <form method="POST" action="/admin/ops/test">
+    <button class="op-btn ghost" type="submit">🧪 Tukio la majaribio</button>
+  </form>
+  <a class="op-btn ghost" href="/admin" style="text-decoration:none;">⬅ Admin</a>
+</div>
+
+<div class="op-title">Hali ya kila mfumo</div>
+<div class="op-sys">
+  {% for r in rows %}
+  <div class="op-card {{ r.level }}">
+    <b>{{ '🔴' if r.level == 'error' else ('🟡' if r.level == 'warn' else '🟢') }} {{ r.name }}</b>
+    <small>{{ r.text }}<br>{{ r.when|eat('%d %b %H:%M') }}</small>
+    {% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener">Fungua run ↗</a>{% endif %}
+  </div>
+  {% endfor %}
+  {% if not rows %}
+  <div class="op-ev old" style="grid-column:1 / -1;">Bado hakuna ripoti. Weka ops_report.yml na watchdog.yml kwenye .github/workflows/.</div>
+  {% endif %}
+</div>
+
+<div class="op-title">Matatizo yaliyo wazi ({{ open_evs|length }})</div>
+{% for e in open_evs %}
+  <div class="op-ev {{ 'warn' if e.level == 'warn' else '' }}">
+    <b>{{ '❌' if e.level == 'error' else '⚠️' }} {{ e.source }}: {{ e.title }}</b>
+    {% if e.detail %}<div style="margin-top:4px;">{{ e.detail }}</div>{% endif %}
+    <small>{{ e.created|eat('%d %b %Y %H:%M') }}{% if e.url %} · <a href="{{ e.url }}" target="_blank" rel="noopener">Fungua run ↗</a>{% endif %}</small>
+    <form method="POST" action="/admin/ops/resolve">
+      <input type="hidden" name="id" value="{{ e.id }}">
+      <button class="op-btn small ghost" type="submit">Imetatuliwa</button>
+    </form>
+  </div>
+{% endfor %}
+{% if not open_evs %}
+  <div class="op-ev old" style="border-left-color:var(--emerald);">✅ Hakuna tatizo lililo wazi.</div>
+{% endif %}
+
+{% if old_evs %}
+<div class="op-title">Yaliyotatuliwa hivi karibuni</div>
+{% for e in old_evs %}
+  <div class="op-ev old">
+    {{ e.source }}: {{ e.title }}
+    <small>{{ e.created|eat('%d %b %Y %H:%M') }}</small>
+  </div>
+{% endfor %}
+{% endif %}
+{% endblock %}
