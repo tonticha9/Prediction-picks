@@ -5,8 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Braiton Picks</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    /* ===== Vitufe vya kisasa na zana za kurasa (Nov 2026) ===== */
+    .pro-bar { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; align-items:center; }
+    .pro-input { flex:1 1 150px; min-width:0; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.14);
+                 background:rgba(255,255,255,.05); color:inherit; font-size:14px; }
+    .pro-btn { appearance:none; border:0; cursor:pointer; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:700;
+               color:#fff; background:linear-gradient(135deg,#6366f1,#10b981); box-shadow:0 4px 14px rgba(99,102,241,.35);
+               transition:transform .12s, box-shadow .12s, opacity .12s; }
+    .pro-btn:active { transform:scale(.96); }
+    .pro-btn.ghost { background:rgba(255,255,255,.07); box-shadow:none; border:1px solid rgba(255,255,255,.14); }
+    .pro-btn.active { background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 14px rgba(16,185,129,.4); }
+    .stat-chips { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+    .stat-chips .chip { display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border-radius:999px; font-size:13px;
+                        background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
+    .stat-chips .chip b { font-size:15px; }
+    .toggle-picks { display:flex; align-items:center; justify-content:space-between; width:100%; margin-top:10px; padding:11px 14px;
+                    border-radius:12px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:inherit;
+                    font-weight:700; cursor:pointer; transition:background .15s, transform .1s; }
+    .toggle-picks:active { transform:scale(.98); }
+    .toggle-picks:hover { background:rgba(255,255,255,.1); }
+    .fab-top { position:fixed; right:14px; bottom:14px; z-index:50; width:44px; height:44px; border-radius:50%; border:0; cursor:pointer;
+               font-size:20px; color:#fff; background:linear-gradient(135deg,#6366f1,#10b981); box-shadow:0 6px 18px rgba(0,0,0,.45);
+               opacity:0; pointer-events:none; transition:opacity .2s; }
+    .fab-top.show { opacity:1; pointer-events:auto; }
+    .ops-alert { display:block; padding:11px 16px; background:rgba(239,68,68,.22); border-bottom:1px solid rgba(239,68,68,.55);
+                 color:#fecaca; font-size:13px; font-weight:700; text-align:center; text-decoration:none; }
+    .nav-badge { display:inline-block; margin-left:6px; min-width:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff;
+                 font-size:12px; font-weight:700; text-align:center; }
+  </style>
 </head>
 <body>
+
+  {% set _oc = ops_open_count() if (is_admin and ops_open_count is defined) else 0 %}
 
   <div class="topbar">
     <div class="brand">⚽ Braiton <span class="dot">Picks</span></div>
@@ -14,6 +45,10 @@
       <span></span><span></span><span></span>
     </div>
   </div>
+
+  {% if _oc %}
+  <a class="ops-alert" href="/admin/ops">🚨 Matatizo {{ _oc }} ya mfumo yanahitaji umakini: bonyeza kuona</a>
+  {% endif %}
 
   <div class="nav-overlay" id="navOverlay" onclick="toggleNav()"></div>
   <div class="nav-drawer" id="navDrawer">
@@ -36,7 +71,7 @@
 
     {# Kitufe cha Admin kinaonekana kwa akaunti ya admin PEKEE #}
     {% if is_admin %}
-      <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' and request.endpoint != 'admin_ai' else '' }}">⚙️ Admin</a>
+      <a href="{{ url_for('admin') }}" class="{{ 'active' if page=='admin' and request.endpoint != 'admin_ai' else '' }}">⚙️ Admin{% if _oc %}<span class="nav-badge">{{ _oc }}</span>{% endif %}</a>
     {% endif %}
 
     <div style="border-top:1px solid rgba(255,255,255,.12); margin:12px 0;"></div>
@@ -75,6 +110,8 @@
     </div>
   </div>
 
+  <button class="fab-top" id="fabTop" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Juu">↑</button>
+
   <script>
     function toggleNav() {
       document.getElementById('navDrawer').classList.toggle('open');
@@ -83,6 +120,35 @@
     function togglePicks(id) {
       document.getElementById(id).classList.toggle('open');
     }
+    function expandAll() {
+      document.querySelectorAll('.other-picks').forEach(function (e) { e.classList.add('open'); });
+    }
+    function collapseAll() {
+      document.querySelectorAll('.other-picks').forEach(function (e) { e.classList.remove('open'); });
+    }
+    var _oddsOnly = false;
+    function applyFilters() {
+      var q = ((document.getElementById('matchSearch') || {}).value || '').toLowerCase().trim();
+      var shown = 0;
+      document.querySelectorAll('.match-card').forEach(function (c) {
+        var t = ((c.querySelector('.match-teams') || c).textContent || '').toLowerCase();
+        var ok = (!q || t.indexOf(q) !== -1) && (!_oddsOnly || c.querySelector('.best-pick-extra'));
+        c.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      });
+      var v = document.getElementById('visCount');
+      if (v) v.textContent = shown;
+    }
+    function filterMatches() { applyFilters(); }
+    function toggleOdds(btn) {
+      _oddsOnly = !_oddsOnly;
+      btn.classList.toggle('active', _oddsOnly);
+      applyFilters();
+    }
+    window.addEventListener('scroll', function () {
+      var f = document.getElementById('fabTop');
+      if (f) f.classList.toggle('show', window.scrollY > 500);
+    });
   </script>
   {% block scripts %}{% endblock %}
 </body>
