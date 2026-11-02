@@ -1,5 +1,4 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Getafe vs Sevilla: goals_over_15 @1.53 + Como vs Venezia: dc_1x @1.07,1.64,67.7
-3,3,Ein Frankfurt vs Hamburg: dc_1x @1.17 + Ath Bilbao vs Sociedad: dc_1x @1.36 + Getafe vs Sevilla: goals_over_15 @1.53,2.43,47.2
-5,5,Sunderland vs Chelsea: goals_over_15 @1.28 + Genclerbirligi vs Alanyaspor: goals_over_15 @1.33 + Getafe vs Sevilla: goals_over_15 @1.53 + Angers vs Nice: dc_12 @1.28 + Liverpool vs Arsenal: goals_over_15 @1.25,4.17,28.7
-7,6,Auxerre vs Paris FC: dc_x2 @1.28 + Getafe vs Sevilla: goals_over_15 @1.53 + Buyuksehyr vs Samsunspor: dc_1x @1.22 + Lorient vs Brest: goals_over_15 @1.33 + Gil Vicente vs Guimaraes: goals_over_15 @1.36 + Elche vs Valencia: goals_over_15 @1.30,5.62,20.2
+2,2,Aston Villa vs Sunderland: dc_1x @1.25 + Qpr vs Lincoln: dc_12 @1.28,1.6,67.4
+3,4,Brighton vs Brentford: dc_1x @1.28 + Ofi Crete vs Atromitos: dc_1x @1.36 + Az Alkmaar vs Groningen: dc_1x @1.17 + Sociedad vs Vallecano: dc_1x @1.18,2.4,45.1
+5,5,Genclerbirligi vs Alanyaspor: goals_over_15 @1.33 + Kalamata vs Iraklis: goals_over_15 @1.36 + Brest vs Lyon: dc_12 @1.28 + Venezia vs Udinese: dc_1x @1.35 + Brighton vs Brentford: dc_1x @1.28,4.0,26.9
