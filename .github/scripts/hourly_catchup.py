@@ -58,6 +58,20 @@ v7 (UIMARA WA API + USIRI WA KEY):
   - Ukaguzi wa 'stuck fixtures' hausemi 'sawa' ukishindwa.
   - Hali ya API inahifadhiwa kwenye flags (job_a_api_failed_leagues, job_a_api_last_check).
 
+v8 (USAHIHI WA MATOKEO YA MASOKO):
+  - Kadi: API ikitoa takwimu bila orodha ya kadi, njano zinachukuliwa kutoka takwimu na nyekundu
+    zinabaki TUPU (si 0 ya uongo). football-data ikiwa na kadi NYINGI kuliko dataset (msimu huu na
+    uliopita), kadi za football-data zinatumika (API ilitoa pungufu).
+  - HTHG/HTAG (nusu-muda) zinajazwa kutoka football-data (masoko ya nusu hayawi VOID bila sababu).
+  - Usawazishaji KAMILI wa football-data unafanyika mara moja zaidi (alama: fd_markers.json ndani
+    ya dataset), ili HT na kadi ziwekwe kwa historia yote.
+  - Mechi za siku VOID_GRACE_DAYS zilizopita hazipewi VOID mara moja: zinabaki PENDING mpaka
+    data ijazwe. Rekodi za siku RECHECK_DAYS zilizopita zinakaguliwa upya kila mzunguko.
+  - Mara moja tu (flag ya DB 'resettle_version'): HISTORIA YOTE ya predictions/legs/combos
+    inatathminiwa upya kwa evaluator mpya. Logi inaonyesha marekebisho yote kwa soko.
+  - market_evaluator.selftest() lazima ipite, vinginevyo historia haiguswi na run inakuwa nyekundu.
+  - Masoko yasiyo na evaluator yanaorodheshwa kwenye logi.
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
@@ -94,11 +108,19 @@ API_BACKOFF = (2, 6)     # sekunde za kusubiri kati ya majaribio
 CIRCUIT_BREAKER = 4      # ligi 4 mfululizo zikishindwa = API iko chini
 API_FAIL_THRESHOLD = 6   # ligi 6+ zikishindwa kwenye utafutaji wa matokeo = run nyekundu
 
+# v8: usahihi wa matokeo
+VOID_GRACE_DAYS = 4      # mechi changa hazipewi VOID mara moja (data inaweza kujazwa baadaye)
+RECHECK_DAYS = 10        # rekodi zilizosettlewa ndani ya siku hizi zinakaguliwa upya kila mzunguko
+RESETTLE_VERSION = 'v8-2026-11-02'   # flag ya DB: historia yote inasettlewa upya mara moja
+MARKER_FILE = 'fd_markers.json'      # alama ndani ya dataset: usawazishaji kamili wa v8 umefanyika
+MARKER_VERSION = 'v8-ht-cards'
+
 FD_BASE = "https://www.football-data.co.uk/mmz4281"
 FD_FIRST_SEASON = 2014
-FD_NUM = ['HS', 'AS', 'HST', 'AST', 'HC', 'AC', 'HY', 'AY', 'HR', 'AR', 'HF', 'AF']
+FD_NUM = ['HS', 'AS', 'HST', 'AST', 'HC', 'AC', 'HY', 'AY', 'HR', 'AR', 'HF', 'AF', 'HTHG', 'HTAG']
 CARD_COLS = ['HY', 'AY', 'HR', 'AR']
 NOSTAT_COLS = ['HC', 'AC', 'HS', 'AS', 'HST', 'AST']
+DIAG_COLS = ['HY', 'AY', 'HR', 'AR', 'HC', 'AC']
 
 # v5: odds za football-data -> safu zenye kiambishi 'fdo_'.
 # Kila safu ina orodha ya majina ya chanzo (la kwanza lenye thamani linatumika).
@@ -307,18 +329,16 @@ def fetch_recent_results(from_date, to_date):
             stats_list = f.get('statistics', []) or []
             cards_list = f.get('cards', []) or []
             stats = parse_statistics(stats_list)
-            hy, ay, hr, ar = parse_cards(cards_list)
-            if not stats_list and not cards_list:
-                # Hakuna takwimu wala kadi kutoka API: hatujui, si sifuri.
-                hy = ay = hr = ar = np.nan
-            elif not cards_list:
-                # Orodha ya kadi tupu lakini takwimu zipo: tumia 'Yellow Cards' kama ipo.
-                ys_h = stats['home'].get('yellow_cards')
-                ys_a = stats['away'].get('yellow_cards')
-                if ys_h is not None and not pd.isna(ys_h):
-                    hy = ys_h
-                if ys_a is not None and not pd.isna(ys_a):
-                    ay = ys_a
+            if cards_list:
+                hy, ay, hr, ar = parse_cards(cards_list)
+            else:
+                # v8: hakuna orodha ya kadi - SI sifuri (hatujui). Njano kutoka takwimu ikiwa
+                # zipo; nyekundu hazijulikani. football-data inajaza baadaye.
+                yh = stats['home'].get('yellow_cards')
+                ya = stats['away'].get('yellow_cards')
+                hy = yh if (yh is not None and not pd.isna(yh)) else np.nan
+                ay = ya if (ya is not None and not pd.isna(ya)) else np.nan
+                hr = ar = np.nan
 
             all_matches.append({
                 'Date': f.get('event_date'), 'HomeTeam': f.get('event_home_team'),
@@ -367,7 +387,7 @@ def download_dataset():
         return
 
     print("::warning::Upakuaji wa dataset nzima umeshindwa - natumia upakuaji wa faili moja moja.")
-    for fname in (DATASET_CSV, 'team_aliases.json'):
+    for fname in (DATASET_CSV, 'team_aliases.json', MARKER_FILE):
         res = run_kaggle_cmd(['datasets', 'download', '-d', KAGGLE_DATASET, '-f', fname,
                               '-p', 'kaggle_dataset', '-o'], fatal=(fname == DATASET_CSV))
         if res is None:
@@ -456,7 +476,25 @@ def warn_new_team_names(df_existing, df_new):
 
 
 # ============================================================
-# STATS + ODDS KUTOKA football-data.co.uk (v4 + v5)
+# ALAMA YA USAWAZISHAJI KAMILI (v8): faili ndani ya dataset
+# ============================================================
+
+def read_marker():
+    try:
+        with open(os.path.join('kaggle_dataset', MARKER_FILE), encoding='utf-8') as f:
+            return json.load(f).get('version')
+    except Exception:
+        return None
+
+
+def write_marker():
+    with open(os.path.join('kaggle_dataset', MARKER_FILE), 'w', encoding='utf-8') as f:
+        json.dump({'version': MARKER_VERSION,
+                   'time': datetime.utcnow().isoformat(timespec='seconds')}, f)
+
+
+# ============================================================
+# STATS + ODDS KUTOKA football-data.co.uk (v4 + v5 + v8)
 # ============================================================
 
 def _k(n):
@@ -474,13 +512,17 @@ def tkey(name):
 
 def fetch_football_data(seasons):
     """Pakua faili za ligi zote kwa misimu iliyotolewa (2014 = msimu 14/15).
-    v5: pia odds za Bet365 na wastani wa soko (safu fdo_*)."""
+    v5: pia odds za Bet365 na wastani wa soko (safu fdo_*).
+    Inarudisha (DataFrame, faili_zilizofanikiwa, faili_zote)."""
     frames = []
     headers = {'User-Agent': 'Mozilla/5.0'}
+    ok_total = 0
+    tot_total = 0
     for s in seasons:
         code = f"{str(s)[2:]}{str(s + 1)[2:]}"
         ok = 0
         for lg in LEAGUE_MAP:
+            tot_total += 1
             url = f"{FD_BASE}/{code}/{lg}.csv"
             try:
                 resp = requests.get(url, headers=headers, timeout=30)
@@ -507,22 +549,24 @@ def fetch_football_data(seasons):
             frames.append(x[['league', 'Date', 'HomeTeam', 'AwayTeam']
                             + FD_NUM + ['Referee'] + FDO_COLS])
             ok += 1
+            ok_total += 1
             time.sleep(0.2)
         print(f"   football-data msimu {s}/{s + 1}: ligi {ok}/{len(LEAGUE_MAP)}")
     if not frames:
-        return pd.DataFrame()
+        return pd.DataFrame(), ok_total, tot_total
     fd = pd.concat(frames, ignore_index=True)
     fd['dt'] = pd.to_datetime(fd['Date'], dayfirst=True, format='mixed', errors='coerce').dt.normalize()
     fd = fd.dropna(subset=['dt'])
     fd['hk'] = fd['HomeTeam'].map(tkey)
     fd['ak'] = fd['AwayTeam'].map(tkey)
-    return fd
+    return fd, ok_total, tot_total
 
 
 def football_data_mode(df):
-    """Rudisha (full, do_sync). full=True: dataset haina HF au fdo_B365H bado (au FD_FULL=1)."""
+    """Rudisha (full, do_sync). full=True: dataset haina HF au fdo_B365H bado, alama ya v8
+    haipo (HT + kadi bado hazijarekebishwa kwa historia yote), au FD_FULL=1."""
     full = (('HF' not in df.columns) or ('fdo_B365H' not in df.columns)
-            or os.environ.get('FD_FULL') == '1')
+            or os.environ.get('FD_FULL') == '1' or read_marker() != MARKER_VERSION)
     manual = os.environ.get('GITHUB_EVENT_NAME') == 'workflow_dispatch'
     forced = os.environ.get('FD_SYNC') == '1'
     scheduled = datetime.utcnow().hour % 6 == 0
@@ -553,19 +597,34 @@ def print_odds_coverage(df):
             print(f"::warning::Odds za B365: {bad:.1f}% ziko nje ya overround ya kawaida (1.00-1.25) - angalia data.")
 
 
+def print_ht_coverage(df):
+    """Ripoti fupi: nusu-muda (HTHG/HTAG) zilizopo kwa msimu."""
+    d = pd.to_datetime(df['Date'], errors='coerce')
+    season = d.dt.year.where(d.dt.month >= 7, d.dt.year - 1)
+    played = d <= pd.Timestamp(date.today())
+    print("   Nusu-muda (HTHG/HTAG) zilizopo kwa msimu:")
+    for s in sorted(season[played].dropna().unique())[-4:]:
+        m = played & (season == s)
+        n = int(m.sum())
+        if n == 0:
+            continue
+        p = (df.loc[m, 'HTHG'].notna() & df.loc[m, 'HTAG'].notna()).mean() * 100
+        print(f"     {int(s)}/{str(int(s) + 1)[2:]}: {p:.1f}% (n={n})")
+
+
 def sync_stats_from_football_data(df_in, full):
-    """Jaza SEHEMU TUPU za stats (na HF/AF/Referee) na odds (fdo_*) kutoka football-data.
-    Haibadilishi thamani zilizopo. Pia inabadilisha kadi 'sifuri za uongo' kuwa tupu.
-    Inarudisha (df, idadi_ya_mabadiliko, maelezo)."""
+    """Jaza SEHEMU TUPU za stats (na HF/AF/HT/Referee) na odds (fdo_*) kutoka football-data.
+    Haibadilishi thamani zilizopo, ISIPOKUWA kadi za msimu huu na uliopita pale football-data
+    ina kadi NYINGI kuliko dataset (API ilitoa pungufu). Pia inabadilisha kadi 'sifuri za uongo'
+    kuwa tupu. Inarudisha (df, idadi_ya_mabadiliko, maelezo, fd_ok)."""
     df = df_in.copy()
     n_before = len(df)
-    for c in ['HF', 'AF']:
+    for c in FD_NUM:
         if c not in df.columns:
             df[c] = np.nan
+        df[c] = pd.to_numeric(df[c], errors='coerce')
     if 'Referee' not in df.columns:
         df['Referee'] = np.nan
-    for c in FD_NUM:
-        df[c] = pd.to_numeric(df[c], errors='coerce')
     for c in FDO_COLS:
         if c not in df.columns:
             df[c] = np.nan
@@ -576,10 +635,11 @@ def sync_stats_from_football_data(df_in, full):
     season = d.dt.year.where(d.dt.month >= 7, d.dt.year - 1)
     cur = season.max()
     if pd.isna(cur):
-        return df_in, 0, 'hakuna tarehe'
+        return df_in, 0, 'hakuna tarehe', False
     cur = int(cur)
     seasons = list(range(FD_FIRST_SEASON, cur + 1)) if full else [cur - 1, cur]
     mask = season.isin(seasons)
+    recent = season.isin([cur - 1, cur])
     label = f"kamili {seasons[0]}-{cur}" if full else f"msimu {cur - 1}-{cur}"
     print(f"\n📊 Usawazishaji wa stats + odds kutoka football-data ({label})...")
 
@@ -595,10 +655,14 @@ def sync_stats_from_football_data(df_in, full):
         print(f"   Kadi 'sifuri za uongo' zilizofanywa tupu: {int(fake.sum())}")
 
     # 2) Pakua football-data
-    fd = fetch_football_data(seasons)
+    fd, ok_files, tot_files = fetch_football_data(seasons)
+    fd_ok = tot_files > 0 and ok_files >= 0.9 * tot_files
     if len(fd) == 0:
         print("::warning::football-data: hakuna data iliyopatikana - naruka kujaza.")
-        return (df if changes else df_in), changes, label
+        return (df if changes else df_in), changes, label, False
+    if not fd_ok:
+        print(f"::warning::football-data: faili {ok_files}/{tot_files} tu zimepatikana - "
+              f"usawazishaji hauhesabiwi kamili.")
 
     look = {(r.league, r.dt, r.hk, r.ak): r for r in fd.itertuples(index=False)}
     hk = df['HomeTeam'].map(tkey)
@@ -607,6 +671,9 @@ def sync_stats_from_football_data(df_in, full):
     fill_cols = FD_NUM + FDO_COLS
     used = set()
     filled = 0
+    mism = Counter()
+    card_fix = 0
+    card_examples = []
     for i in df.index[mask]:
         r_dt = d.at[i]
         if pd.isna(r_dt):
@@ -620,6 +687,27 @@ def sync_stats_from_football_data(df_in, full):
                 break
         if f is None:
             continue
+
+        # Ukaguzi: tofauti kati ya dataset na football-data (kabla ya marekebisho)
+        for c in DIAG_COLS:
+            cv, fv = df.at[i, c], getattr(f, c)
+            if not pd.isna(cv) and not pd.isna(fv) and cv != fv:
+                mism[c] += 1
+
+        # Kadi: football-data ikiwa na kadi NYINGI kuliko dataset (msimu huu na uliopita), itumike
+        if recent.at[i]:
+            cur_c = [df.at[i, c] for c in CARD_COLS]
+            fd_c = [getattr(f, c) for c in CARD_COLS]
+            if not any(pd.isna(x) for x in cur_c + fd_c) and sum(fd_c) > sum(cur_c):
+                card_fix += 1
+                if len(card_examples) < 12:
+                    card_examples.append(
+                        f"{df.at[i, 'league']}: {df.at[i, 'HomeTeam']} vs {df.at[i, 'AwayTeam']} "
+                        f"({r_dt:%Y-%m-%d}) kadi (HY,AY,HR,AR) "
+                        f"{tuple(int(x) for x in cur_c)} -> {tuple(int(x) for x in fd_c)}")
+                for c, v in zip(CARD_COLS, fd_c):
+                    df.at[i, c] = v
+
         for c in fill_cols:
             v = getattr(f, c)
             if pd.isna(df.at[i, c]) and not pd.isna(v):
@@ -629,15 +717,23 @@ def sync_stats_from_football_data(df_in, full):
         if pd.isna(df.at[i, 'Referee']) and isinstance(ref, str) and ref.strip():
             df.at[i, 'Referee'] = ref.strip()
             filled += 1
-    changes += filled
-    print(f"   Seli zilizojazwa (stats + odds): {filled:,}")
+    changes += filled + card_fix
+    print(f"   Seli zilizojazwa (stats + odds + nusu-muda): {filled:,}")
+    if card_fix:
+        print(f"   Kadi zilizorekebishwa kutoka football-data (dataset ilikuwa na pungufu): {card_fix:,}")
+        for ex in card_examples:
+            print(f"     • {ex}")
+    if mism:
+        print("   Ukaguzi - seli zenye thamani tofauti na football-data (kabla ya marekebisho): "
+              + ", ".join(f"{c}={n:,}" for c, n in mism.most_common()))
 
-    # Ripoti ya odds (coverage kwa msimu + overround)
+    # Ripoti ya odds + nusu-muda
     if full or filled:
         try:
             print_odds_coverage(df)
+            print_ht_coverage(df)
         except Exception as e:
-            print(f"::warning::Ripoti ya odds imeshindwa (haiathiri data): {e}")
+            print(f"::warning::Ripoti ya odds/HT imeshindwa (haiathiri data): {e}")
 
     # 3) Mechi za football-data zisizolingana na dataset (zaidi ya siku 3 zilizopita)
     cutoff = pd.Timestamp(date.today() - timedelta(days=3))
@@ -651,11 +747,11 @@ def sync_stats_from_football_data(df_in, full):
 
     if len(df) != n_before:
         raise RuntimeError("idadi ya mechi imebadilika wakati wa usawazishaji (haipaswi)")
-    return df, changes, label
+    return df, changes, label, fd_ok
 
 
 # ============================================================
-# UTATHMINI (SETTLEMENT) - v2
+# UTATHMINI (SETTLEMENT) - v8
 # ============================================================
 
 def norm_team(name):
@@ -713,28 +809,77 @@ def _stamp(obj):
         obj.settled_at = datetime.utcnow()
 
 
-def settle_pending(df_results):
-    """Tathmini PredictionRecord, ComboLeg na ComboRecord zote za PENDING
-    dhidi ya dataset nzima. Inarudisha True ikiwa kila kitu kiko sawa
-    (hata kama hakuna cha kutathmini), False ikiwa utathmini umeshindwa
-    kuanza au kuhifadhi."""
+def resettle_needed():
+    """True ikiwa flag ya DB 'resettle_version' si ya toleo la sasa (historia yote isettlewe upya)."""
+    if not os.environ.get('DATABASE_URL'):
+        return False
+    try:
+        from app import app, get_flag
+        with app.app_context():
+            return get_flag('resettle_version', '') != RESETTLE_VERSION
+    except Exception as e:
+        print(f"::warning::Imeshindwa kusoma flag ya resettle (naendelea kawaida): {redact(e)}")
+        return False
+
+
+def mark_resettled():
+    try:
+        from app import app, set_flag
+        with app.app_context():
+            set_flag('resettle_version', RESETTLE_VERSION)
+    except Exception as e:
+        print(f"::warning::Imeshindwa kuhifadhi flag ya resettle: {redact(e)}")
+
+
+def settle_pending(df_results, recheck_days=RECHECK_DAYS):
+    """Tathmini PredictionRecord, ComboLeg na ComboRecord dhidi ya dataset nzima.
+    recheck_days=N: PENDING zote + zilizosettlewa ndani ya siku N (zinarekebishwa ikiwa data
+    imebadilika). recheck_days=None: HISTORIA YOTE. Inarudisha True ikiwa kila kitu kiko sawa,
+    False ikiwa utathmini umeshindwa kuanza au kuhifadhi."""
     if not os.environ.get('DATABASE_URL'):
         print("::error::DATABASE_URL haipo kwenye workflow - utathmini hauwezi kufanya kazi.")
         return False
     try:
+        import market_evaluator
         from market_evaluator import evaluate_market, result_label
+        from sqlalchemy import or_
         from app import app
         from models import db, PredictionRecord, ComboLeg, ComboRecord
     except Exception as e:
         print(f"::error::Imeshindwa kuunganisha na app/models/market_evaluator: {e}")
         return False
 
+    selftest = getattr(market_evaluator, 'selftest', None)
+    if selftest is None:
+        print("::error::market_evaluator.py ni ya ZAMANI (haina selftest). Weka toleo jipya (v2). "
+              "Utathmini umesimamishwa, historia haijaguswa.")
+        return False
+    problems = selftest()
+    if problems:
+        for p in problems:
+            print(f"::error::market_evaluator selftest: {p}")
+        print("::error::market_evaluator.py ina kasoro - utathmini umesimamishwa, historia haijaguswa.")
+        return False
+    market_evaluator.UNKNOWN_MARKETS.clear()
+
     index = build_results_index(df_results)
     today = date.today()
-    print(f"\n🧮 Kutathmini PENDING zote dhidi ya dataset ({len(df_results):,} mechi)...")
+    if recheck_days is None:
+        scope = "HISTORIA YOTE"
+        cutoff_dt = None
+    else:
+        scope = f"PENDING + zilizosettlewa siku {recheck_days} zilizopita"
+        cutoff_dt = datetime.combine(today - timedelta(days=recheck_days), datetime.min.time())
+    print(f"\n🧮 Kutathmini ({scope}) dhidi ya dataset ({len(df_results):,} mechi)...")
 
-    def settle_one(market, home, away, match_date):
-        """Rudisha (label, sababu). label None = bado haijaweza kutathminiwa."""
+    stats = Counter()
+    unmatched = []            # PENDING zilizopita muda lakini hazina matokeo kwenye dataset
+    void_markets = Counter()  # markets zilizosettlewa VOID (takwimu hazipo au soko halijulikani)
+    corrections = Counter()   # (soko, kabla, baada) -> idadi
+    samples = []
+
+    def new_label(market, home, away, match_date):
+        """Rudisha (label, sababu). label None = haiwezi kutathminiwa sasa."""
         md = to_date(match_date)
         row = find_result(index, home, away, md)
         if row is None:
@@ -744,74 +889,111 @@ def settle_pending(df_results):
         except Exception as e:
             print(f"   ⚠️ evaluate_market imeshindwa kwa market '{market}' ({home} v {away}): {e}")
             return None, 'error'
+        if label == 'VOID' and md is not None and (today - md).days <= VOID_GRACE_DAYS:
+            return 'PENDING', 'deferred'   # data inaweza kujazwa (football-data): subiri
         return label, 'ok'
 
-    stats = {'pred_total': 0, 'pred_settled': 0, 'leg_total': 0, 'leg_settled': 0,
-             'combos_settled': 0}
-    unmatched = []            # mechi zilizopita muda lakini hazina matokeo kwenye dataset
-    void_markets = Counter()  # markets zilizosettlewa VOID (takwimu hazipo au soko halijulikani)
+    def process(rec, kind):
+        stats[kind + '_total'] += 1
+        cur = rec.result
+        label, why = new_label(rec.market, rec.home_team, rec.away_team, rec.match_date)
+        if why == 'no_match':
+            if cur == 'PENDING':
+                md = to_date(rec.match_date)
+                if md is not None and md < today:
+                    unmatched.append((rec.home_team, rec.away_team, str(md), rec.market))
+            return
+        if label is None:
+            return
+        if why == 'deferred':
+            stats['deferred'] += 1
+        if label == cur:
+            return
+        rec.result = label
+        _stamp(rec)
+        if cur == 'PENDING':
+            stats[kind + '_settled'] += 1
+            if label == 'VOID':
+                void_markets[str(rec.market)] += 1
+        else:
+            stats[kind + '_corrected'] += 1
+            corrections[(str(rec.market), cur, label)] += 1
+            if len(samples) < 20:
+                samples.append(f"{rec.home_team} v {rec.away_team} ({to_date(rec.match_date)}) "
+                               f"[{rec.market}] {cur} -> {label}")
 
     try:
         with app.app_context():
-            # --- PredictionRecord ---
-            preds = PredictionRecord.query.filter_by(result='PENDING').all()
-            stats['pred_total'] = len(preds)
-            for rec in preds:
-                label, why = settle_one(rec.market, rec.home_team, rec.away_team, rec.match_date)
-                if label:
-                    rec.result = label
-                    _stamp(rec)
-                    stats['pred_settled'] += 1
-                    if label == 'VOID':
-                        void_markets[str(rec.market)] += 1
-                elif why == 'no_match':
-                    md = to_date(rec.match_date)
-                    if md is not None and md < today:
-                        unmatched.append((rec.home_team, rec.away_team, str(md), rec.market))
+            q = PredictionRecord.query
+            if cutoff_dt is not None:
+                q = q.filter(or_(PredictionRecord.result == 'PENDING',
+                                 PredictionRecord.match_date >= cutoff_dt))
+            for rec in q.all():
+                process(rec, 'pred')
 
-            # --- ComboLeg ---
-            legs = ComboLeg.query.filter_by(result='PENDING').all()
-            stats['leg_total'] = len(legs)
-            for leg in legs:
-                label, why = settle_one(leg.market, leg.home_team, leg.away_team, leg.match_date)
-                if label:
-                    leg.result = label
-                    stats['leg_settled'] += 1
-                    if label == 'VOID':
-                        void_markets[str(leg.market)] += 1
-                elif why == 'no_match':
-                    md = to_date(leg.match_date)
-                    if md is not None and md < today:
-                        unmatched.append((leg.home_team, leg.away_team, str(md), leg.market))
+            q = ComboLeg.query
+            if cutoff_dt is not None:
+                q = q.filter(or_(ComboLeg.result == 'PENDING', ComboLeg.match_date >= cutoff_dt))
+            for leg in q.all():
+                process(leg, 'leg')
 
-            # --- ComboRecord (zote za PENDING, hata za zamani) ---
-            for combo in ComboRecord.query.filter_by(result='PENDING').all():
+            # --- ComboRecord: matokeo kutoka kwa legs (zote, ili marekebisho ya legs yaonekane) ---
+            for combo in ComboRecord.query.all():
                 leg_results = [lg.result for lg in combo.legs]
-                if not leg_results or any(x == 'PENDING' for x in leg_results):
+                if not leg_results:
                     continue
-                if any(x == 'LOST' for x in leg_results):
-                    combo.result = 'LOST'
+                if any(x == 'PENDING' for x in leg_results):
+                    new = 'PENDING'
+                elif any(x == 'LOST' for x in leg_results):
+                    new = 'LOST'
                 elif any(x == 'VOID' for x in leg_results):
-                    combo.result = 'VOID'
+                    new = 'VOID'
                 else:
-                    combo.result = 'WON'
-                _stamp(combo)
-                stats['combos_settled'] += 1
+                    new = 'WON'
+                if new != combo.result:
+                    old = combo.result
+                    combo.result = new
+                    _stamp(combo)
+                    stats['combo_changed'] += 1
+                    if old != 'PENDING':
+                        stats['combo_corrected'] += 1
 
-            if stats['pred_settled'] or stats['leg_settled'] or stats['combos_settled']:
+            dirty = any(stats[k] for k in ('pred_settled', 'pred_corrected', 'leg_settled',
+                                           'leg_corrected', 'combo_changed'))
+            if dirty:
                 db.session.commit()
     except Exception as e:
         print(f"::error::Utathmini umeshindwa wakati wa kuhifadhi: {e}")
         return False
 
-    print(f"   Predictions: {stats['pred_settled']}/{stats['pred_total']} zimesettlewa")
-    print(f"   Combo legs : {stats['leg_settled']}/{stats['leg_total']} zimesettlewa")
-    print(f"   Combos     : {stats['combos_settled']} zimekamilika")
+    print(f"   Predictions: {stats['pred_settled']} mpya zimesettlewa, "
+          f"{stats['pred_corrected']} zimerekebishwa (zilizokaguliwa: {stats['pred_total']})")
+    print(f"   Combo legs : {stats['leg_settled']} mpya zimesettlewa, "
+          f"{stats['leg_corrected']} zimerekebishwa (zilizokaguliwa: {stats['leg_total']})")
+    print(f"   Combos     : {stats['combo_changed']} zimebadilika ({stats['combo_corrected']} marekebisho)")
+    if stats['deferred']:
+        print(f"   Zinazosubiri data (mechi changa, si VOID bado): {stats['deferred']}")
+
+    if corrections:
+        total_corr = sum(corrections.values())
+        print(f"\n🔧 MAREKEBISHO YA HISTORIA ({total_corr}): soko: kabla -> baada = idadi")
+        for (market, old, new), n in corrections.most_common(40):
+            print(f"   • {market}: {old} -> {new} = {n}")
+        for s in samples:
+            print(f"     mfano: {s}")
+        print(f"::warning::Historia imerekebishwa: {total_corr} rekodi (angalia orodha ya marekebisho).")
 
     if void_markets:
         top = ', '.join(f"{m} x{n}" for m, n in void_markets.most_common(10))
         print(f"\nℹ️ Zilizosettlewa kama VOID ({sum(void_markets.values())}) - takwimu hazipo "
               f"au soko halijulikani: {top}")
+
+    unknown = market_evaluator.UNKNOWN_MARKETS
+    if unknown:
+        top = ', '.join(f"{m} x{n}" for m, n in unknown.most_common(25))
+        print(f"\n❓ MASOKO YASIYO NA EVALUATOR (yanaishia VOID): {top}")
+        print(f"::warning::Masoko {len(unknown)} hayana evaluator: {', '.join(list(unknown)[:10])}")
+
     if unmatched:
         print(f"\n⚠️ {len(unmatched)} PENDING zimepita muda lakini HAZIKUPATIKANA kwenye dataset "
               f"(angalia majina ya timu/tarehe):")
@@ -891,11 +1073,12 @@ def main():
             need_upload = True
             reasons.append(f"+{len(df_new_unique)} mechi")
 
-    # Stats + odds kutoka football-data (kamili mara ya kwanza; kisha msimu huu na uliopita)
+    # Stats + odds + nusu-muda + kadi kutoka football-data (kamili mara ya kwanza; kisha msimu huu na uliopita)
     full, do_sync = football_data_mode(df_results)
+    fd_ok = False
     if do_sync:
         try:
-            df_sync, changes, label = sync_stats_from_football_data(df_results, full)
+            df_sync, changes, label, fd_ok = sync_stats_from_football_data(df_results, full)
             if changes > 0:
                 df_results = df_sync
                 csv_dirty = True
@@ -904,7 +1087,15 @@ def main():
             else:
                 print("ℹ️ football-data: hakuna cha kujaza mzunguko huu.")
         except Exception as e:
+            fd_ok = False
             print(f"::warning::Usawazishaji wa football-data umeshindwa (naendelea bila huo): {e}")
+
+    # Alama ya v8: usawazishaji kamili umefanikiwa -> iandikwe ndani ya dataset (ipakiwe na toleo jipya)
+    if full and fd_ok:
+        write_marker()
+        need_upload = True
+        reasons.append(f"alama {MARKER_VERSION}")
+    marker_ok = (read_marker() == MARKER_VERSION)
 
     if csv_dirty:
         df_results.to_csv(csv_path, index=False)
@@ -926,8 +1117,16 @@ def main():
         else:
             print("🎉 Dataset imesasishwa kikamilifu!")
 
-    # Utathmini UNAFANYIKA KILA MZUNGUKO, bila kujali kama kuna mechi mpya.
-    settle_ok = settle_pending(df_results)
+    # Utathmini UNAFANYIKA KILA MZUNGUKO. Mara moja tu (baada ya usawazishaji kamili wa football-data),
+    # historia YOTE inasettlewa upya kwa evaluator mpya.
+    do_resettle = marker_ok and resettle_needed()
+    if do_resettle:
+        print("\n🔁 Usawazishaji wa HISTORIA YOTE (mara moja, toleo "
+              f"{RESETTLE_VERSION}): rekodi zote zinatathminiwa upya.")
+    settle_ok = settle_pending(df_results, recheck_days=None if do_resettle else RECHECK_DAYS)
+    if do_resettle and settle_ok:
+        mark_resettled()
+        print("✅ Historia yote imesettlewa upya (haitarudiwa).")
     run_stuck_check(stuck_from_str, to_date_str)
 
     # Hali ya API kwenye flags + uamuzi wa rangi ya run
