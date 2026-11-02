@@ -7,8 +7,13 @@ kwenye jedwali fixture_time. Inaendeshwa ndani ya hourly_catchup.yml, lakini
 inaruka kama ilifanya kazi chini ya saa 3 zilizopita (kuokoa API calls).
 FORCE_TIMES=1 inalazimisha (run za mkono).
 Mwishoni inaripoti mechi ngapi za data/predictions.csv zimepata saa.
+
+v2: majaribio 3 kwa makosa ya API (502/5xx/429/timeout), key inafichwa kwenye logi,
+    API ikiwa chini haizuii steps zingine (onyo, si kosa), na sync haihesabiwi
+    kama imekamilika ikiwa ligi nyingi zimeshindwa (itajaribu tena run inayofuata).
 """
 import os
+import re
 import sys
 import time
 from datetime import datetime, timedelta
@@ -27,6 +32,16 @@ DAYS_AHEAD = 10
 MIN_HOURS_BETWEEN = 3
 PRUNE_DAYS = 120
 
+API_RETRIES = 3
+API_BACKOFF = (2, 6)
+CIRCUIT_BREAKER = 4      # ligi 4 mfululizo zikishindwa = API iko chini
+MAX_FAILED_FOR_DONE = 2  # ligi zaidi ya hizi zikishindwa, sync haihesabiwi kukamilika
+
+
+def redact(text):
+    """Ficha API key kwenye maandishi yoyote (ujumbe wa makosa una URL kamili)."""
+    return re.sub(r'(APIkey=)[^&\s)]+', r'\1***', str(text))
+
 
 def get_api_key():
     app_url = os.environ.get('APP_URL')
@@ -40,28 +55,61 @@ def get_api_key():
             if k:
                 return k
         except Exception as e:
-            print(f"⚠️ API key kutoka Admin imeshindwa ({e}) - natumia GitHub Secret.")
+            print(f"⚠️ API key kutoka Admin imeshindwa ({redact(e)}) - natumia GitHub Secret.")
     return os.environ.get('ALLSPORTSAPI_KEY')
 
 
-def fetch_fixtures(api_key, d_from, d_to):
-    out, ok = [], 0
-    for code, league_key in LEAGUE_MAP.items():
+def api_get(api_key, params):
+    """Ombi moja na majaribio. Kosa la 4xx (isipokuwa 429) halijaribiwi tena."""
+    last = 'haijulikani'
+    for attempt in range(1, API_RETRIES + 1):
         try:
-            resp = requests.get(BASE_URL, params={
+            resp = requests.get(BASE_URL, params=params, timeout=30)
+        except requests.RequestException as e:
+            last = redact(e).replace(api_key, '***')
+        else:
+            if resp.status_code < 400:
+                try:
+                    return resp.json()
+                except ValueError:
+                    last = 'jibu si JSON'
+            else:
+                last = f"HTTP {resp.status_code} {resp.reason}"
+                if resp.status_code < 500 and resp.status_code != 429:
+                    break
+        if attempt < API_RETRIES:
+            time.sleep(API_BACKOFF[min(attempt - 1, len(API_BACKOFF) - 1)])
+    raise RuntimeError(last)
+
+
+def fetch_fixtures(api_key, d_from, d_to):
+    """Rudisha (mechi, idadi ya ligi zilizojibu, orodha ya ligi zilizoshindwa)."""
+    out, ok, failed = [], 0, []
+    consecutive = 0
+    items = list(LEAGUE_MAP.items())
+    for i, (code, league_key) in enumerate(items):
+        if consecutive >= CIRCUIT_BREAKER:
+            rest = [c for c, _ in items[i:]]
+            failed.extend(rest)
+            print(f"   ⛔ API inaonekana iko chini - naruka ligi {len(rest)} zilizobaki.")
+            break
+        try:
+            data = api_get(api_key, {
                 "met": "Fixtures", "APIkey": api_key, "leagueId": league_key,
                 "from": d_from, "to": d_to, "timezone": TZ,
-            }, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
+            })
             ok += 1
+            consecutive = 0
         except Exception as e:
-            print(f"   ⚠️ {code}: ombi limeshindwa ({e})")
+            failed.append(code)
+            consecutive += 1
+            print(f"   ⚠️ {code}: ombi limeshindwa ({redact(e)})")
+            time.sleep(0.3)
             continue
         for f in (data.get('result') or []):
             out.append(f)
         time.sleep(0.3)
-    return out, ok
+    return out, ok, failed
 
 
 def main():
@@ -72,6 +120,7 @@ def main():
     if not api_key:
         print("::error::ALLSPORTSAPI_KEY haipo (Admin wala GitHub Secret).")
         sys.exit(1)
+    print(f"::add-mask::{api_key}")
 
     from app import app, get_flag, set_flag
     from models import db
@@ -96,11 +145,13 @@ def main():
         d_to = (now_eat + timedelta(days=DAYS_AHEAD)).date()
         print(f"🔍 Ratiba {d_from} hadi {d_to} (timezone {TZ})")
 
-        fixtures, ok_leagues = fetch_fixtures(api_key, d_from.isoformat(), d_to.isoformat())
+        fixtures, ok_leagues, failed = fetch_fixtures(api_key, d_from.isoformat(), d_to.isoformat())
         print(f"   Ligi {ok_leagues}/{len(LEAGUE_MAP)} zimejibu; mechi {len(fixtures)}")
         if ok_leagues == 0:
-            print("::error::Hakuna ligi iliyojibu.")
-            sys.exit(1)
+            # API iko chini: hakuna cha kusawazisha. Si kosa la hatua hii (hourly_catchup inaripoti API).
+            print("::warning::Hakuna ligi iliyojibu (API iko chini?) - saa za mechi hazikusasishwa; "
+                  "nitajaribu tena run inayofuata.")
+            return
 
         existing = {(r.match_date, r.home_key, r.away_key): r
                     for r in FixtureTime.query.filter(FixtureTime.match_date >= d_from).all()}
@@ -140,7 +191,13 @@ def main():
         prune_before = (now_eat - timedelta(days=PRUNE_DAYS)).date()
         FixtureTime.query.filter(FixtureTime.match_date < prune_before).delete()
         db.session.commit()
-        set_flag('fixture_times_last_sync', datetime.utcnow().isoformat(timespec='seconds'))
+
+        if len(failed) <= MAX_FAILED_FOR_DONE:
+            set_flag('fixture_times_last_sync', datetime.utcnow().isoformat(timespec='seconds'))
+        else:
+            print(f"::warning::Ligi {len(failed)} zimeshindwa ({', '.join(failed)}) - sync haijahesabiwa "
+                  f"kukamilika, itajaribiwa tena run inayofuata.")
+
         print(f"✅ Saa za mechi: mpya {added}, zilizobadilika {changed}, zilizorukwa {skipped}.")
         print("   Mifano (linganisha na saa halisi ya mechi ili kuthibitisha EAT):")
         for s in samples:
