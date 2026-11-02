@@ -1,0 +1,52 @@
+# Inaripoti hali ya kila workflow kwa Admin ya app (inafeli au inafanikiwa).
+# Majina kwenye 'workflows:' lazima yafanane na 'name:' ya kila workflow yako.
+name: Ops Report
+
+on:
+  workflow_run:
+    workflows:
+      - "Nightly Predictions Update"
+      - "Hourly Catchup"
+      - "Retrain Weekly"
+      - "Weekly Retrain v8"
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    # Hourly inayofanikiwa hairipotiwi (kuokoa dakika za Actions); makosa yake yanaripotiwa kila wakati.
+    if: ${{ github.event.workflow_run.conclusion != 'success' || !contains(github.event.workflow_run.name, 'Hourly') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Report to app
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          WF_NAME: ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+        run: |
+          case "$CONCLUSION" in
+            success) STATUS=success ;;
+            failure|timed_out|startup_failure) STATUS=failure ;;
+            cancelled) STATUS=cancelled ;;
+            *) echo "Hali '$CONCLUSION' hairipotiwi."; exit 0 ;;
+          esac
+          DETAIL="Run #${RUN_NUMBER} · chanzo: ${RUN_EVENT} · matokeo: ${CONCLUSION}"
+          BODY=$(jq -n --arg source "$WF_NAME" --arg status "$STATUS" --arg url "$RUN_URL" --arg detail "$DETAIL" \
+                 '{source:$source, status:$status, url:$url, detail:$detail}')
+          for i in 1 2 3 4; do
+            code=$(curl -s -o /tmp/out.txt -w "%{http_code}" -m 90 -X POST "$APP_URL/api/ops/report" \
+              -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" -d "$BODY" || echo 000)
+            echo "Jaribio $i: HTTP $code"
+            cat /tmp/out.txt 2>/dev/null; echo
+            if [ "$code" = "200" ]; then exit 0; fi
+            sleep 30
+          done
+          echo "::warning::Imeshindwa kuripoti kwa app (huenda app imezimika). Angalia Render."
+          exit 0
