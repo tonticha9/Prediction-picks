@@ -50,6 +50,14 @@ v6 (UPAKUAJI WA AKIBA): Kaggle ikishindwa kupakua dataset NZIMA (404 kwa toleo f
   wakati kila faili inapakuliwa vizuri), script inapakua faili moja moja
   (historical_complete_no_gap.csv na team_aliases.json).
 
+v7 (UIMARA WA API + USIRI WA KEY):
+  - Kila ombi la AllSportsAPI linajaribiwa mara 3 (502/5xx/429/timeout), na kusubiri kati.
+  - API key inafichwa kwenye logi ya GitHub (::add-mask::) na kwenye ujumbe wa makosa.
+  - Ligi 4 mfululizo zikishindwa, API inahesabiwa iko chini: naruka zilizobaki (kuokoa muda).
+  - Ligi 6+ zikishindwa kwenye utafutaji wa matokeo, run inakuwa NYEKUNDU (si kijani cha uongo).
+  - Ukaguzi wa 'stuck fixtures' hausemi 'sawa' ukishindwa.
+  - Hali ya API inahifadhiwa kwenye flags (job_a_api_failed_leagues, job_a_api_last_check).
+
 API_KEY inaombwa kutoka Admin (Flask /api/config/allsportsapi-key,
 ndicho chanzo cha ukweli), na GITHUB SECRET ni FALLBACK TU.
 """
@@ -79,6 +87,12 @@ STUCK_DAYS = 2           # ukaguzi wa mechi 'zilizokwama' unabaki siku 2
 
 DATASET_CSV = 'historical_complete_no_gap.csv'
 MIN_ROWS = 45000         # dataset ikiwa chini ya hii, kuna tatizo - usiandike juu yake
+
+# v7: uimara wa API
+API_RETRIES = 3          # majaribio kwa kila ombi
+API_BACKOFF = (2, 6)     # sekunde za kusubiri kati ya majaribio
+CIRCUIT_BREAKER = 4      # ligi 4 mfululizo zikishindwa = API iko chini
+API_FAIL_THRESHOLD = 6   # ligi 6+ zikishindwa kwenye utafutaji wa matokeo = run nyekundu
 
 FD_BASE = "https://www.football-data.co.uk/mmz4281"
 FD_FIRST_SEASON = 2014
@@ -128,6 +142,10 @@ def fetch_api_key_from_admin():
 
 API_KEY = fetch_api_key_from_admin() or os.environ.get("ALLSPORTSAPI_KEY")
 
+# v7: ficha key kwenye logi zote za GitHub kuanzia hapa (key ya Admin haifichwi na GitHub yenyewe)
+if API_KEY:
+    print(f"::add-mask::{API_KEY}")
+
 missing = []
 if not API_KEY:
     missing.append("ALLSPORTSAPI_KEY (Admin wala GitHub Secret havina thamani)")
@@ -148,6 +166,85 @@ STAT_TYPE_MAP = {'Corners': 'corners', 'Shots Total': 'shots_total',
 
 # Kwa utangamano na msimbo wa zamani: ramani ya majina sasa iko team_names.py (chanzo kimoja).
 TEAM_NAME_MAPPING = team_names.ALIASES
+
+
+# ============================================================
+# API: usiri wa key + majaribio + mzunguko wa ligi (v7)
+# ============================================================
+
+def redact(text):
+    """Ficha API key kwenye maandishi yoyote (ujumbe wa makosa una URL kamili)."""
+    s = str(text)
+    if API_KEY:
+        s = s.replace(API_KEY, '***')
+    return re.sub(r'(APIkey=)[^&\s)]+', r'\1***', s)
+
+
+def api_get_fixtures(league_key, d_from, d_to):
+    """Omba mechi za ligi moja. Hujaribu mara API_RETRIES kwa makosa ya muda
+    (5xx, 429, timeout, muunganisho). Kosa la 4xx (mfano key mbaya) halijaribiwi tena.
+    Inarudisha dict ya JSON, au inatupa RuntimeError yenye sababu (key imefichwa)."""
+    params = {"met": "Fixtures", "APIkey": API_KEY, "leagueId": league_key,
+              "from": d_from, "to": d_to}
+    last = 'haijulikani'
+    for attempt in range(1, API_RETRIES + 1):
+        try:
+            resp = requests.get(BASE_URL, params=params, timeout=30)
+        except requests.RequestException as e:
+            last = redact(e)
+        else:
+            if resp.status_code < 400:
+                try:
+                    return resp.json()
+                except ValueError:
+                    last = 'jibu si JSON'
+            else:
+                last = f"HTTP {resp.status_code} {resp.reason}"
+                if resp.status_code < 500 and resp.status_code != 429:
+                    break   # kosa la mteja (mfano key mbaya): kujaribu tena hakusaidii
+        if attempt < API_RETRIES:
+            time.sleep(API_BACKOFF[min(attempt - 1, len(API_BACKOFF) - 1)])
+    raise RuntimeError(last)
+
+
+def fetch_all_leagues(d_from, d_to, label):
+    """Pitia ligi zote 12. Inarudisha (matokeo_kwa_ligi, orodha_ya_ligi_zilizoshindwa).
+    Ligi CIRCUIT_BREAKER mfululizo zikishindwa, zilizobaki zinarukwa na kuhesabiwa kama zimeshindwa."""
+    results, failed = {}, []
+    consecutive = 0
+    items = list(LEAGUE_MAP.items())
+    for i, (code, league_key) in enumerate(items):
+        if consecutive >= CIRCUIT_BREAKER:
+            rest = [c for c, _ in items[i:]]
+            failed.extend(rest)
+            print(f"   ⛔ API inaonekana iko chini (ligi {consecutive} mfululizo zimeshindwa) "
+                  f"- naruka ligi {len(rest)} zilizobaki.")
+            break
+        try:
+            data = api_get_fixtures(league_key, d_from, d_to)
+            results[code] = data.get('result', []) or []
+            consecutive = 0
+        except Exception as e:
+            failed.append(code)
+            consecutive += 1
+            print(f"   ⚠️ {code}: {label} limeshindwa ({redact(e)})")
+        time.sleep(0.3)
+    return results, failed
+
+
+def record_api_status(failed_fetch):
+    """Hifadhi hali ya API kwenye flags za app (Admin Health inaweza kuisoma baadaye).
+    Haiwezi kuvunja job: makosa yoyote yanaishia kuwa onyo."""
+    if not os.environ.get('DATABASE_URL'):
+        return
+    try:
+        from app import app, set_flag
+        with app.app_context():
+            set_flag('job_a_api_failed_leagues', str(len(failed_fetch)))
+            set_flag('job_a_api_failed_list', ','.join(failed_fetch) if failed_fetch else '-')
+            set_flag('job_a_api_last_check', datetime.utcnow().isoformat(timespec='seconds'))
+    except Exception as e:
+        print(f"::warning::Imeshindwa kuhifadhi hali ya API kwenye flags (haiathiri job): {redact(e)}")
 
 
 def parse_statistics(stats_list):
@@ -181,20 +278,10 @@ def parse_cards(cards_list):
 
 
 def fetch_recent_results(from_date, to_date):
+    """Rudisha (DataFrame ya mechi zilizokwisha, orodha ya ligi zilizoshindwa)."""
+    results, failed = fetch_all_leagues(from_date, to_date, "ombi")
     all_matches = []
-    for code, league_key in LEAGUE_MAP.items():
-        try:
-            resp = requests.get(BASE_URL, params={
-                "met": "Fixtures", "APIkey": API_KEY, "leagueId": league_key,
-                "from": from_date, "to": to_date,
-            }, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as e:
-            print(f"   ⚠️ {code}: ombi limeshindwa ({e}) - naruka ligi hii mzunguko huu")
-            continue
-
-        fixtures = data.get('result', []) or []
+    for code, fixtures in results.items():
         finished = [f for f in fixtures if f.get('event_status') == 'Finished']
         if finished:
             print(f"   {code}: {len(finished)} mechi zilizokwisha")
@@ -245,7 +332,6 @@ def fetch_recent_results(from_date, to_date):
                 'HF': stats['home'].get('fouls'), 'AF': stats['away'].get('fouls'),
                 'Referee': (f.get('event_referee') or np.nan),
             })
-        time.sleep(0.3)
 
     df = pd.DataFrame(all_matches)
     if len(df) > 0:
@@ -254,7 +340,7 @@ def fetch_recent_results(from_date, to_date):
         # Majina rasmi (chanzo kimoja: team_names.py)
         df['HomeTeam'] = df['HomeTeam'].map(team_names.canon)
         df['AwayTeam'] = df['AwayTeam'].map(team_names.canon)
-    return df
+    return df, failed
 
 
 def run_kaggle_cmd(args, fatal=True):
@@ -301,21 +387,12 @@ def download_dataset():
 
 
 def check_stuck_fixtures(from_date, to_date):
+    """Rudisha (orodha ya mechi zilizokwama, orodha ya ligi zilizoshindwa kukaguliwa)."""
+    results, failed = fetch_all_leagues(from_date, to_date, "ukaguzi wa 'stuck fixtures'")
     stuck = []
     now = datetime.utcnow()
-    for code, league_key in LEAGUE_MAP.items():
-        try:
-            resp = requests.get(BASE_URL, params={
-                "met": "Fixtures", "APIkey": API_KEY, "leagueId": league_key,
-                "from": from_date, "to": to_date,
-            }, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-        except Exception as e:
-            print(f"   ⚠️ {code}: ukaguzi wa 'stuck fixtures' umeshindwa ({e})")
-            continue
-
-        for f in (data.get('result', []) or []):
+    for code, fixtures in results.items():
+        for f in fixtures:
             status = f.get('event_status', '')
             if status == 'Finished':
                 continue
@@ -328,21 +405,24 @@ def check_stuck_fixtures(from_date, to_date):
             if hours_since_kickoff > 4:
                 stuck.append((code, f.get('event_home_team'), f.get('event_away_team'),
                               f.get('event_date'), f.get('event_time'), status or '(tupu)'))
-        time.sleep(0.3)
-    return stuck
+    return stuck, failed
 
 
 def run_stuck_check(from_date, to_date):
     print("\n🔍 Kukagua mechi 'zilizokwama' (zimepita masaa 4+ bila matokeo)...")
-    stuck = check_stuck_fixtures(from_date, to_date)
+    stuck, failed = check_stuck_fixtures(from_date, to_date)
     if stuck:
         print(f"\n⚠️  MECHI {len(stuck)} ZIMEKWAMA (zimepita muda, bado hazina matokeo):")
         for code, home, away, edate, etime, status in stuck:
             msg = f"{code}: {home} vs {away} ({edate} {etime}) - status: '{status}'"
             print(f"   • {msg}")
             print(f"::warning::Mechi imekwama: {msg}")
-    else:
+    if failed:
+        print(f"::warning::Ukaguzi wa mechi zilizokwama HAUKUKAMILIKA: ligi {len(failed)}/{len(LEAGUE_MAP)} "
+              f"zimeshindwa ({', '.join(failed)}).")
+    elif not stuck:
         print("✅ Hakuna mechi zilizokwama - kila kitu kiko sawa.")
+    return failed
 
 
 # ============================================================
@@ -772,8 +852,11 @@ def main():
     from_date_str = (today - timedelta(days=LOOKBACK_DAYS)).isoformat()
     stuck_from_str = (today - timedelta(days=STUCK_DAYS)).isoformat()
     print(f"🔍 Kutafuta mechi zilizokwisha: {from_date_str} hadi {to_date_str}")
-    df_new = fetch_recent_results(from_date_str, to_date_str)
+    df_new, failed_fetch = fetch_recent_results(from_date_str, to_date_str)
     print(f"   Jumla ya mechi zilizopatikana: {len(df_new)}")
+    if failed_fetch:
+        print(f"::warning::AllSportsAPI: ligi {len(failed_fetch)}/{len(LEAGUE_MAP)} "
+              f"zimeshindwa ({', '.join(failed_fetch)}) - matokeo ya ligi hizo hayakuchukuliwa mzunguko huu.")
 
     df_results = df_existing   # dataset itakayotumika kutathmini
     upload_ok = True
@@ -782,7 +865,11 @@ def main():
     reasons = ["team_aliases.json"] if aliases_changed else []
 
     if len(df_new) == 0:
-        print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu.")
+        if failed_fetch:
+            print("ℹ️ Hakuna mechi mpya zilizopatikana - lakini API ilishindwa kwa baadhi ya ligi, "
+                  "kwa hiyo si lazima hakuna mechi. Mzunguko unaofuata utajaribu tena.")
+        else:
+            print("ℹ️ Hakuna mechi mpya zilizokwisha mzunguko huu.")
     else:
         # Nakala zinaondolewa kwa MAJINA RASMI: 'PSG' na 'Paris Sg' ni timu moja
         existing_keys = set(canon_keys(df_existing))
@@ -843,7 +930,14 @@ def main():
     settle_ok = settle_pending(df_results)
     run_stuck_check(stuck_from_str, to_date_str)
 
-    if not upload_ok or not settle_ok:
+    # Hali ya API kwenye flags + uamuzi wa rangi ya run
+    record_api_status(failed_fetch)
+    api_down = len(failed_fetch) >= API_FAIL_THRESHOLD
+    if api_down:
+        print(f"::error::AllSportsAPI haikujibu kwa ligi {len(failed_fetch)}/{len(LEAGUE_MAP)} - "
+              f"matokeo mapya hayakuchukuliwa. Mzunguko unaofuata utajaribu tena (dirisha ni siku {LOOKBACK_DAYS}).")
+
+    if not upload_ok or not settle_ok or api_down:
         sys.exit(1)
 
 
