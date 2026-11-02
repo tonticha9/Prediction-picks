@@ -1,0 +1,44 @@
+# Mlinzi: anaangalia kila dakika 30 kama app ya Render iko hai.
+# Ikishindwa, run hii inafeli na GitHub inakutumia email yenyewe (app iliyozimika haiwezi kujiripoti).
+name: Watchdog
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: watchdog
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check app health
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+        run: |
+          ok=0
+          for i in 1 2 3; do
+            code=$(curl -s -o /tmp/h.json -w "%{http_code}" -m 90 "$APP_URL/healthz" || echo 000)
+            echo "Jaribio $i: HTTP $code"
+            cat /tmp/h.json 2>/dev/null; echo
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 20
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::App haijibu (Render imezimika, inadeploy, au database ina tatizo)."
+            exit 1
+          fi
+
+      - name: Heartbeat to app
+        if: success()
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+        run: |
+          curl -s -m 60 -X POST "$APP_URL/api/ops/report" \
+            -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" \
+            -d '{"source":"Watchdog (Render)","status":"success","detail":"App na database vinajibu."}' || true
