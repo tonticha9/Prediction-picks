@@ -26,17 +26,30 @@ MASOKO YA NUSU (imeongezwa Okt 22 2026, yanalingana 100% na training):
   - home_win_both_halves   = nyumbani ashinde nusu ZOTE MBILI (1H na 2H)
   - away_win_both_halves   = ugenini ashinde nusu ZOTE MBILI
   - away_score_both_halves = ugenini afunge bao kwenye nusu zote mbili
-  (awali masoko haya yalihesabiwa VOID daima)
 
 Masoko ya BTTS: btts, home_win_btts, away_win_btts, na X_and_btts (home_win/away_win/dc_*).
+
+v2 (Nov 2 2026):
+  - MASOKO YA MCHANGANYIKO (X_and_Y): upande wowote unaweza kuwa soko lolote linalojulikana
+    (si over/under au btts tu). Upande mmoja ukipotea kwa uhakika (False), mchanganyiko
+    umepotea hata kama data ya upande mwingine haipo.
+  - Masoko ya kadi yanatoa jibu hata data ya nyekundu ikikosekana, pale njano pekee zinatosha
+    kuamua (mfano both_teams_carded na njano 1+ kila upande = WON).
+  - UNKNOWN_MARKETS: masoko yasiyo na evaluator yanakusanywa (hourly_catchup inayaonyesha).
+  - selftest(): ukaguzi wa ndani; hourly_catchup inakataa kusettle ikishindwa.
 
 evaluate_market(market, row) inarudisha:
   True   -> soko lilishinda (WON)
   False  -> soko lilipotea (LOST)
-  None   -> haiwezekani kuamua (VOID) - takwimu muhimu haipo (NaN/missing)
+  None   -> haiwezekani kuamua (VOID) - takwimu muhimu haipo (NaN/missing) au soko halijulikani
 """
 import re
 import math
+from collections import Counter
+
+# Masoko yasiyojulikana (hayana evaluator) yanakusanywa hapa.
+UNKNOWN_MARKETS = Counter()
+NAN = float('nan')
 
 
 def _num(row, key):
@@ -67,10 +80,6 @@ def _has_corners(row):
 
 def _has_yellows(row):
     return _num(row, 'HY') is not None and _num(row, 'AY') is not None
-
-
-def _has_reds(row):
-    return _num(row, 'HR') is not None and _num(row, 'AR') is not None
 
 
 def _has_cards(row):
@@ -150,6 +159,8 @@ HALF_MARKETS = (
     'home_win_both_halves', 'away_win_both_halves', 'away_score_both_halves',
 )
 
+SIMPLE_MARKETS = ('home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12')
+
 
 # ================================================================
 # Masoko ya moja kwa moja (match result / half-time / booleans)
@@ -227,30 +238,45 @@ def _boolean_market(market, row):
         both = h > 0 and a > 0
         return both and (h > a if market == 'home_win_btts' else h < a)
 
+    hy, ay = _num(row, 'HY'), _num(row, 'AY')
+    hr, ar = _num(row, 'HR'), _num(row, 'AR')
+    have_y = hy is not None and ay is not None
+    have_r = hr is not None and ar is not None
+    full = have_y and have_r
+
     if market == 'any_red_card':
-        if not _has_reds(row):
+        if (hr is not None and hr >= 1) or (ar is not None and ar >= 1):
+            return True
+        if not have_r:
             return None
-        return (_num(row, 'HR') + _num(row, 'AR')) >= 1
+        return (hr + ar) >= 1
 
-    # Masoko ya hapa chini yanahitaji kadi zote nne (HY, AY, HR, AR)
-    if market in ('both_teams_carded', 'no_cards_ft',
-                  'both_teams_2plus_cards', 'home_more_cards'):
-        if not _has_cards(row):
+    if market == 'both_teams_carded':
+        if have_y and hy >= 1 and ay >= 1:
+            return True            # njano pekee zinatosha kuamua
+        if not full:
             return None
-        hy, ay = _num(row, 'HY'), _num(row, 'AY')
-        hr, ar = _num(row, 'HR'), _num(row, 'AR')
-        home_cards = hy + hr
-        away_cards = ay + ar
+        return (hy + hr) >= 1 and (ay + ar) >= 1
 
-        if market == 'both_teams_carded':
-            return home_cards >= 1 and away_cards >= 1
-        if market == 'no_cards_ft':
-            return (home_cards + away_cards) == 0
-        if market == 'both_teams_2plus_cards':
-            return home_cards >= 2 and away_cards >= 2
-        if market == 'home_more_cards':
-            # Training: (HY + 2*HR) > (AY + 2*AR)
-            return (hy + 2 * hr) > (ay + 2 * ar)
+    if market == 'no_cards_ft':
+        if (have_y and (hy + ay) > 0) or (have_r and (hr + ar) > 0):
+            return False           # kadi yoyote iliyopo inatosha kuamua
+        if not full:
+            return None
+        return (hy + ay + hr + ar) == 0
+
+    if market == 'both_teams_2plus_cards':
+        if have_y and hy >= 2 and ay >= 2:
+            return True
+        if not full:
+            return None
+        return (hy + hr) >= 2 and (ay + ar) >= 2
+
+    if market == 'home_more_cards':
+        if not full:
+            return None
+        # Training: (HY + 2*HR) > (AY + 2*AR)
+        return (hy + 2 * hr) > (ay + 2 * ar)
 
     return 'unknown'
 
@@ -310,30 +336,40 @@ def _threshold_market(market, row):
 
 
 # ================================================================
-# Masoko ya mchanganyiko: "X_and_Y" (mfano home_win_and_over_25,
-# away_win_and_cards_over35, dc_12_and_over_25, home_win_and_btts)
+# Kiingilio cha ndani: True / False / None (data haipo) / 'unknown' (soko halijulikani)
 # ================================================================
+def _evaluate(market, row):
+    if '_and_' in market:
+        return _compound_market(market, row)
+    if market in SIMPLE_MARKETS:
+        return _simple_result(market, row)
+    if market in HALF_MARKETS:
+        return _half_result(market, row)
+    if market in BOOLEAN_MARKETS:
+        return _boolean_market(market, row)
+    if market.startswith('cards_range_'):
+        return _cards_range(market, row)
+    return _threshold_market(market, row)
+
+
 def _compound_market(market, row):
-    if '_and_' not in market:
-        return 'unknown'
+    """'X_and_Y': pande zote mbili lazima ziwe WON. Upande wowote ni soko lolote linalojulikana.
+    Upande mmoja ukipotea kwa uhakika (False), mchanganyiko umepotea hata data ya upande
+    mwingine ikikosekana."""
     base, _, second = market.partition('_and_')
-
-    base_result = evaluate_market(base, row)
-    if base_result is None:
-        return None
-    if base_result == 'unknown':
+    if not base or not second:
         return 'unknown'
-
-    if second == 'btts':
-        second_result = _boolean_market('btts', row)
-    else:
-        second_result = _threshold_market(second, row)
-    if second_result is None:
-        return None
-    if second_result == 'unknown':
+    a = _evaluate(base, row)
+    if isinstance(a, str):
         return 'unknown'
-
-    return bool(base_result) and bool(second_result)
+    b = _evaluate(second, row)
+    if isinstance(b, str):
+        return 'unknown'
+    if a is False or b is False:
+        return False
+    if a is None or b is None:
+        return None
+    return bool(a) and bool(b)
 
 
 # ================================================================
@@ -343,32 +379,14 @@ def evaluate_market(market, row):
     """market: jina la soko (string, mfano 'away_win_and_under_25')
     row: dict/Series yenye FTHG,FTAG,HTHG,HTAG,HC,AC,HY,AY,HR,AR,HST,AST
 
-    Inarudisha True (WON) / False (LOST) / None (VOID - takwimu haipo)."""
-
-    if '_and_' in market:
-        result = _compound_market(market, row)
-        if result != 'unknown':
-            return result
-
-    if market in ('home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12'):
-        return _simple_result(market, row)
-
-    if market in HALF_MARKETS:
-        return _half_result(market, row)
-
-    if market in BOOLEAN_MARKETS:
-        return _boolean_market(market, row)
-
-    if market.startswith('cards_range_'):
-        return _cards_range(market, row)
-
-    threshold_result = _threshold_market(market, row)
-    if threshold_result != 'unknown':
-        return threshold_result
-
-    # Soko halijulikani kabisa - salama zaidi kurudisha None (VOID) badala
-    # ya kubahatisha na kuandika matokeo ya uongo.
-    return None
+    Inarudisha True (WON) / False (LOST) / None (VOID - takwimu haipo au soko halijulikani)."""
+    result = _evaluate(market, row)
+    if isinstance(result, str):
+        # Soko halijulikani kabisa - salama zaidi kurudisha None (VOID) badala
+        # ya kubahatisha na kuandika matokeo ya uongo. Linakusanywa ili lionekane kwenye logi.
+        UNKNOWN_MARKETS[market] += 1
+        return None
+    return result
 
 
 def result_label(evaluated):
@@ -376,3 +394,74 @@ def result_label(evaluated):
     if evaluated is None:
         return 'VOID'
     return 'WON' if evaluated else 'LOST'
+
+
+# ================================================================
+# UKAGUZI WA NDANI: hourly_catchup inaita selftest() kabla ya kusettle.
+# ================================================================
+def _row(**kw):
+    base = {k: NAN for k in ('FTHG', 'FTAG', 'HTHG', 'HTAG', 'HC', 'AC',
+                              'HY', 'AY', 'HR', 'AR', 'HST', 'AST')}
+    base.update(kw)
+    return base
+
+
+def selftest():
+    """Inarudisha orodha ya kasoro (tupu = kila kitu sawa)."""
+    r1 = _row(FTHG=1, FTAG=2, HTHG=1, HTAG=0, HC=5, AC=5, HY=3, AY=2, HR=0, AR=0, HST=4, AST=6)
+    r2 = _row(FTHG=0, FTAG=1)                                   # data nyingi haipo
+    r3 = _row(FTHG=2, FTAG=2, HTHG=1, HTAG=1, HY=1, AY=1)       # njano zipo, nyekundu hazipo
+    r4 = _row(FTHG=0, FTAG=0, HTHG=0, HTAG=0, HY=0, AY=0, HR=0, AR=0)
+    r5 = _row(FTHG=2, FTAG=0, HTHG=1, HTAG=0)
+
+    cases = [
+        ('yellows_under_35', r1, False),        # njano 5 -> under 3.5 LAZIMA ipotee
+        ('yellows_over_35', r1, True),
+        ('cards_range_4_6', r1, True),
+        ('cards_range_0_3', r1, False),
+        ('booking_pts_over_45', r1, True),      # 50 > 45
+        ('booking_pts_under_55', r1, True),     # 50 < 55
+        ('corners_over_95', r1, True),
+        ('goals_over_25', r1, True),
+        ('goals_over_15', r1, True),
+        ('home_goals_under_15', r1, True),
+        ('away_goals_over_05', r1, True),
+        ('away_win_either_half', r1, True),     # 2H = 0-2
+        ('home_win_either_half', r1, True),     # 1H = 1-0
+        ('home_win_both_halves', r1, False),
+        ('away_score_both_halves', r1, False),
+        ('away_win_and_over_15', r1, True),
+        ('dc_1x_and_over_15', r1, False),
+        ('btts', r1, True),
+        ('away_win_and_btts', r1, True),
+        ('both_teams_carded', r1, True),
+        ('no_cards_ft', r1, False),
+        ('any_red_card', r1, False),
+        ('home_more_cards', r1, True),
+        ('yellows_under_35', r2, None),         # data haipo -> VOID, si WON
+        ('away_win_either_half', r2, None),
+        ('corners_over_95', r2, None),
+        ('home_win_and_cards_over35', r2, False),   # home_win imepotea kwa uhakika
+        ('away_win_and_cards_over35', r2, None),
+        ('both_teams_carded', r3, True),        # njano pekee zinatosha
+        ('no_cards_ft', r3, False),
+        ('any_red_card', r3, None),
+        ('no_cards_ft', r4, True),
+        ('home_more_cards', r4, False),
+        ('home_win_both_halves', r5, False),    # 2H ni 1-0 lakini 1H ni 1-0 -> kweli ni True
+        ('home_win_and_both_teams_carded', r1, False),
+        ('foo_bar_baz', r1, None),
+    ]
+    # kesi ya r5: nyumbani 2-0, HT 1-0, 2H 1-0 => home_win_both_halves = True
+    cases[33] = ('home_win_both_halves', r5, True)
+
+    problems = []
+    for market, row, expected in cases:
+        try:
+            got = evaluate_market(market, row)
+        except Exception as e:
+            got = f"KOSA {type(e).__name__}: {e}"
+        if got is not expected:
+            problems.append(f"{market}: nilitegemea {expected}, nimepata {got}")
+    UNKNOWN_MARKETS.clear()
+    return problems
