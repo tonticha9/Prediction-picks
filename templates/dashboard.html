@@ -32,6 +32,22 @@
 
 {% if not matches %}
   <div class="empty-state" style="font-size:20px; font-weight:700; padding:40px 0;">{{ empty_message }}</div>
+{% else %}
+  {% set cnt = namespace(total=0) %}
+  {% for m in matches %}
+    {% set cnt.total = cnt.total + 1 + ((m.other_picks|length) if m.other_picks else 0) %}
+  {% endfor %}
+  <div class="stat-chips">
+    <span class="chip">🏟 Mechi <b id="visCount">{{ matches|length }}</b></span>
+    <span class="chip">🎯 Best Picks <b>{{ matches|length }}</b></span>
+    <span class="chip">📌 Picks zote <b>{{ cnt.total }}</b></span>
+  </div>
+  <div class="pro-bar">
+    <input id="matchSearch" class="pro-input" type="search" placeholder="🔍 Tafuta timu..." oninput="filterMatches()">
+    <button class="pro-btn" type="button" onclick="expandAll()">⤵ Fungua zote</button>
+    <button class="pro-btn ghost" type="button" onclick="collapseAll()">⤴ Funga zote</button>
+    <button class="pro-btn ghost" type="button" onclick="toggleOdds(this)">💲 Zenye odds</button>
+  </div>
 {% endif %}
 
 {% for m in matches %}
@@ -65,11 +81,11 @@
   </div>
 
   {% if m.other_picks %}
-  <button class="toggle-picks" onclick="togglePicks('picks-{{ mi }}')">Other Picks ({{ m.other_picks|length }}) ▾</button>
+  <button class="toggle-picks" onclick="togglePicks('picks-{{ mi }}')"><span>Other Picks ({{ m.other_picks|length }})</span><span>▾</span></button>
   <div class="other-picks" id="picks-{{ mi }}">
     {% for g in m.other_groups %}
       <button class="toggle-picks" style="font-size:13px;" onclick="togglePicks('picks-{{ mi }}-{{ g.key }}')">
-        {{ g.icon }} {{ g.label }} ({{ g.picks|length }}) ▾
+        <span>{{ g.icon }} {{ g.label }} ({{ g.picks|length }})</span><span>▾</span>
       </button>
       <div class="other-picks" id="picks-{{ mi }}-{{ g.key }}">
         {% for p in g.picks %}
