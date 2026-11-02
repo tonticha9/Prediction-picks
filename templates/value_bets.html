@@ -51,6 +51,12 @@
 
 {% if not bets %}
   <div class="empty-state">{{ empty_message or 'Hakuna value bets kwa sasa.' }}</div>
+{% else %}
+  <div class="stat-chips">
+    <span class="chip">💰 Value bets <b>{{ bets|length }}</b></span>
+    <span class="chip">✅ Za kawaida <b>{{ normal|length }}</b></span>
+    <span class="chip">⚠️ Tahadhari <b>{{ cautious|length }}</b></span>
+  </div>
 {% endif %}
 
 {% for b in normal %}
