@@ -7,9 +7,18 @@ Kudhibiti kupitia Render env var QUALITY_GATE:
    '1' (chaguo-msingi) = kamili: daraja + margin juu ya base rate
    'soft'              = daraja tu (bila margin)
    '0'                 = kimezimwa (tabia ya zamani)
+
+v3 (Nov 3 2026): LIVE layer. Inasoma prediction_record (siku 90) na kupima kama soko
+   linatofautisha washindi na walioshindwa (AUC). Soko lenye picks 100+ na AUC < 0.54
+   haliwezi kuwa Best Pick (linabaki Other Picks). Masoko ya goals (over/under) hayaguswi.
+   Pia inatoa honest_rate()/honest_text(): hit-rate halisi ya siku 60 karibu na probability.
+   QUALITY_LIVE=0 inazima layer hii. Data ikikosekana, injini inarudi kwenye jedwali la tuli.
 """
+import math
 import os
 import re
+import time
+from datetime import date, datetime, timedelta
 
 try:
     from market_quality import QUALITY, MIN_EDGE, BEST_TIERS
@@ -24,9 +33,24 @@ OVER_05_RE = re.compile(r'^(home_|away_)?goals_over_05$')
 # na kwenye combos, lakini HAYAWI Best Pick kamwe.
 TEAM_GOALS_UNDER_RE = re.compile(r'^(home|away)_goals_under_\d{2,3}$')
 
+# Masoko ya goals (jumla na ya timu): hayachujwi na LIVE layer (lebo tu).
+GOALS_TOTAL_RE = re.compile(r'^(home_|away_)?goals_(over|under)_\d{2,3}$')
+
 # Kigezo cha 'Pro Confidence' ya model - kinatumika kuvunja usawa wa
 # probability zilizokaribiana (point 1-2), badala ya namba pekee.
 TIER_RANK = {'PRO_STRONG': 2, 'PRO_MEDIUM': 1}
+
+# LIVE layer
+LIVE_DAYS = 90          # dirisha la data kwa AUC
+LIVE_TTL = 1800         # sekunde 30 kabla ya kusoma database tena
+LIVE_MIN_N = 100        # picks za chini kabla ya kuhukumu soko
+LIVE_MIN_CLASS = 15     # washindi na walioshindwa wa chini kila upande
+LIVE_AUC_MIN = 0.54     # chini ya hapa = haitofautishi
+HONEST_DAYS = 60        # dirisha la hit-rate halisi
+HONEST_BAND = 5.0       # +/- pointi za probability
+HONEST_MIN_N = 15       # picks za chini kuonyesha hit-rate
+
+_LIVE = {'ts': 0.0, 'data': None}
 
 
 def is_market_allowed(market):
@@ -72,7 +96,7 @@ def is_best_pick_excluded(market, allow_dc_best=False):
 
 
 # ---------------------------------------------------------------------------
-# QUALITY GATE (Step 8B)
+# QUALITY GATE (Step 8B) - jedwali la tuli
 # ---------------------------------------------------------------------------
 def _gate_mode():
     """'0' = imezimwa, 'soft' = daraja tu, '1' = kamili (chaguo-msingi)."""
@@ -100,7 +124,7 @@ def _quality_key(market):
 
 def quality_info(market, probability):
     """Taarifa ya ubora wa soko kwa probability husika, au None kama soko halimo
-    kwenye jedwali (masoko yasiyojulikana hayachujwi)."""
+    kwenye jedwali (masoko yasiyojulikana hayachujwi na jedwali; LIVE layer inayakagua)."""
     try:
         key, is_under = _quality_key(market)
         q = QUALITY.get(key)
@@ -141,6 +165,175 @@ def quality_label(market, probability):
 def unknown_quality_markets(markets):
     """Orodha ya masoko (kutoka kwenye data) yasiyo kwenye jedwali la ubora."""
     return sorted({str(m) for m in markets if quality_info(m, 0) is None})
+
+
+# ---------------------------------------------------------------------------
+# LIVE LAYER (v3): data halisi kutoka prediction_record
+# ---------------------------------------------------------------------------
+def _live_on():
+    return os.environ.get('QUALITY_LIVE', '1').strip().lower() not in ('0', 'off', 'false', 'no')
+
+
+def _family(m):
+    m = str(m)
+    if '_and_' in m:
+        return 'combo'
+    if m.startswith('corners_'):
+        return 'corners'
+    if m.startswith('sot_'):
+        return 'sot'
+    if m.startswith(('yellows_', 'cards_', 'booking_', 'both_teams_carded',
+                     'both_teams_2plus', 'home_more_cards', 'any_red', 'no_cards')):
+        return 'cards'
+    if 'goals' in m or m == 'btts':
+        return 'goals'
+    return 'result'
+
+
+def _auc(pos, neg):
+    """AUC (Mann-Whitney): uwezekano kwamba pick iliyoshinda ilikuwa na probability kubwa kuliko iliyopoteza."""
+    n1, n0 = len(pos), len(neg)
+    vals = sorted([(v, 1) for v in pos] + [(v, 0) for v in neg], key=lambda t: t[0])
+    n = len(vals)
+    i = 0
+    rank_sum = 0.0
+    while i < n:
+        j = i
+        while j + 1 < n and vals[j + 1][0] == vals[i][0]:
+            j += 1
+        avg = (i + j) / 2.0 + 1.0
+        for k in range(i, j + 1):
+            if vals[k][1] == 1:
+                rank_sum += avg
+        i = j + 1
+    return (rank_sum - n1 * (n1 + 1) / 2.0) / (n1 * n0)
+
+
+def _load_live():
+    from models import db, PredictionRecord as PR
+    since = datetime.utcnow() - timedelta(days=LIVE_DAYS)
+    try:
+        rows = db.session.query(PR.market, PR.probability, PR.result, PR.match_date).filter(
+            PR.section == 'prediction', PR.result.in_(['WON', 'LOST']),
+            PR.probability.isnot(None), PR.match_date >= since).all()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+        raise
+    by_m, by_f = {}, {}
+    for m, p, r, d in rows:
+        try:
+            day = d.date() if hasattr(d, 'date') else d
+            item = (float(p), 1 if r == 'WON' else 0, day)
+        except Exception:
+            continue
+        by_m.setdefault(str(m), []).append(item)
+        by_f.setdefault(_family(m), []).append(item)
+    disc = {}
+    for m, items in by_m.items():
+        pos = [p for p, y, _d in items if y]
+        neg = [p for p, y, _d in items if not y]
+        n = len(items)
+        if n < LIVE_MIN_N or len(pos) < LIVE_MIN_CLASS or len(neg) < LIVE_MIN_CLASS:
+            disc[m] = ('unknown', None, n)
+            continue
+        auc = _auc(pos, neg)
+        disc[m] = ('none' if auc < LIVE_AUC_MIN else 'ok', auc, n)
+    return {'m': by_m, 'f': by_f, 'disc': disc}
+
+
+def _live():
+    if not _live_on():
+        return {}
+    now = time.time()
+    if _LIVE['data'] is not None and now - _LIVE['ts'] < LIVE_TTL:
+        return _LIVE['data']
+    try:
+        _LIVE['data'] = _load_live()
+        _LIVE['ts'] = now
+    except Exception as e:
+        print(f'[market_selection] live data haipatikani: {type(e).__name__}: {e}')
+        if _LIVE['data'] is None:
+            _LIVE['data'] = {}
+        _LIVE['ts'] = now - LIVE_TTL + 300      # jaribu tena baada ya dakika 5
+    return _LIVE['data']
+
+
+def discrimination(market):
+    """('ok' | 'none' | 'unknown', auc, n). 'none' = soko halitofautishi washindi na walioshindwa."""
+    d = _live().get('disc') or {}
+    return d.get(str(market), ('unknown', None, 0))
+
+
+def is_discriminating(market):
+    """False TU kama data inathibitisha soko halitofautishi (na si soko la goals).
+    Kwa matumizi ya combos na Best Pick."""
+    try:
+        if GOALS_TOTAL_RE.match(str(market)):
+            return True
+        return discrimination(market)[0] != 'none'
+    except Exception:
+        return True
+
+
+def live_quality_label(market):
+    """Kwa UI: (msimbo, maandishi) au None."""
+    try:
+        v = discrimination(market)[0]
+        if v == 'none':
+            if GOALS_TOTAL_RE.match(str(market)):
+                return ('goals_flat', 'Ishara hafifu')
+            return ('nodisc', 'Haitofautishi')
+    except Exception:
+        pass
+    return None
+
+
+def honest_rate(market, probability, days=HONEST_DAYS, band=HONEST_BAND):
+    """Hit-rate halisi: picks zilizokamilika za soko hili (siku 'days') zenye probability
+    ndani ya +/- band pointi. Picks zikiwa chache, inatumia familia ya soko. None kama data haitoshi."""
+    try:
+        if probability is None:
+            return None
+        p0 = float(probability)
+        live = _live()
+        if not live:
+            return None
+        cutoff = date.today() - timedelta(days=days)
+
+        def near(items):
+            return [y for (p, y, d) in items
+                    if d is not None and d >= cutoff and abs(p - p0) <= band]
+
+        ys = near(live['m'].get(str(market), []))
+        scope = 'soko'
+        if len(ys) < HONEST_MIN_N:
+            ys = near(live['f'].get(_family(market), []))
+            scope = 'familia'
+        if len(ys) < HONEST_MIN_N:
+            return None
+        return {'rate': round(100.0 * sum(ys) / len(ys), 1), 'n': len(ys),
+                'scope': scope, 'days': days}
+    except Exception:
+        return None
+
+
+def honest_text(market, probability):
+    h = honest_rate(market, probability)
+    if not h:
+        return None
+    where = 'soko hili' if h['scope'] == 'soko' else 'masoko ya aina hii'
+    return f"Ilishinda kweli {h['rate']:.0f}% ({where}, picks {h['n']}, siku {h['days']})"
+
+
+def live_report():
+    """Kwa Admin baadaye: masoko yote na hukumu yao ('none' kwanza)."""
+    d = _live().get('disc') or {}
+    out = [{'market': m, 'verdict': v, 'auc': None if a is None else round(a, 3), 'n': n}
+           for m, (v, a, n) in d.items()]
+    return sorted(out, key=lambda r: (r['verdict'] != 'none', r['market']))
 
 
 # ---------------------------------------------------------------------------
@@ -214,6 +407,8 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
     Quality gate (QUALITY_GATE): masoko ya daraja X yanafichwa (isipokuwa over 0.5 ya
     magoli, Other Picks tu); Best Pick lazima iwe daraja A/B (na, kwenye mode '1',
     probability izidi base rate kwa margin ya daraja).
+    LIVE layer (v3): soko ambalo data halisi inaonyesha halitofautishi washindi na
+    walioshindwa haliwezi kuwa Best Pick (linabaki Other Picks). Goals hazigusiwi.
 
     Orodha inayorudishwa: kipengele cha KWANZA ni Best Pick (soko la kwanza
     lisilozuiwa kuwa Best Pick), vingine vyote ni Other Picks kwa mpangilio wa formula.
@@ -259,9 +454,11 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
             return False
         if mode == '0':
             return True
+        if not is_discriminating(e[0]):
+            return False                      # data halisi: haitofautishi
         qi = quality_info(e[0], e[1])
         if qi is None:
-            return True                       # soko lisilojulikana: haligusiwi
+            return True                       # soko lisilojulikana kwenye jedwali: LIVE layer imeshaliangalia
         if qi['tier'] not in BEST_TIERS:
             return False
         if mode == '1' and qi['edge'] < qi['min_edge']:
