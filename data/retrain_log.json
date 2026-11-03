@@ -1,0 +1,13 @@
+[
+ {
+  "date": "2026-11-03",
+  "type": "retrain",
+  "revision": 4,
+  "n_markets": 64,
+  "reverted": [
+   "booking_pts_over_55",
+   "both_teams_2plus_cards"
+  ],
+  "note": "retrain ya kiotomatiki: masoko 64, 2 yalirudishwa kwa utulivu"
+ }
+]
