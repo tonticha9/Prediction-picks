@@ -25,6 +25,9 @@
       {% endif %}
     </div>
     {% endif %}
+    {% if b.honest %}
+    <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">📊 {{ b.honest }}</div>
+    {% endif %}
     {% if caution %}
     <div class="caution-flag">⚠️ Tahadhari: model na bookmaker wanatofautiana sana.</div>
     {% endif %}
