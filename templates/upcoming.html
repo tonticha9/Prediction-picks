@@ -79,8 +79,13 @@
     {% if m.best_pick.v8 is not none %}
     <div style="margin-top:4px; text-align:right;">{{ v8_badge(m.best_pick.v8, m.best_pick.probability) }}</div>
     {% endif %}
+    {% if m.best_pick.honest %}
+    <div style="margin-top:4px; text-align:right; font-size:0.72em; color:var(--text-dim);">📊 {{ m.best_pick.honest }}</div>
+    {% endif %}
     <div style="margin-top:8px;">
       <span class="tier-badge {{ m.best_pick.tier.class }}">{{ m.best_pick.tier.icon }} {{ m.best_pick.tier.label }}</span>
+      {% set qlb = live_quality_label(m.best_pick.market) if live_quality_label is defined else none %}
+      {% if qlb %}<span style="font-size:0.7em; color:#f59e0b; margin-left:6px;">⚠ {{ qlb[1] }}</span>{% endif %}
     </div>
     {% if m.best_pick.has_odds %}
     <div class="best-pick-extra">
@@ -101,8 +106,13 @@
         <div class="other-pick-row">
           <div>
             {{ p.market }}
+            {% set ql = live_quality_label(p.market) if live_quality_label is defined else none %}
+            {% if ql %}<span style="font-size:0.7em; color:#f59e0b; margin-left:6px;">⚠ {{ ql[1] }}</span>{% endif %}
             {% if p.v8 is not none %}
             <div style="margin-top:2px;">{{ v8_badge(p.v8, p.probability) }}</div>
+            {% endif %}
+            {% if p.honest %}
+            <div style="margin-top:2px; font-size:0.72em; color:var(--text-dim);">📊 {{ p.honest }}</div>
             {% endif %}
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
