@@ -1,4 +1,4 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Aston Villa vs Sunderland: dc_1x @1.25 + Qpr vs Lincoln: dc_12 @1.28,1.6,67.4
-3,4,Brighton vs Brentford: dc_1x @1.28 + Ofi Crete vs Atromitos: dc_1x @1.36 + Az Alkmaar vs Groningen: dc_1x @1.17 + Sociedad vs Vallecano: dc_1x @1.18,2.4,45.1
-5,5,Genclerbirligi vs Alanyaspor: goals_over_15 @1.33 + Kalamata vs Iraklis: goals_over_15 @1.36 + Brest vs Lyon: dc_12 @1.28 + Venezia vs Udinese: dc_1x @1.35 + Brighton vs Brentford: dc_1x @1.28,4.0,26.9
+2,2,Wrexham vs Wolves: dc_12 @1.30 + Cardiff vs West Ham: dc_12 @1.25,1.62,68.2
+3,3,Asteras Tripolis vs Aris: dc_12 @1.36 + Wrexham vs Wolves: dc_12 @1.30 + Blackburn vs Stoke: goals_over_15 @1.36,2.4,48.7
+5,6,Wrexham vs Wolves: dc_12 @1.30 + Venezia vs Udinese: dc_1x @1.36 + Man City vs Fulham: dc_1x @1.12 + Le Havre vs Lorient: goals_over_15 @1.33 + Blackburn vs Stoke: goals_over_15 @1.36 + Rio Ave vs Sp Braga: dc_x2 @1.15,4.12,27.3
