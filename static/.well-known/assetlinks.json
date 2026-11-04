@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.prediction_picks.twa",
+        "sha256_cert_fingerprints": ["43:52:31:C7:71:F4:07:5C:78:E1:06:A8:DD:E7:20:2B:13:33:81:94:97:0B:11:87:35:A3:26:29:6F:91:74:FF"]
+      }
+    }]
