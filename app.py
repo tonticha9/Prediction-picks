@@ -11,7 +11,7 @@ v3 (Nov 3 2026):
   - Picks za Dashboard/Zijazo/Value Bets zina 'honest' (hit-rate halisi) tayari kwa templates.
 """
 from flask import (Flask, render_template, request, redirect, url_for, flash,
-                   jsonify, session, g, abort)
+                   jsonify, session, g, abort, send_from_directory)
 import pandas as pd
 import os
 import re
@@ -235,7 +235,8 @@ def ensure_admin_user():
 
 
 PUBLIC_ENDPOINTS = {'login', 'register', 'logout', 'privacy', 'about', 'static',
-                    'api_refresh', 'api_config_key', 'admin_login', 'admin_logout'}
+                    'api_refresh', 'api_config_key', 'admin_login', 'admin_logout',
+                    'pwa_manifest', 'pwa_service_worker', 'pwa_asset_links'}
 
 
 @app.before_request
@@ -247,6 +248,29 @@ def require_login_gate():
     if not get_current_user():
         return redirect(url_for('login', next=request.path))
     return None
+
+
+# ================================================================
+# PWA / ANDROID APP (manifest, service worker, assetlinks)
+# ================================================================
+@app.route('/manifest.json')
+def pwa_manifest():
+    return send_from_directory(os.path.join(BASE_DIR, 'static'), 'manifest.json',
+                               mimetype='application/manifest+json')
+
+
+@app.route('/sw.js')
+def pwa_service_worker():
+    resp = send_from_directory(os.path.join(BASE_DIR, 'static'), 'sw.js',
+                               mimetype='application/javascript')
+    resp.headers['Cache-Control'] = 'no-cache'
+    return resp
+
+
+@app.route('/.well-known/assetlinks.json')
+def pwa_asset_links():
+    return send_from_directory(os.path.join(BASE_DIR, 'static', '.well-known'),
+                               'assetlinks.json', mimetype='application/json')
 
 
 @app.context_processor
