@@ -1,0 +1,14 @@
+{
+  "name": "Braiton Picks",
+  "short_name": "Braiton Picks",
+  "description": "Football predictions, value bets na combos za kila siku",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0A0F1E",
+  "theme_color": "#0A0F1E",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
