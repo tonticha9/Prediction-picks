@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Rizespor vs Erzurum Bb: dc_12 @1.30 + Man United vs Aston Villa: dc_12 @1.28,1.66,82.1
-3,4,Portsmouth vs Stoke: dc_12 @1.36 + Man United vs Aston Villa: dc_12 @1.28 + Leeds vs Tottenham: dc_12 @1.33 + Charlton vs Bolton: dc_12 @1.30,3.01,62.5
-5,5,Portsmouth vs Stoke: dc_12 @1.36 + Asteras Tripolis vs Aris: dc_12 @1.36 + Derby vs Bolton: dc_x2 @1.67 + Newcastle vs Arsenal: dc_x2 @1.17 + Man City vs Fulham: dc_1x @1.12,4.05,41.7
-7,6,Sassuolo vs Genoa: dc_x2 @1.53 + Falkirk vs St Johnstone: dc_1x @1.33 + Fiorentina vs Juventus: dc_12 @1.28 + Chelsea vs Leeds: dc_12 @1.28 + Leeds vs Tottenham: dc_12 @1.33 + Man United vs Aston Villa: dc_12 @1.28,5.68,30.7
-10,6,Wrexham vs Wolves: dc_x2 @1.40 + Falkirk vs St Johnstone: dc_1x @1.33 + Watford vs Lincoln: dc_1x @1.40 + Sassuolo vs Genoa: dc_x2 @1.53 + Levadeiakos vs Atromitos: dc_x2 @1.50 + Den Haag vs Sparta Rotterdam: dc_1x @1.40,8.38,19.8
+2,2,Man United vs Aston Villa: dc_12 @1.28 + Telstar vs Zwolle: dc_12 @1.25,1.6,79.8
+3,3,Derby vs Bolton: dc_x2 @1.67 + Man United vs Aston Villa: dc_12 @1.28 + Freiburg vs Union Berlin: dc_1x @1.14,2.44,65.9
+5,4,Derby vs Bolton: dc_x2 @1.67 + Cagliari vs Frosinone: dc_12 @1.28 + Asteras Tripolis vs Aris: dc_12 @1.36 + Groningen vs Heerenveen: dc_1x @1.40,4.07,40.0
+7,6,Derby vs Bolton: dc_x2 @1.67 + Asteras Tripolis vs Aris: dc_12 @1.36 + Sassuolo vs Genoa: dc_x2 @1.53 + Olympiakos vs Iraklis: dc_1x @1.04 + Goztep vs Buyuksehyr: dc_12 @1.28 + Schalke 04 vs Stuttgart: dc_x2 @1.25,5.78,30.0
+10,6,Samsunspor vs Konyaspor: dc_12 @1.36 + Groningen vs Heerenveen: dc_1x @1.40 + Cagliari vs Frosinone: dc_12 @1.28 + Paderborn vs Ein Frankfurt: dc_1x @1.70 + Le Havre vs Lorient: dc_12 @1.33 + Derby vs Bolton: dc_x2 @1.67,9.2,21.5
