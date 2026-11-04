@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Braiton Picks</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0A0F1E">
+  <link rel="icon" type="image/png" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     /* ===== Vitufe vya kisasa na zana za kurasa (Nov 2026) ===== */
@@ -151,5 +155,12 @@
     });
   </script>
   {% block scripts %}{% endblock %}
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function () {});
+      });
+    }
+  </script>
 </body>
 </html>
