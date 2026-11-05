@@ -1,6 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Man United vs Aston Villa: dc_12 @1.28 + Telstar vs Zwolle: dc_12 @1.25,1.6,79.8
-3,3,Derby vs Bolton: dc_x2 @1.67 + Man United vs Aston Villa: dc_12 @1.28 + Freiburg vs Union Berlin: dc_1x @1.14,2.44,65.9
-5,4,Derby vs Bolton: dc_x2 @1.67 + Cagliari vs Frosinone: dc_12 @1.28 + Asteras Tripolis vs Aris: dc_12 @1.36 + Groningen vs Heerenveen: dc_1x @1.40,4.07,40.0
-7,6,Derby vs Bolton: dc_x2 @1.67 + Asteras Tripolis vs Aris: dc_12 @1.36 + Sassuolo vs Genoa: dc_x2 @1.53 + Olympiakos vs Iraklis: dc_1x @1.04 + Goztep vs Buyuksehyr: dc_12 @1.28 + Schalke 04 vs Stuttgart: dc_x2 @1.25,5.78,30.0
-10,6,Samsunspor vs Konyaspor: dc_12 @1.36 + Groningen vs Heerenveen: dc_1x @1.40 + Cagliari vs Frosinone: dc_12 @1.28 + Paderborn vs Ein Frankfurt: dc_1x @1.70 + Le Havre vs Lorient: dc_12 @1.33 + Derby vs Bolton: dc_x2 @1.67,9.2,21.5
+2,2,Man United vs Aston Villa: dc_12 @1.28 + For Sittard vs Telstar: dc_1x @1.28,1.64,77.3
+3,3,Le Havre vs Lorient: dc_12 @1.33 + Man United vs Aston Villa: dc_12 @1.28 + Panetolikos vs Volos Nfc: dc_x2 @1.53,2.6,60.8
+5,4,Asteras Tripolis vs Aris: dc_12 @1.36 + Paderborn vs Ein Frankfurt: dc_1x @1.67 + Leeds vs Tottenham: dc_12 @1.33 + Excelsior vs Go Ahead Eagles: dc_x2 @1.44,4.35,38.2
+7,5,Hibernian vs Dundee United: dc_12 @1.25 + Derby vs Bolton: dc_x2 @1.57 + Paderborn vs Ein Frankfurt: dc_1x @1.67 + Volos Nfc vs Kifisia: dc_12 @1.33 + Eyupspor vs Kocaelispor: dc_x2 @1.30,5.67,27.4
