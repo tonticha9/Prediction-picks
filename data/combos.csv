@@ -1,5 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Man United vs Aston Villa: dc_12 @1.28 + For Sittard vs Telstar: dc_1x @1.28,1.64,77.3
-3,3,Le Havre vs Lorient: dc_12 @1.33 + Man United vs Aston Villa: dc_12 @1.28 + Panetolikos vs Volos Nfc: dc_x2 @1.53,2.6,60.3
-5,4,Asteras Tripolis vs Aris: dc_12 @1.36 + Paderborn vs Ein Frankfurt: dc_1x @1.67 + Leeds vs Tottenham: dc_12 @1.33 + Excelsior vs Go Ahead Eagles: dc_x2 @1.44,4.35,38.2
-7,6,Lazio vs Lecce: dc_1x @1.08 + Levadeiakos vs Atromitos: dc_x2 @1.50 + Asteras Tripolis vs Kalamata: dc_12 @1.30 + Alaves vs La Coruna: dc_x2 @1.70 + St Truiden vs Waregem: dc_1x @1.22 + West Brom vs Millwall: dc_1x @1.30,5.68,26.7
+2,2,Telstar vs Zwolle: dc_12 @1.25 + Chelsea vs Leeds: dc_12 @1.28,1.6,78.8
+3,2,Samsunspor vs Konyaspor: dc_12 @1.36 + Alaves vs La Coruna: dc_x2 @1.80,2.45,60.9
+5,4,Derby vs Bolton: dc_x2 @1.50 + Rb Leipzig vs Augsburg: dc_12 @1.17 + Alaves vs La Coruna: dc_x2 @1.80 + Inter vs Como: dc_1x @1.30,4.11,42.5
+7,6,Motherwell vs Rangers: dc_12 @1.18 + Coventry vs Crystal Palace: dc_x2 @1.62 + For Sittard vs Telstar: dc_1x @1.28 + Hearts vs Falkirk: dc_1x @1.18 + Asteras Tripolis vs Aris: dc_12 @1.36 + Derby vs Bolton: dc_x2 @1.50,5.89,29.7
+10,6,Den Haag vs Sparta Rotterdam: dc_1x @1.44 + Osasuna vs Ath Bilbao: dc_x2 @1.28 + Charlton vs Sheffield United: dc_x2 @1.28 + Hoffenheim vs Schalke 04: dc_1x @1.17 + Alaves vs La Coruna: dc_x2 @1.80 + Coventry vs Crystal Palace: dc_x2 @1.62,8.05,17.6
