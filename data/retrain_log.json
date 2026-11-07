@@ -26,7 +26,7 @@
  {
   "date": "2026-11-07",
   "type": "retrain",
-  "revision": 4,
+  "revision": 5,
   "n_markets": 64,
   "reverted": [
    "booking_pts_over_55",
