@@ -11,12 +11,16 @@
 #   mode=retrain, publish=no   -> jaribio kavu (hakuna kinachochapishwa)
 #   mode=retrain, publish=yes  -> retrain + chapisha ikiwa gate imepita
 #   mode=rollback, rollback_run_id=<id> -> rudisha toleo lililohifadhiwa na run hiyo
+#   (rollback pia inaombwa KIOTOMATIKI na release_monitor.py kwenye nightly ikiwa matokeo halisi yameshuka)
 #
 # v1 (Oct 27 2026)
 # v2 (Oct 27 2026): ratiba ya kila Jumatatu imewashwa.
-# v3 (Oct 28 2026): kila retrain inapochapishwa, tukio linaandikwa kwenye data/retrain_log.json
-#                   (kwa Market Analysis: kabla/baada ya retrain). Hatua hiyo haivunji chochote.
-# v4 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
+# v3 (Oct 28 2026): kila retrain inapochapishwa, tukio linaandikwa kwenye data/retrain_log.json.
+# v4 (Nov 1 2026): 'six' imeongezwa kwenye pip install.
+# v5 (Nov 7 2026): (1) inaripoti hali kwa ops (/api/ops/report, chanzo 'retrain_weekly');
+#                  (2) data/release_state.json: release_id + run_id ya kila toleo lililochapishwa (kwa release_monitor);
+#                  (3) rollback: faili za artifact zinatolewa nje ya folda backup_prev/ (awali zisingepatikana);
+#                  (4) release_id inaonekana kwenye log na Summary.
 
 name: Weekly Retrain Release
 
@@ -39,6 +43,10 @@ on:
         description: 'Kwa rollback tu: run id ya retrain iliyohifadhi toleo la zamani'
         type: string
         default: ''
+
+permissions:
+  contents: write
+  actions: read
 
 concurrency:
   group: retrain-weekly
@@ -79,6 +87,16 @@ jobs:
           run-id: ${{ inputs.rollback_run_id }}
           github-token: ${{ github.token }}
 
+      # v5: artifact inahifadhi faili ndani ya backup_prev/; script ya rollback inazitafuta moja kwa moja kwenye rollback_files/
+      - name: Flatten rollback files (rollback only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
+        run: |
+          if [ -d rollback_files/backup_prev ]; then
+            cp -f rollback_files/backup_prev/* rollback_files/
+          fi
+          echo "Faili za rollback:"
+          ls -la rollback_files
+
       - name: Retrain / publish / rollback
         env:
           MODE: ${{ inputs.mode || 'retrain' }}
@@ -87,22 +105,56 @@ jobs:
           KAGGLE_RELEASE_DATASET: tonticha/v6b-release
         run: python .github/scripts/retrain_and_publish.py
 
-      # v3: andika tukio la retrain kwenye repo (hufanya kazi tu kama kitu kilichapishwa)
-      - name: Record retrain event (for Market Analysis)
+      # v3 + v5: andika tukio la retrain na hali ya toleo (release_state.json) kwenye repo.
+      # Hufanya kazi tu kama kitu kilichapishwa (folda publish_stage ipo).
+      - name: Record retrain event + release state
         if: success()
         continue-on-error: true
         env:
           MODE: ${{ inputs.mode || 'retrain' }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          python .github/scripts/record_retrain_event.py
+          python .github/scripts/record_retrain_event.py || echo "::warning::record_retrain_event imeshindwa (haiathiri chochote)."
+          python - <<'PY'
+          import json, os, datetime
+          mode = os.environ.get('MODE', 'retrain')
+          stage = os.path.join('publish_stage', 'MANIFEST.json')
+          if not os.path.isfile(stage):
+              print('ℹ️ Hakuna toleo lililochapishwa kwenye run hii (jaribio kavu au gate imezuia): release_state haijabadilika.')
+          else:
+              man = json.load(open(stage))
+              path = os.path.join('data', 'release_state.json')
+              old = json.load(open(path)) if os.path.isfile(path) else {}
+              now = datetime.datetime.utcnow().isoformat(timespec='seconds')
+              hist = list(old.get('history', []))
+              if old.get('release_id'):
+                  hist.append({k: old.get(k) for k in ('release_id', 'published_utc', 'run_id', 'rolled_back')})
+              rid = man.get('release_id') or f"{man.get('bundle_data_end')}_rev{man.get('bundle_revision')}"
+              if mode == 'rollback':
+                  st = dict(old)
+                  st.update(release_id=rid, published_utc=now, run_id=None, rolled_back=True,
+                            rolled_back_utc=now, rolled_back_from=old.get('release_id'))
+              else:
+                  st = {'release_id': rid, 'published_utc': now, 'run_id': os.environ.get('RUN_ID'),
+                        'rolled_back': False, 'n_markets': man.get('n_markets'),
+                        'data_end': man.get('bundle_data_end'), 'tier_demoted': man.get('tier_demoted')}
+              st['history'] = hist[-10:]
+              os.makedirs('data', exist_ok=True)
+              json.dump(st, open(path, 'w'), indent=1)
+              print(f"✅ release_id: {rid} (mode {mode}) | run_id {st.get('run_id')}")
+              sm = os.environ.get('GITHUB_STEP_SUMMARY')
+              if sm:
+                  open(sm, 'a').write(f"### Toleo: **{rid}** ({mode}) | masoko {man.get('n_markets')} | data_end {man.get('bundle_data_end')}\n")
+          PY
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           if [ -f data/retrain_log.json ]; then git add data/retrain_log.json; fi
+          if [ -f data/release_state.json ]; then git add data/release_state.json; fi
           if git diff --staged --quiet; then
             echo "Hakuna tukio jipya la kuhifadhi."
             exit 0
           fi
-          git commit -m "Record retrain event $(date -u +'%Y-%m-%d')"
+          git commit -m "Record retrain event + release state $(date -u +'%Y-%m-%d')"
           pushed=0
           for i in 1 2 3 4 5; do
             if git pull --rebase -X theirs origin main && git push; then
@@ -126,3 +178,21 @@ jobs:
             kaggle_retrain_output/release_gate.json
           if-no-files-found: ignore
           retention-days: 30
+
+      # v5: ripoti hali kwa app (/admin/ops). Inafanya bango jekundu lijiponye lenyewe retrain ikifanikiwa.
+      - name: Report to ops monitor
+        if: always()
+        continue-on-error: true
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          JOB_STATUS: ${{ job.status }}
+          MODE: ${{ inputs.mode || 'retrain' }}
+          PUBLISH: ${{ github.event_name == 'schedule' && 'yes' || inputs.publish }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$APP_URL" ]; then exit 0; fi
+          code=$(curl -s -m 25 -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/ops/report" \
+            -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" \
+            -d "{\"source\":\"retrain_weekly\",\"status\":\"$JOB_STATUS\",\"detail\":\"mode=$MODE publish=$PUBLISH\",\"url\":\"$RUN_URL\"}")
+          echo "ops report: HTTP $code"
