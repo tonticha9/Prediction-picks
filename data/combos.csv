@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Lens vs Toulouse: dc_12 @1.25 + Man United vs Aston Villa: dc_12 @1.28,1.6,81.2
-3,2,Alaves vs La Coruna: dc_x2 @1.80 + Samsunspor vs Konyaspor: dc_12 @1.36,2.45,59.9
-5,3,Lorient vs Rennes: dc_x2 @1.40 + Alaves vs La Coruna: dc_x2 @1.80 + Coventry vs Crystal Palace: dc_x2 @1.62,4.08,38.2
-7,5,Alaves vs La Coruna: dc_x2 @1.80 + Coventry vs Crystal Palace: dc_x2 @1.62 + Besiktas vs Genclerbirligi: dc_1x @1.05 + Birmingham vs Swansea: dc_1x @1.22 + Sassuolo vs Genoa: dc_x2 @1.57,5.86,28.5
-10,5,Liverpool vs Man United: home_win @1.83 + Racing Santander vs Sociedad: dc_x2 @1.36 + Alaves vs La Coruna: dc_x2 @1.80 + Coventry vs Crystal Palace: dc_x2 @1.62 + Qpr vs Lincoln: dc_1x @1.17,8.49,19.9
+2,2,Ath Bilbao vs Espanol: dc_12 @1.25 + Man United vs Aston Villa: dc_12 @1.28,1.6,77.3
+3,3,Nijmegen vs Psv Eindhoven: dc_12 @1.18 + Ath Bilbao vs Espanol: dc_12 @1.25 + Wrexham vs Wolves: dc_1x @1.67,2.46,58.8
+5,4,Paderborn vs Ein Frankfurt: dc_1x @1.67 + Asteras Tripolis vs Aris: dc_12 @1.36 + Levante vs Elche: dc_1x @1.36 + Napoli vs Lazio: dc_1x @1.36,4.2,38.6
+7,5,Wrexham vs Wolves: dc_1x @1.67 + Levante vs Elche: dc_1x @1.36 + Santa Clara vs Gil Vicente: dc_1x @1.30 + Dundee United vs Motherwell: dc_12 @1.25 + Sassuolo vs Genoa: dc_x2 @1.57,5.79,30.7
+10,6,Monza vs Fiorentina: dc_x2 @1.33 + Guimaraes vs Porto: dc_12 @1.25 + Sparta Rotterdam vs Az Alkmaar: dc_12 @1.22 + Liverpool vs Man United: home_win @1.83 + Wrexham vs Wolves: dc_1x @1.67 + Asteras Tripolis vs Kalamata: dc_12 @1.36,8.43,20.7
