@@ -6,23 +6,14 @@
 # /api/refresh ya app moja kwa moja ili data ionekane papo hapo bila
 # kusubiri Render redeploy.
 #
-# v2 (Oct 15 2026): kikomo cha job kimeongezwa hadi dakika 170 (Kaggle inaweza kuchukua
-# hadi dakika 150), na 'concurrency' inazuia nightly mbili kuendeshwa pamoja.
-#
-# v3 (Oct 18 2026): kivuli cha v8 - archive_shadow.py inahifadhi predictions_v8.csv na
-# archive ya v6/v8 kwenye repo (commit moja, deploy moja). Hiari kabisa: ikikosekana
-# au ikishindwa, hakuna kinachovunjika.
-#
-# v4 (Oct 25 2026): hatua ya push sasa inavuta mabadiliko mapya ya 'main' kwanza
-# (git pull --rebase) na kujaribu tena hadi mara 5. Hii inazuia kosa la
-# "rejected (fetch first)" wakati workflow nyingine (mfano hourly_catchup)
-# inasukuma commit wakati Kaggle inaendeshwa.
-#
-# v5 (Oct 27 2026): calibration ya kila siku (daily_calibration.py) inarekebisha
-# probability kwa matokeo halisi ya live kabla ya commit. HAIVUNJI nightly: ikishindwa,
-# faili zinabaki kama zilivyotoka Kaggle (continue-on-error).
-#
-# v6 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
+# v2 (Oct 15 2026): kikomo cha job kimeongezwa hadi dakika 170, na 'concurrency' inazuia nightly mbili pamoja.
+# v3 (Oct 18 2026): kivuli cha v8 - archive_shadow.py (hiari kabisa).
+# v4 (Oct 25 2026): push inavuta mabadiliko mapya ya 'main' kwanza (git pull --rebase) na kujaribu tena hadi mara 5.
+# v5 (Oct 27 2026): calibration ya kila siku (daily_calibration.py), continue-on-error.
+# v6 (Nov 1 2026): 'six' imeongezwa kwenye pip install.
+# v7 (Nov 7 2026): (1) calibration inaendeshwa kupitia calib_epoch.py (inapuuza rekodi za zamani za masoko yaliyobadilishwa injini);
+#                  (2) release_monitor.py: ufuatiliaji wa matokeo halisi + rollback ya kiotomatiki (inaita retrain_weekly mode=rollback);
+#                  (3) inaripoti hali kwa /api/ops/report (chanzo 'nightly_predictions').
 
 name: Nightly Predictions Update
 
@@ -30,7 +21,11 @@ on:
   schedule:
     # 22:00 UTC = 01:00 usiku (saa 7 usiku) Afrika Mashariki (EAT = UTC+3)
     - cron: '0 22 * * *'
-  workflow_dispatch:        # Inaruhusu ku-trigger kwa mkono (kwa jaribio la kwanza)
+  workflow_dispatch:        # Inaruhusu ku-trigger kwa mkono
+
+permissions:
+  contents: write
+  actions: write            # kwa rollback ya kiotomatiki (gh workflow run)
 
 concurrency:
   group: nightly-predictions
@@ -97,21 +92,34 @@ jobs:
           # Kivuli cha v8 (HIARI - haivunji chochote ikishindwa)
           python .github/scripts/archive_shadow.py || echo "::warning::archive_shadow imeshindwa (haiathiri app)."
 
-      # v5: maktaba za app (ili script ifikie database kama hourly_catchup inavyofanya)
-      - name: Install app requirements (for daily calibration)
+      # v5: maktaba za app (ili scripts zifikie database kama hourly_catchup inavyofanya)
+      - name: Install app requirements (for calibration + monitor)
         if: env.SKIP_UPDATE != 'true'
         continue-on-error: true
         run: pip install -r requirements.txt
 
-      # v5: calibration ya kila siku. Ikishindwa, faili zinabaki za Kaggle (nightly inaendelea).
-      # Kwa jaribio la kuangalia tu bila kubadilisha faili: CALIB_MODE: shadow
+      # v7: calibration ya kila siku kupitia calib_epoch.py (daily_calibration + kupuuza rekodi za zamani za masoko yaliyobadilishwa).
+      # Ikishindwa, faili zinabaki za Kaggle (nightly inaendelea). Kwa jaribio bila kubadilisha faili: CALIB_MODE: shadow
       - name: Daily calibration (never blocks nightly)
         if: env.SKIP_UPDATE != 'true'
         continue-on-error: true
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           CALIB_MODE: apply
-        run: python .github/scripts/daily_calibration.py
+        run: python .github/scripts/calib_epoch.py
+
+      # v7: ufuatiliaji wa matokeo halisi. Inaripoti kwa /admin/ops na inaweza kuomba rollback (action=rollback).
+      # ROLLBACK_ENABLED: 'no' = inaripoti tu, haichukui hatua.
+      - name: Release monitor (real results)
+        id: relmon
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          ROLLBACK_ENABLED: 'yes'
+        run: python .github/scripts/release_monitor.py
 
       - name: Commit and push updated data
         if: env.SKIP_UPDATE != 'true'
@@ -163,6 +171,32 @@ jobs:
           done
           echo "::warning::App refresh haikufanikiwa baada ya majaribio 3 - data mpya ipo kwenye repo, lakini app inaweza bado kuonyesha cache ya zamani hadi redeploy ijayo."
 
+      # v7: rollback ya kiotomatiki - inaendeshwa TU kama release_monitor imesema action=rollback
+      - name: Auto rollback (only if monitor says so)
+        if: steps.relmon.outputs.action == 'rollback'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "🛑 Matokeo halisi yameshuka baada ya release: naomba rollback ya run ${{ steps.relmon.outputs.rollback_run_id }}"
+          gh workflow run retrain_weekly.yml --ref main -f mode=rollback -f publish=yes -f rollback_run_id=${{ steps.relmon.outputs.rollback_run_id }}
+
       - name: Skipped (no new matches)
         if: env.SKIP_UPDATE == 'true'
         run: echo "ℹ️ Hakuna mechi mpya zilizopatikana (huenda ni international break) - data ya app haijabadilishwa, predictions za zamani zinaendelea kutumika."
+
+      # v7: ripoti hali kwa app (/admin/ops). Mafanikio yanaponya bango jekundu lenyewe.
+      - name: Report to ops monitor
+        if: always()
+        continue-on-error: true
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$APP_URL" ]; then exit 0; fi
+          code=$(curl -s -m 25 -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/ops/report" \
+            -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" \
+            -d "{\"source\":\"nightly_predictions\",\"status\":\"$JOB_STATUS\",\"detail\":\"nightly\",\"url\":\"$RUN_URL\"}")
+          echo "ops report: HTTP $code"
