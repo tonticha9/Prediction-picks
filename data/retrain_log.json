@@ -22,5 +22,18 @@
    "cards_range_6_8"
   ],
   "note": "retrain ya kiotomatiki: masoko 64, 4 yalirudishwa kwa utulivu"
+ },
+ {
+  "date": "2026-11-07",
+  "type": "retrain",
+  "revision": 4,
+  "n_markets": 64,
+  "reverted": [
+   "booking_pts_over_55",
+   "both_teams_2plus_cards",
+   "both_teams_carded",
+   "cards_range_6_8"
+  ],
+  "note": "retrain ya kiotomatiki: masoko 64, 4 yalirudishwa kwa utulivu"
  }
 ]
