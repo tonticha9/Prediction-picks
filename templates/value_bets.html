@@ -3,13 +3,13 @@
 <style>
   .caution-title { font-size:13px; font-weight:700; color:#f59e0b; margin:20px 0 6px; }
   .caution-note { font-size:12px; color:var(--text-dim); margin-bottom:10px; line-height:1.5; }
-  .caution-flag { font-size:12px; color:#f59e0b; margin-top:6px; }
+  .caution-flag { font-size:12px; color:#f59e0b; margin-top:6px; line-height:1.4; }
 </style>
 
 <h2 style="margin-bottom:16px;">💰 Value Bets — Leo</h2>
 
-{% macro bet_row(b, caution) %}
-<div class="value-row" {% if caution %}style="border-left:3px solid #f59e0b;"{% endif %}>
+{% macro bet_row(b, reasons) %}
+<div class="value-row" {% if reasons %}style="border-left:3px solid #f59e0b;"{% endif %}>
   <div>
     <div style="font-weight:700; font-size:14px;">{{ b.home }} vs {{ b.away }}</div>
     <div style="font-size:12px; color:var(--text-dim); margin-top:2px;">{{ b.date }} · {{ b.market }}</div>
@@ -28,8 +28,8 @@
     {% if b.honest %}
     <div style="font-size:12px; color:var(--text-dim); margin-top:4px;">📊 {{ b.honest }}</div>
     {% endif %}
-    {% if caution %}
-    <div class="caution-flag">⚠️ Tahadhari: model na bookmaker wanatofautiana sana.</div>
+    {% if reasons %}
+    <div class="caution-flag">⚠️ Tahadhari: {{ reasons|join(' · ') }}</div>
     {% endif %}
   </div>
   <div style="text-align:right;">
@@ -41,12 +41,29 @@
 </div>
 {% endmacro %}
 
-{# Kigezo cha tahadhari: EV >= 40% AU edge >= 20 #}
+{# Vigezo vya tahadhari (v2):
+   - masoko ya magoli/btts: EV >= 18% AU edge >= 9
+   - masoko mengine: EV >= 25% AU edge >= 12
+   - model isiyo na odds (v8) ina edge hasi #}
 {% set normal = [] %}
 {% set cautious = [] %}
 {% for b in bets %}
-  {% if (b.ev is not none and b.ev >= 40) or (b.edge is not none and b.edge >= 20) %}
-    {% set _ = cautious.append(b) %}
+  {% set rs = [] %}
+  {% set mk = (b.market|string|lower) %}
+  {% set is_goals = ('goals' in mk) or ('magoli' in mk) or ('btts' in mk) %}
+  {% set ev_t = 18 if is_goals else 25 %}
+  {% set ed_t = 9 if is_goals else 12 %}
+  {% if b.ev is not none and b.ev >= ev_t %}
+    {% set _ = rs.append('EV kubwa (' ~ b.ev ~ '%)') %}
+  {% endif %}
+  {% if b.edge is not none and b.edge >= ed_t %}
+    {% set _ = rs.append('tofauti kubwa na bookmaker (edge ' ~ b.edge ~ ')') %}
+  {% endif %}
+  {% if b.edge_free is defined and b.edge_free is not none and b.edge_free < 0 %}
+    {% set _ = rs.append('model isiyo na odds haikubaliani (edge ' ~ b.edge_free ~ '%)') %}
+  {% endif %}
+  {% if rs %}
+    {% set _ = cautious.append((b, rs)) %}
   {% else %}
     {% set _ = normal.append(b) %}
   {% endif %}
@@ -63,18 +80,18 @@
 {% endif %}
 
 {% for b in normal %}
-  {{ bet_row(b, false) }}
+  {{ bet_row(b, none) }}
 {% endfor %}
 
 {% if cautious %}
   <div class="caution-title">⚠️ Tahadhari ({{ cautious|length }})</div>
   <div class="caution-note">
-    Hizi zina EV 40%+ au edge 20+ pts. Tofauti kubwa kiasi hiki na bookmaker
-    mara nyingi ni dalili ya kosa la model au odds zisizo za kawaida, si fursa
-    ya uhakika. Zichukulie kwa tahadhari.
+    Hizi zina faida (EV) au tofauti na bookmaker iliyo kubwa kupita kawaida, au model isiyotumia odds
+    haikubaliani nazo. Tofauti kubwa kiasi hiki mara nyingi ni dalili ya kosa la model au odds zisizo za kawaida,
+    si fursa ya uhakika. Sababu imeandikwa chini ya kila moja. Zichukulie kwa tahadhari.
   </div>
-  {% for b in cautious %}
-    {{ bet_row(b, true) }}
+  {% for item in cautious %}
+    {{ bet_row(item[0], item[1]) }}
   {% endfor %}
 {% endif %}
 {% endblock %}
