@@ -1,5 +1,5 @@
 """
-ops_monitor.py: ufuatiliaji wa mfumo mzima + udhibiti wa Best Pick (plugin ya Admin).
+ops_monitor.py v2: ufuatiliaji wa mfumo mzima + udhibiti wa Best Pick (plugin ya Admin).
 
 - Jedwali ops_event: kila kitu kinachofeli au kufanikiwa (GitHub, Kaggle, Render, API, app) kinarekodiwa.
 - POST /api/ops/report  (header X-Refresh-Secret): GitHub inaripoti hali ya workflow.
@@ -7,6 +7,9 @@ ops_monitor.py: ufuatiliaji wa mfumo mzima + udhibiti wa Best Pick (plugin ya Ad
 - Makosa 5xx ya app yanarekodiwa yenyewe.
 - Health checks za Admin zinaongezewa hali ya mifumo ya nje.
 - Admin: /admin/ops (matukio), /admin/bestpick/save (zima soko lisiwe Best Pick).
+
+v2 (Nov 7 2026): makosa/tahadhari za zaidi ya masaa 48 hazihesabiwi tena kuwa wazi (hazikwamishi bango);
+bango jekundu sasa linataja mfumo wenye tatizo; mifumo isiyoripoti kwa zaidi ya siku 14 inapuuzwa.
 """
 import hmac
 import os
@@ -22,6 +25,8 @@ FLAG_BP = 'bestpick_off'
 MAX_FAILS = 8
 BLOCK_SECONDS = 900
 KEEP_DAYS = 45
+STALE_HOURS = 48          # kosa/tahadhari la zamani kuliko hapa halihesabiwi kuwa wazi (linabaki kwenye orodha ya zamani)
+SILENT_DAYS = 14          # mfumo usioripoti kwa zaidi ya siku hizi unaonekana umestaafu: hauonywi tena
 LEVEL_MAP = {
     'success': 'ok', 'ok': 'ok',
     'failure': 'error', 'error': 'error', 'timed_out': 'error', 'startup_failure': 'error',
@@ -136,6 +141,9 @@ def _record(source, level, title, detail='', url=''):
 def _is_open(e, job_a):
     if e.resolved or e.level not in ('error', 'warn'):
         return False
+    # v2: tukio la zamani kuliko STALE_HOURS halihesabiwi kuwa wazi
+    if e.created and (datetime.utcnow() - e.created).total_seconds() > STALE_HOURS * 3600:
+        return False
     # Job A (hourly) ikikimbia vizuri baada ya kosa, kosa linahesabiwa limetatuliwa
     if job_a and 'hourly' in (e.source or '').lower() and job_a > e.created:
         return False
@@ -159,11 +167,16 @@ def _status_rows():
         elif opened:
             ev, level, txt = opened[0], 'warn', opened[0].title
         else:
-            ev, level, txt = evs[0], 'ok', 'Sawa'
+            ev, level = evs[0], 'ok'
+            if ev.level == 'ok':
+                txt = 'Sawa'
+            else:
+                age0 = (now - ev.created).total_seconds() / 3600.0
+                txt = f'Hakuna tatizo jipya (kosa la mwisho masaa {age0:.0f} yaliyopita)'
             exp = _expect_hours(s)
             if exp:
                 age = (now - ev.created).total_seconds() / 3600.0
-                if age > exp:
+                if exp < age < SILENT_DAYS * 24:
                     level = 'warn'
                     txt = f'Haijaripoti kwa masaa {age:.0f} (inatarajiwa ndani ya masaa {exp:g})'
         rows.append({'name': s, 'level': level, 'text': txt, 'when': ev.created,
@@ -309,7 +322,11 @@ def register(app, admin_only, app_ns):
                     worst = 'error' if any(c['status'] == 'error' for c in bad) else 'warn'
                     if rank[worst] > rank.get(summ.get('level', 'ok'), 0):
                         summ['level'] = worst
-                        summ['text'] = f'Matatizo {len(bad)} ya mifumo ya nje yanahitaji umakini'
+                        # v2: bango linataja mfumo wenye tatizo (hadi 3) ili ujue ni lipi
+                        names = '; '.join(
+                            f"{str(c['name']).replace('⚙️ ', '').replace('🌐 ', '')}: {str(c['detail'])[:60]}"
+                            for c in bad[:3])
+                        summ['text'] = f'Matatizo {len(bad)} ya mifumo ya nje yanahitaji umakini. {names}'
                 return checks, summ
             except Exception:
                 return res
