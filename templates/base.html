@@ -40,6 +40,7 @@
   </style>
 </head>
 <body>
+  <!-- cv-fab: menyu ya Cover-All ipo hapa chini, kwa hiyo kitufe cha kuelea cha plugin hakihitajiki -->
 
   {% set _oc = ops_open_count() if (is_admin and ops_open_count is defined) else 0 %}
 
@@ -62,6 +63,9 @@
     <a href="{{ url_for('upcoming') }}" class="{{ 'active' if page=='upcoming' else '' }}">📅 Zijazo</a>
     <a href="{{ url_for('value_bets') }}" class="{{ 'active' if page=='value_bets' else '' }}">💰 Value Bets</a>
     <a href="{{ url_for('combos') }}" class="{{ 'active' if page=='combos' else '' }}">🎯 Combos</a>
+
+    {# Cover-All: kiungo cha moja kwa moja (kinafanya kazi hata plugin ikikosekana) #}
+    <a href="/cover-all" class="{{ 'active' if page=='cover' else '' }}">🧮 Cover-All</a>
 
     {# Kitufe cha History: admin anaweza kukizima kwa watumiaji, au kwa kila mtu (Admin → Udhibiti wa History) #}
     {% if history_nav_visible is not defined or history_nav_visible %}
