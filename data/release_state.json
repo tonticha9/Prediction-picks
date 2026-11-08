@@ -1,0 +1,13 @@
+{
+ "release_id": "2026-11-07_202611080636",
+ "published_utc": "2026-11-08T06:37:54",
+ "run_id": "42454282165",
+ "rolled_back": false,
+ "n_markets": 64,
+ "data_end": "2026-11-07",
+ "tier_demoted": [
+  "cards_range_9_20",
+  "dc_12"
+ ],
+ "history": []
+}
