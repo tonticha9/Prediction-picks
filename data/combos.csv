@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Nijmegen vs Psv Eindhoven: dc_12 @1.18 + Asteras Tripolis vs Kalamata: dc_12 @1.36,1.6,77.3
-3,2,Alaves vs La Coruna: dc_x2 @1.80 + Asteras Tripolis vs Kalamata: dc_12 @1.36,2.45,58.3
-5,5,Villarreal vs Getafe: dc_12 @1.18 + Asteras Tripolis vs Kalamata: dc_12 @1.36 + Brighton vs Brentford: dc_1x @1.28 + Coventry vs Crystal Palace: dc_x2 @1.62 + Guimaraes vs Porto: dc_12 @1.25,4.16,39.0
-7,6,Como vs Cagliari: dc_12 @1.18 + Groningen vs Heerenveen: dc_1x @1.40 + Guimaraes vs Porto: dc_12 @1.25 + Alaves vs La Coruna: dc_x2 @1.80 + Napoli vs Lazio: dc_1x @1.36 + Ein Frankfurt vs Hoffenheim: dc_12 @1.22,6.17,30.4
-10,6,Le Havre vs Lorient: dc_1x @1.50 + Man United vs Aston Villa: dc_12 @1.28 + Rennes vs Lille: dc_1x @1.33 + Asteras Tripolis vs Kalamata: dc_12 @1.36 + Inter vs Como: dc_1x @1.30 + Alaves vs La Coruna: dc_x2 @1.80,8.13,25.3
+2,2,Man United vs Aston Villa: dc_12 @1.28 + Sevilla vs Betis: dc_12 @1.28,1.64,77.5
+3,3,Man United vs Aston Villa: dc_12 @1.28 + Ajax vs Den Haag: dc_1x @1.05 + Alaves vs La Coruna: dc_x2 @1.80,2.42,55.0
+5,4,Sassuolo vs Genoa: dc_x2 @1.57 + Le Havre vs Lorient: dc_12 @1.33 + Club Brugge vs Anderlecht: dc_1x @1.14 + Alaves vs La Coruna: dc_x2 @1.80,4.28,38.6
+7,5,St. Gilloise vs Genk: dc_1x @1.17 + Le Havre vs Lorient: dc_12 @1.33 + St Truiden vs Waregem: dc_1x @1.22 + Coventry vs Crystal Palace: dc_x2 @1.62 + Liverpool vs Man United: home_win @1.83,5.63,28.3
+10,6,Alaves vs La Coruna: dc_x2 @1.80 + Liverpool vs Man United: home_win @1.83 + Hoffenheim vs Schalke 04: dc_1x @1.17 + Kilmarnock vs Aberdeen: dc_12 @1.28 + Rennes vs Lille: dc_1x @1.33 + Elche vs Betis: dc_12 @1.28,8.4,20.0

@@ -1,160 +1,126 @@
 HomeTeam,AwayTeam,match_date,market,probability_%,pro_tier,real_odds,ev_%
-Iraklis,Panathinaikos,2026-11-08 00:00:00,home_win,20.2,PRO_STRONG,8.0,61.6
-Nijmegen,Psv Eindhoven,2026-11-21 00:00:00,home_win,26.8,PRO_STRONG,5.0,34.0
-Hull,Brighton,2026-11-22 00:00:00,home_win,23.9,PRO_STRONG,5.5,31.4
-Dundee,Hearts,2026-11-21 00:00:00,home_win,31.2,PRO_STRONG,4.2,31.0
-Asteras Tripolis,Aris,2026-11-23 00:00:00,home_win,39.5,PRO_STRONG,3.3,30.3
-Brest,Lyon,2026-11-08,goals_over_25,66.0,PRO_MEDIUM,1.91,26.1
-Hibernian,Dundee United,2026-11-21 00:00:00,away_win,38.4,PRO_STRONG,3.25,24.8
-Alaves,La Coruna,2026-11-21,dc_x2,68.8,PRO_STRONG,1.8,23.8
-Bournemouth,Nott'M Forest,2026-11-21,goals_over_25,67.6,PRO_MEDIUM,1.8,21.7
-Panetolikos,Volos Nfc,2026-11-22 00:00:00,away_win,45.0,PRO_STRONG,2.7,21.5
-Vallecano,Valencia,2026-11-21,goals_over_25,57.6,PRO_MEDIUM,2.1,21.0
-Le Mans,Monaco,2026-11-08 00:00:00,home_win,26.7,PRO_STRONG,4.5,20.2
-Nacional,Academica,2026-11-08,goals_over_25,58.1,PRO_MEDIUM,2.05,19.1
-Guimaraes,Porto,2026-11-08,away_win,71.3,PRO_STRONG,1.67,19.1
-Olympiakos,Paok,2026-11-08,goals_over_25,68.0,PRO_MEDIUM,1.75,19.0
-Sevilla,Betis,2026-11-21 00:00:00,home_win,42.5,PRO_STRONG,2.8,19.0
-Guimaraes,Porto,2026-11-08,goals_over_25,64.1,PRO_MEDIUM,1.85,18.6
-Genoa,Milan,2026-11-08,goals_over_25,56.2,PRO_MEDIUM,2.1,18.0
-Chelsea,Leeds,2026-11-21,goals_over_25,68.2,PRO_MEDIUM,1.73,18.0
-Asteras Tripolis,Kalamata,2026-11-08,dc_12,86.4,PRO_STRONG,1.36,17.5
-Coventry,Crystal Palace,2026-11-21,dc_x2,72.5,PRO_STRONG,1.62,17.5
-Fiorentina,Juventus,2026-11-08,goals_over_25,65.2,PRO_MEDIUM,1.8,17.4
-Coventry,Crystal Palace,2026-11-21 00:00:00,away_win,39.0,PRO_STRONG,3.0,17.0
-Getafe,Ath Madrid,2026-11-22,goals_over_25,55.6,PRO_MEDIUM,2.1,16.8
-Bologna,Udinese,2026-11-22,goals_over_25,61.1,PRO_MEDIUM,1.91,16.7
-Ath Madrid,Barcelona,2026-11-08 00:00:00,home_win,31.1,PRO_STRONG,3.75,16.6
-Asteras Tripolis,Kalamata,2026-11-08,home_win,58.2,PRO_STRONG,2.0,16.4
-Fiorentina,Juventus,2026-11-08 00:00:00,home_win,34.2,PRO_STRONG,3.4,16.3
-Ofi Crete,Atromitos,2026-11-08,goals_over_25,59.6,PRO_MEDIUM,1.95,16.2
-Sassuolo,Genoa,2026-11-22,dc_x2,73.7,PRO_STRONG,1.57,15.7
-Alanyaspor,Trabzonspor,2026-11-08,goals_over_25,67.8,PRO_MEDIUM,1.7,15.3
-Alaves,La Coruna,2026-11-21 00:00:00,away_win,32.0,PRO_STRONG,3.6,15.2
-Levante,Elche,2026-11-23,goals_over_25,68.8,PRO_MEDIUM,1.67,14.9
-Asteras Tripolis,Aris,2026-11-23,dc_12,83.9,PRO_STRONG,1.36,14.1
-Brighton,Brentford,2026-11-08,home_win,60.0,PRO_STRONG,1.9,14.0
-Ein Frankfurt,Hoffenheim,2026-11-21 00:00:00,home_win,47.5,PRO_STRONG,2.4,14.0
-Fc Koln,Leverkusen,2026-11-08,away_win,63.3,PRO_STRONG,1.8,13.9
-Newcastle,Arsenal,2026-11-21,goals_over_25,65.8,PRO_MEDIUM,1.73,13.8
-Liverpool,Man United,2026-11-22,home_win,62.2,PRO_STRONG,1.83,13.8
-Man United,Aston Villa,2026-11-08,dc_12,88.8,PRO_STRONG,1.28,13.7
-Sunderland,Chelsea,2026-11-08,away_win,59.5,PRO_STRONG,1.91,13.6
-Ipswich,Bournemouth,2026-11-08,dc_1x,61.9,PRO_STRONG,1.83,13.3
-Juventus,Venezia,2026-11-22,goals_over_25,69.9,PRO_MEDIUM,1.62,13.2
-Brentford,Everton,2026-11-23,goals_over_25,65.4,PRO_MEDIUM,1.73,13.1
-Genoa,Milan,2026-11-08,btts,58.0,PRO_MEDIUM,1.95,13.1
-Man United,Aston Villa,2026-11-08 00:00:00,home_win,53.8,PRO_STRONG,2.1,13.0
-Inter,Como,2026-11-08,dc_1x,86.5,PRO_STRONG,1.3,12.5
-Strasbourg,Brest,2026-11-21 00:00:00,home_win,51.1,PRO_STRONG,2.2,12.4
-Ipswich,Bournemouth,2026-11-08,goals_over_25,64.8,PRO_MEDIUM,1.73,12.1
-Villarreal,Getafe,2026-11-08,goals_over_25,62.2,PRO_MEDIUM,1.8,12.0
-M'Gladbach,Dortmund,2026-11-21,away_win,67.8,PRO_STRONG,1.65,11.9
-Napoli,Lazio,2026-11-08,dc_1x,82.2,PRO_STRONG,1.36,11.8
-Vallecano,Valencia,2026-11-21 00:00:00,away_win,29.4,PRO_STRONG,3.8,11.7
-Monaco,Auxerre,2026-11-21,goals_over_25,74.5,PRO_MEDIUM,1.5,11.7
-Strasbourg,Brest,2026-11-21,goals_over_25,68.7,PRO_MEDIUM,1.62,11.3
-Le Havre,Lorient,2026-11-08,goals_over_25,55.6,PRO_MEDIUM,2.0,11.2
-Atalanta,Inter,2026-11-22 00:00:00,home_win,23.4,PRO_STRONG,4.75,11.1
-Marseille,Le Mans,2026-11-22,dc_12,92.4,PRO_STRONG,1.2,10.9
-Ein Frankfurt,Hoffenheim,2026-11-21,dc_12,90.9,PRO_STRONG,1.22,10.9
-Rennes,Lille,2026-11-08,dc_1x,83.3,PRO_STRONG,1.33,10.8
-Guimaraes,Porto,2026-11-08,dc_12,88.6,PRO_STRONG,1.25,10.7
-Paok,Kifisia,2026-11-22,goals_over_25,70.3,PRO_MEDIUM,1.57,10.4
-Kilmarnock,Aberdeen,2026-11-21,dc_12,86.2,PRO_STRONG,1.28,10.3
-Telstar,Zwolle,2026-11-21 00:00:00,away_win,33.4,PRO_STRONG,3.3,10.2
-Aek,Levadeiakos,2026-11-08,goals_over_25,66.7,PRO_MEDIUM,1.65,10.1
-Sevilla,Betis,2026-11-21,dc_12,85.9,PRO_STRONG,1.28,10.0
-Hoffenheim,Schalke 04,2026-11-08,home_win,68.6,PRO_STRONG,1.6,9.8
-Napoli,Lazio,2026-11-08,dc_x2,67.8,PRO_STRONG,1.62,9.8
-Santa Clara,Gil Vicente,2026-11-08,dc_1x,84.4,PRO_STRONG,1.3,9.7
-Telstar,Zwolle,2026-11-21,dc_12,87.7,PRO_STRONG,1.25,9.6
-Como,Cagliari,2026-11-21,dc_12,92.9,PRO_STRONG,1.18,9.6
-Ath Bilbao,Espanol,2026-11-20,dc_12,87.6,PRO_STRONG,1.25,9.5
-Aston Villa,Sunderland,2026-11-21,goals_over_25,63.3,PRO_MEDIUM,1.73,9.5
-Sparta Rotterdam,Az Alkmaar,2026-11-22,away_win,66.3,PRO_STRONG,1.65,9.4
-Bournemouth,Nott'M Forest,2026-11-21,dc_1x,85.5,PRO_STRONG,1.28,9.4
-Genoa,Milan,2026-11-08,away_win,60.8,PRO_STRONG,1.8,9.4
-Gent,Kortrijk,2026-11-08,goals_over_25,63.2,PRO_MEDIUM,1.73,9.3
-Man United,Aston Villa,2026-11-08,goals_over_25,69.6,PRO_MEDIUM,1.57,9.3
-Getafe,Ath Madrid,2026-11-22,dc_12,85.3,PRO_STRONG,1.28,9.2
-Le Havre,Lorient,2026-11-08 00:00:00,home_win,37.9,PRO_STRONG,2.88,9.2
-St Truiden,Waregem,2026-11-08,goals_over_25,69.5,PRO_MEDIUM,1.57,9.1
-Heerenveen,Feyenoord,2026-11-08,away_win,62.9,PRO_STRONG,1.73,8.8
-Nijmegen,Psv Eindhoven,2026-11-21,dc_12,92.2,PRO_STRONG,1.18,8.8
-Levante,Elche,2026-11-23,dc_1x,79.8,PRO_STRONG,1.36,8.5
-Vallecano,Valencia,2026-11-21,dc_12,83.5,PRO_STRONG,1.3,8.5
-Hibernian,Dundee United,2026-11-21,dc_12,86.7,PRO_STRONG,1.25,8.4
-Tottenham,Ipswich,2026-11-21,goals_over_25,68.9,PRO_MEDIUM,1.57,8.2
-Kilmarnock,Aberdeen,2026-11-21 00:00:00,away_win,52.7,PRO_STRONG,2.05,8.0
-Liverpool,Man United,2026-11-22,goals_over_25,68.7,PRO_MEDIUM,1.57,7.9
-Gent,Kortrijk,2026-11-08,dc_12,88.4,PRO_STRONG,1.22,7.8
-Getafe,Ath Madrid,2026-11-22,away_win,66.5,PRO_STRONG,1.62,7.7
-Levadeiakos,Atromitos,2026-11-22,dc_x2,71.8,PRO_STRONG,1.5,7.7
-Freiburg,Union Berlin,2026-11-08,goals_over_25,66.5,PRO_MEDIUM,1.62,7.7
-Napoli,Torino,2026-11-21,goals_over_25,64.4,PRO_MEDIUM,1.67,7.5
-Getafe,Ath Madrid,2026-11-22,goals_over_15,78.9,PRO_MEDIUM,1.36,7.3
-Villarreal,Getafe,2026-11-08,home_win,75.5,PRO_STRONG,1.42,7.2
+Nijmegen,Psv Eindhoven,2026-11-21 00:00:00,home_win,27.6,PRO_STRONG,5.0,38.0
+Hull,Brighton,2026-11-22 00:00:00,home_win,24.5,PRO_STRONG,5.5,34.7
+Sevilla,Betis,2026-11-21 00:00:00,home_win,47.4,PRO_STRONG,2.8,32.7
+Dundee,Hearts,2026-11-21 00:00:00,home_win,31.5,PRO_STRONG,4.2,32.3
+Asteras Tripolis,Aris,2026-11-23 00:00:00,home_win,39.7,PRO_STRONG,3.3,31.0
+Vallecano,Valencia,2026-11-21,goals_over_25,61.2,PRO_MEDIUM,2.1,28.5
+Alaves,La Coruna,2026-11-21 00:00:00,away_win,35.6,PRO_STRONG,3.6,28.2
+Olympiakos,Paok,2026-11-08,goals_over_25,72.8,PRO_MEDIUM,1.75,27.4
+Alaves,La Coruna,2026-11-21,dc_x2,70.0,PRO_STRONG,1.8,26.0
+Cambuur,Psv Eindhoven,2026-11-08 00:00:00,home_win,20.1,PRO_STRONG,6.25,25.6
+Brest,Lyon,2026-11-08,goals_over_25,65.0,PRO_MEDIUM,1.91,24.2
+Man United,Aston Villa,2026-11-08 00:00:00,away_win,37.6,PRO_STRONG,3.3,24.1
+Chelsea,Leeds,2026-11-21,goals_over_25,70.5,PRO_MEDIUM,1.73,22.0
+Panetolikos,Volos Nfc,2026-11-22 00:00:00,away_win,45.2,PRO_STRONG,2.7,22.0
+Ein Frankfurt,Hoffenheim,2026-11-21 00:00:00,home_win,50.8,PRO_STRONG,2.4,21.9
+Le Havre,Lorient,2026-11-08 00:00:00,away_win,48.1,PRO_STRONG,2.5,20.3
+Nacional,Academica,2026-11-08 00:00:00,away_win,48.6,PRO_STRONG,2.45,19.1
+Levante,Elche,2026-11-23,goals_over_25,71.0,PRO_MEDIUM,1.67,18.6
+Ofi Crete,Atromitos,2026-11-08,goals_over_25,60.7,PRO_MEDIUM,1.95,18.4
+Villarreal,Getafe,2026-11-08,goals_over_25,65.6,PRO_MEDIUM,1.8,18.1
+Sevilla,Betis,2026-11-21,dc_12,92.3,PRO_STRONG,1.28,18.1
+Bournemouth,Nott'M Forest,2026-11-21,goals_over_25,65.0,PRO_MEDIUM,1.8,17.0
+Sassuolo,Genoa,2026-11-22,dc_x2,73.8,PRO_STRONG,1.57,15.9
+Liverpool,Man United,2026-11-22,home_win,63.1,PRO_STRONG,1.83,15.5
+Getafe,Ath Madrid,2026-11-22 00:00:00,home_win,21.8,PRO_STRONG,5.25,14.5
+Le Havre,Lorient,2026-11-08,dc_12,85.7,PRO_STRONG,1.33,14.0
+Guimaraes,Porto,2026-11-08,goals_over_25,61.5,PRO_MEDIUM,1.85,13.8
+Angers,Nice,2026-11-08,away_win,56.9,PRO_STRONG,2.0,13.8
+Alanyaspor,Trabzonspor,2026-11-08,goals_over_25,66.8,PRO_MEDIUM,1.7,13.6
+Nacional,Academica,2026-11-08,goals_over_25,55.1,PRO_MEDIUM,2.05,13.0
+Asteras Tripolis,Aris,2026-11-23,dc_12,83.0,PRO_STRONG,1.36,12.9
+Coventry,Crystal Palace,2026-11-21,dc_x2,69.0,PRO_STRONG,1.62,11.8
+Fiorentina,Juventus,2026-11-08,goals_over_25,62.0,PRO_MEDIUM,1.8,11.6
+Aek,Levadeiakos,2026-11-08,goals_over_25,67.6,PRO_MEDIUM,1.65,11.5
+Brentford,Everton,2026-11-23,goals_over_25,64.4,PRO_MEDIUM,1.73,11.4
+Osasuna,Malaga,2026-11-22,dc_x2,55.7,PRO_STRONG,2.0,11.4
+Elversberg,Freiburg,2026-11-21,dc_1x,61.9,PRO_STRONG,1.8,11.4
+Newcastle,Arsenal,2026-11-21,goals_over_25,64.4,PRO_MEDIUM,1.73,11.4
+Le Mans,Monaco,2026-11-08 00:00:00,home_win,24.7,PRO_STRONG,4.5,11.1
+Man United,Aston Villa,2026-11-08,dc_12,86.7,PRO_STRONG,1.28,11.0
+Napoli,Torino,2026-11-21,goals_over_25,66.3,PRO_MEDIUM,1.67,10.7
+Coventry,Crystal Palace,2026-11-21 00:00:00,away_win,36.9,PRO_STRONG,3.0,10.7
+Aston Villa,Sunderland,2026-11-21,goals_over_25,63.8,PRO_MEDIUM,1.73,10.4
+Utrecht,Cambuur,2026-11-21,dc_1x,88.2,PRO_STRONG,1.25,10.3
+Hibernian,Dundee United,2026-11-21 00:00:00,away_win,33.9,PRO_STRONG,3.25,10.2
+Chelsea,Leeds,2026-11-21,dc_12,85.9,PRO_STRONG,1.28,10.0
+Strasbourg,Brest,2026-11-21,goals_over_25,67.8,PRO_MEDIUM,1.62,9.8
+Levadeiakos,Atromitos,2026-11-22,dc_x2,73.2,PRO_STRONG,1.5,9.8
+Monaco,Auxerre,2026-11-21,goals_over_25,73.2,PRO_MEDIUM,1.5,9.8
+Kilmarnock,Aberdeen,2026-11-21,dc_12,85.6,PRO_STRONG,1.28,9.6
+Chelsea,Leeds,2026-11-21,home_win,60.7,PRO_STRONG,1.8,9.3
+Lens,Toulouse,2026-11-21,goals_over_25,67.4,PRO_MEDIUM,1.62,9.2
+M'Gladbach,Dortmund,2026-11-21,goals_over_25,72.6,PRO_MEDIUM,1.5,8.9
+Kilmarnock,Aberdeen,2026-11-21 00:00:00,home_win,35.1,PRO_STRONG,3.1,8.8
+Juventus,Venezia,2026-11-22,goals_over_25,67.0,PRO_MEDIUM,1.62,8.5
+Lorient,Rennes,2026-11-22,goals_over_25,62.7,PRO_MEDIUM,1.73,8.5
+Fc Koln,Leverkusen,2026-11-08,away_win,60.0,PRO_STRONG,1.8,8.0
+Vallecano,Valencia,2026-11-21,goals_over_15,81.0,PRO_MEDIUM,1.33,7.7
+Racing Santander,Sociedad,2026-11-22,goals_over_25,74.7,PRO_MEDIUM,1.44,7.6
+Man United,Aston Villa,2026-11-08,goals_over_25,68.5,PRO_MEDIUM,1.57,7.5
+Tottenham,Ipswich,2026-11-21,goals_over_25,68.5,PRO_MEDIUM,1.57,7.5
+Vallecano,Valencia,2026-11-21,dc_12,82.7,PRO_STRONG,1.3,7.5
+Falkirk,St Johnstone,2026-11-21,goals_over_25,59.6,PRO_MEDIUM,1.8,7.3
+Brentford,Everton,2026-11-23,dc_x2,56.1,PRO_STRONG,1.91,7.2
+Inter,Como,2026-11-08,dc_x2,58.6,PRO_STRONG,1.83,7.2
+Lorient,Rennes,2026-11-22,dc_1x,64.2,PRO_STRONG,1.67,7.2
+Monza,Fiorentina,2026-11-23,goals_over_25,66.1,PRO_MEDIUM,1.62,7.1
+Villarreal,Getafe,2026-11-08,home_win,75.4,PRO_STRONG,1.42,7.1
 Levadeiakos,Atromitos,2026-11-22 00:00:00,away_win,37.2,PRO_STRONG,2.88,7.1
-Lazio,Lecce,2026-11-21,dc_12,90.7,PRO_STRONG,1.18,7.0
-Genoa,Milan,2026-11-08,goals_over_15,78.7,PRO_MEDIUM,1.36,7.0
-Alaves,La Coruna,2026-11-21,goals_over_15,78.6,PRO_MEDIUM,1.36,6.9
-Lens,Toulouse,2026-11-21,dc_12,85.5,PRO_STRONG,1.25,6.9
-St. Gilloise,Genk,2026-11-08,home_win,68.1,PRO_STRONG,1.57,6.9
-Racing Santander,Sociedad,2026-11-22 00:00:00,away_win,50.9,PRO_STRONG,2.1,6.9
-Utrecht,Cambuur,2026-11-21,dc_1x,85.3,PRO_STRONG,1.25,6.6
-Villarreal,Getafe,2026-11-08,dc_12,90.3,PRO_STRONG,1.18,6.6
-Newcastle,Arsenal,2026-11-21,away_win,67.8,PRO_STRONG,1.57,6.4
-Strasbourg,Brest,2026-11-21,dc_1x,76.0,PRO_STRONG,1.4,6.4
-Nacional,Academica,2026-11-08,goals_over_15,79.9,PRO_MEDIUM,1.33,6.3
-Brest,Lyon,2026-11-08,goals_over_15,83.0,PRO_MEDIUM,1.28,6.2
-Lens,Toulouse,2026-11-21,home_win,61.4,PRO_STRONG,1.73,6.2
-St. Gilloise,Genk,2026-11-08,dc_12,85.0,PRO_STRONG,1.25,6.2
-Rio Ave,Sp Braga,2026-11-08,goals_over_25,58.9,PRO_MEDIUM,1.8,6.0
-Corum,Fenerbahce,2026-11-08,goals_over_25,66.2,PRO_MEDIUM,1.6,5.9
-Elversberg,Freiburg,2026-11-21,dc_1x,58.8,PRO_STRONG,1.8,5.8
-Parma,Roma,2026-11-21,btts,55.4,PRO_MEDIUM,1.91,5.8
-Dundee,Hearts,2026-11-21,dc_12,86.6,PRO_STRONG,1.22,5.7
-Coventry,Crystal Palace,2026-11-21,goals_over_25,61.1,PRO_MEDIUM,1.73,5.7
-Hearts,Falkirk,2026-11-08,home_win,67.2,PRO_STRONG,1.57,5.5
-Sevilla,Betis,2026-11-21,goals_over_25,60.9,PRO_MEDIUM,1.73,5.4
-Santa Clara,Gil Vicente,2026-11-08,goals_over_15,73.2,PRO_MEDIUM,1.44,5.4
-Vallecano,Valencia,2026-11-21,goals_over_15,79.2,PRO_MEDIUM,1.33,5.3
-Brighton,Brentford,2026-11-08,dc_1x,82.2,PRO_STRONG,1.28,5.2
-Lille,Lyon,2026-11-21,dc_1x,77.3,PRO_STRONG,1.36,5.1
-Paris FC,Angers,2026-11-22,goals_over_25,62.9,PRO_MEDIUM,1.67,5.0
-Genoa,Milan,2026-11-08,dc_12,82.0,PRO_STRONG,1.28,5.0
-M'Gladbach,Dortmund,2026-11-21,dc_12,86.0,PRO_STRONG,1.22,4.9
-Falkirk,St Johnstone,2026-11-21,dc_1x,78.9,PRO_STRONG,1.33,4.9
-Gent,Kortrijk,2026-11-08,home_win,72.8,PRO_STRONG,1.44,4.8
-Ath Bilbao,Espanol,2026-11-20,home_win,66.7,PRO_STRONG,1.57,4.7
-Chelsea,Leeds,2026-11-21,dc_12,81.7,PRO_STRONG,1.28,4.6
-Hull,Brighton,2026-11-22,goals_over_25,62.5,PRO_MEDIUM,1.67,4.4
-Panathinaikos,Ofi Crete,2026-11-22,dc_12,91.5,PRO_STRONG,1.14,4.3
-Groningen,Heerenveen,2026-11-21,dc_1x,74.4,PRO_STRONG,1.4,4.2
-Rennes,Lille,2026-11-08 00:00:00,home_win,49.6,PRO_STRONG,2.1,4.2
-Monaco,Auxerre,2026-11-21,home_win,74.4,PRO_STRONG,1.4,4.2
-Sparta Rotterdam,Az Alkmaar,2026-11-22,dc_12,85.4,PRO_STRONG,1.22,4.2
-Hoffenheim,Schalke 04,2026-11-08,dc_12,86.7,PRO_STRONG,1.2,4.0
-Monaco,Auxerre,2026-11-21,dc_12,88.0,PRO_STRONG,1.18,3.8
-Bournemouth,Nott'M Forest,2026-11-21,goals_over_15,83.0,PRO_MEDIUM,1.25,3.7
-Besiktas,Genclerbirligi,2026-11-08,dc_12,92.6,PRO_STRONG,1.12,3.7
-Le Havre,Lorient,2026-11-08,goals_over_15,79.7,PRO_MEDIUM,1.3,3.6
-Lazio,Lecce,2026-11-21,home_win,76.2,PRO_STRONG,1.36,3.6
-M'Gladbach,Dortmund,2026-11-21,goals_over_25,69.0,PRO_MEDIUM,1.5,3.5
-Newcastle,Arsenal,2026-11-21,dc_12,84.8,PRO_STRONG,1.22,3.5
-St. Gilloise,Genk,2026-11-08,goals_over_25,64.7,PRO_MEDIUM,1.6,3.5
-Monza,Fiorentina,2026-11-23,goals_over_25,63.9,PRO_MEDIUM,1.62,3.5
-Paok,Kifisia,2026-11-22,dc_12,88.3,PRO_STRONG,1.17,3.3
-Go Ahead Eagles,For Sittard,2026-11-22,goals_over_25,73.7,PRO_MEDIUM,1.4,3.2
-Fc Koln,Leverkusen,2026-11-08,dc_12,84.6,PRO_STRONG,1.22,3.2
-Bologna,Udinese,2026-11-22,goals_over_15,80.6,PRO_MEDIUM,1.28,3.2
-Marseille,Le Mans,2026-11-22,home_win,71.6,PRO_STRONG,1.44,3.1
-Olympiakos,Iraklis,2026-11-22,goals_over_25,67.4,PRO_MEDIUM,1.53,3.1
-Le Havre,Lorient,2026-11-08,dc_1x,68.7,PRO_STRONG,1.5,3.0
-Atalanta,Inter,2026-11-22,dc_12,84.4,PRO_STRONG,1.22,3.0
-Napoli,Torino,2026-11-21,dc_12,84.4,PRO_STRONG,1.22,3.0
-Levante,Elche,2026-11-23,goals_over_15,84.1,PRO_MEDIUM,1.22,2.6
-Fiorentina,Juventus,2026-11-08,dc_12,80.1,PRO_STRONG,1.28,2.5
-Aek,Levadeiakos,2026-11-08,dc_12,91.4,PRO_STRONG,1.12,2.4
-Real Madrid,Celta,2026-11-21,dc_12,91.3,PRO_STRONG,1.12,2.3
+Sassuolo,Genoa,2026-11-22,goals_over_25,56.0,PRO_MEDIUM,1.91,7.0
+Hearts,Falkirk,2026-11-08,home_win,68.1,PRO_STRONG,1.57,6.9
+Santa Clara,Gil Vicente,2026-11-08,goals_over_15,74.2,PRO_MEDIUM,1.44,6.8
+Asteras Tripolis,Kalamata,2026-11-08 00:00:00,home_win,53.3,PRO_STRONG,2.0,6.6
+Rio Ave,Sp Braga,2026-11-08,goals_over_25,59.2,PRO_MEDIUM,1.8,6.6
+Parma,Roma,2026-11-21,btts,55.8,PRO_MEDIUM,1.91,6.6
+Getafe,Ath Madrid,2026-11-22,goals_over_15,78.4,PRO_MEDIUM,1.36,6.6
+St Truiden,Waregem,2026-11-08,dc_1x,87.3,PRO_STRONG,1.22,6.5
+Strasbourg,Brest,2026-11-21,dc_1x,75.9,PRO_STRONG,1.4,6.3
+Strasbourg,Brest,2026-11-21 00:00:00,home_win,48.3,PRO_STRONG,2.2,6.3
+Ath Bilbao,Espanol,2026-11-20,home_win,67.7,PRO_STRONG,1.57,6.3
+Inter,Como,2026-11-08,dc_1x,81.8,PRO_STRONG,1.3,6.3
+Bournemouth,Nott'M Forest,2026-11-21,dc_1x,83.0,PRO_STRONG,1.28,6.2
+Hoffenheim,Schalke 04,2026-11-08,home_win,66.3,PRO_STRONG,1.6,6.1
+Asteras Tripolis,Kalamata,2026-11-08,dc_12,78.0,PRO_STRONG,1.36,6.1
+Paok,Kifisia,2026-11-22,goals_over_25,67.6,PRO_MEDIUM,1.57,6.1
+Gent,Kortrijk,2026-11-08,goals_over_25,61.3,PRO_MEDIUM,1.73,6.0
+Olympiakos,Iraklis,2026-11-22,goals_over_25,69.3,PRO_MEDIUM,1.53,6.0
+Olympiakos,Paok,2026-11-08,goals_over_15,86.8,PRO_MEDIUM,1.22,5.9
+St. Gilloise,Genk,2026-11-08,goals_over_25,66.2,PRO_MEDIUM,1.6,5.9
+Lille,Lyon,2026-11-21,dc_1x,77.9,PRO_STRONG,1.36,5.9
+Angers,Nice,2026-11-08,dc_12,82.6,PRO_STRONG,1.28,5.7
+Union Berlin,Rb Leipzig,2026-11-21,goals_over_25,73.4,PRO_MEDIUM,1.44,5.7
+Bologna,Udinese,2026-11-22,goals_over_25,55.3,PRO_MEDIUM,1.91,5.6
+Ath Bilbao,Espanol,2026-11-20,goals_over_25,55.3,PRO_MEDIUM,1.91,5.6
+Hibernian,Dundee United,2026-11-21,dc_12,84.5,PRO_STRONG,1.25,5.6
+Dundee,Hearts,2026-11-21,dc_12,86.2,PRO_STRONG,1.22,5.2
+Paris FC,Angers,2026-11-22,goals_over_25,63.0,PRO_MEDIUM,1.67,5.2
+Alaves,La Coruna,2026-11-21,goals_over_15,77.1,PRO_MEDIUM,1.36,4.9
+Brest,Lyon,2026-11-08,goals_over_15,81.9,PRO_MEDIUM,1.28,4.8
+Nacional,Academica,2026-11-08,goals_over_15,78.8,PRO_MEDIUM,1.33,4.8
+Hearts,Falkirk,2026-11-08,dc_1x,89.3,PRO_STRONG,1.17,4.5
+Werder Bremen,Hamburg,2026-11-22,home_win,62.6,PRO_STRONG,1.67,4.5
+Levante,Elche,2026-11-23,goals_over_15,85.6,PRO_MEDIUM,1.22,4.4
+Fc Koln,Leverkusen,2026-11-08,goals_over_25,74.4,PRO_MEDIUM,1.4,4.2
+Liverpool,Man United,2026-11-22,goals_over_25,66.3,PRO_MEDIUM,1.57,4.1
+Lens,Toulouse,2026-11-21,dc_12,83.2,PRO_STRONG,1.25,4.0
+Telstar,Zwolle,2026-11-21,dc_12,83.2,PRO_STRONG,1.25,4.0
+St. Gilloise,Genk,2026-11-08,dc_1x,88.8,PRO_STRONG,1.17,3.9
+Vallecano,Valencia,2026-11-21 00:00:00,home_win,53.3,PRO_STRONG,1.95,3.9
+Ath Bilbao,Espanol,2026-11-20,dc_12,83.1,PRO_STRONG,1.25,3.9
+Chelsea,Leeds,2026-11-21,goals_over_15,85.1,PRO_MEDIUM,1.22,3.8
+Panathinaikos,Ofi Crete,2026-11-22,goals_over_25,69.2,PRO_MEDIUM,1.5,3.8
+Groningen,Heerenveen,2026-11-21,dc_x2,62.1,PRO_STRONG,1.67,3.7
+Fc Koln,Leverkusen,2026-11-08,dc_12,84.9,PRO_STRONG,1.22,3.6
+Villarreal,Getafe,2026-11-08,goals_over_15,82.8,PRO_MEDIUM,1.25,3.5
+Coventry,Crystal Palace,2026-11-21,goals_over_25,59.8,PRO_MEDIUM,1.73,3.5
+Ein Frankfurt,Hoffenheim,2026-11-21,dc_12,84.8,PRO_STRONG,1.22,3.5
+Como,Cagliari,2026-11-21,dc_12,87.5,PRO_STRONG,1.18,3.2
+Schalke 04,Stuttgart,2026-11-21,goals_over_25,71.5,PRO_MEDIUM,1.44,3.0
+Monza,Fiorentina,2026-11-23,dc_x2,77.4,PRO_STRONG,1.33,2.9
+Aston Villa,Sunderland,2026-11-21,dc_1x,87.1,PRO_STRONG,1.18,2.8
+Monaco,Auxerre,2026-11-21,home_win,73.4,PRO_STRONG,1.4,2.8
+Milan,Frosinone,2026-11-22,dc_1x,90.1,PRO_STRONG,1.14,2.7
+Werder Bremen,Hamburg,2026-11-22,dc_1x,85.3,PRO_STRONG,1.2,2.4
+Sociedad,Vallecano,2026-11-08,dc_1x,86.7,PRO_STRONG,1.18,2.3
