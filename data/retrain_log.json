@@ -42,11 +42,12 @@
   "revision": 5,
   "n_markets": 64,
   "reverted": [
+   "booking_pts_over_35",
    "booking_pts_over_55",
    "both_teams_2plus_cards",
    "both_teams_carded",
    "cards_range_6_8"
   ],
-  "note": "retrain ya kiotomatiki: masoko 64, 4 yalirudishwa kwa utulivu"
+  "note": "retrain ya kiotomatiki: masoko 64, 5 yalirudishwa kwa utulivu"
  }
 ]
