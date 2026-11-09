@@ -13,6 +13,16 @@ v3 (Nov 3 2026): LIVE layer. Inasoma prediction_record (siku 90) na kupima kama 
    haliwezi kuwa Best Pick (linabaki Other Picks). Masoko ya goals (over/under) hayaguswi.
    Pia inatoa honest_rate()/honest_text(): hit-rate halisi ya siku 60 karibu na probability.
    QUALITY_LIVE=0 inazima layer hii. Data ikikosekana, injini inarudi kwenye jedwali la tuli.
+
+v4 (Nov 9 2026): dc_12 INARUHUSIWA kuwa Best Pick (marufuku ya kudumu imeondolewa).
+   - Kwenye kichujio cha ubora dc_12 inahesabiwa daraja B (data halisi: model iko chini ya
+     ukweli, 76.8% ilishinda 81.0%). Bado lazima izidi base rate kwa MIN_EDGE ya daraja B
+     na ipite LIVE layer (AUC).
+   - Admin anaweza kuizima kwa kitufe cha Best Pick switches (m:dc_12), au Render env
+     BEST_ALLOW_DC12=0 inairudisha kuwa Other Picks tu.
+   - over 1.5 haijaguswa (inabaki Other Picks).
+   - BEST_TIERS ikikosekana kwenye market_quality.py, thamani ya akiba ni {'A','B'}
+     (kichujio hakizimiki kimya).
 """
 import math
 import os
@@ -21,7 +31,10 @@ import time
 from datetime import date, datetime, timedelta
 
 try:
-    from market_quality import QUALITY, MIN_EDGE, BEST_TIERS
+    import market_quality as _mq
+    QUALITY = _mq.QUALITY
+    MIN_EDGE = _mq.MIN_EDGE
+    BEST_TIERS = getattr(_mq, 'BEST_TIERS', {'A', 'B'})
 except Exception:                      # faili likikosekana, gate inazimika kimya
     QUALITY, MIN_EDGE, BEST_TIERS = {}, {}, set()
 
@@ -51,6 +64,11 @@ HONEST_BAND = 5.0       # +/- pointi za probability
 HONEST_MIN_N = 15       # picks za chini kuonyesha hit-rate
 
 _LIVE = {'ts': 0.0, 'data': None}
+
+
+def _dc12_best_allowed():
+    """dc_12 inaruhusiwa kuwa Best Pick isipokuwa env BEST_ALLOW_DC12=0."""
+    return os.environ.get('BEST_ALLOW_DC12', '1').strip().lower() not in ('0', 'off', 'false', 'no')
 
 
 def is_market_allowed(market):
@@ -85,7 +103,7 @@ def is_best_pick_excluded(market, allow_dc_best=False):
     """Masoko yasiyoruhusiwa kuwa Best Pick (yanaruhusiwa kuonekana Other Picks)."""
     m = str(market)
     if m == 'dc_12':
-        return True                       # kamwe Best Pick
+        return not _dc12_best_allowed()   # v4: inaruhusiwa (BEST_ALLOW_DC12=0 inairudisha marufuku)
     if m in ('dc_1x', 'dc_x2') and not allow_dc_best:
         return True                       # Admin anaweza kuruhusu
     if OVER_05_RE.match(m):
@@ -131,6 +149,8 @@ def quality_info(market, probability):
         if q is None:
             return None
         tier, skill, base = q
+        if key == 'dc_12' and _dc12_best_allowed():
+            tier = 'B'                    # v4: data halisi inaunga mkono (model iko chini ya ukweli)
         base_eff = (100.0 - base) if is_under else base
         edge = float(probability or 0) - base_eff
         min_edge = MIN_EDGE.get(tier, 0.0)
@@ -406,7 +426,7 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
 
     Quality gate (QUALITY_GATE): masoko ya daraja X yanafichwa (isipokuwa over 0.5 ya
     magoli, Other Picks tu); Best Pick lazima iwe daraja A/B (na, kwenye mode '1',
-    probability izidi base rate kwa margin ya daraja).
+    probability izidi base rate kwa margin ya daraja). dc_12 inahesabiwa daraja B (v4).
     LIVE layer (v3): soko ambalo data halisi inaonyesha halitofautishi washindi na
     walioshindwa haliwezi kuwa Best Pick (linabaki Other Picks). Goals hazigusiwi.
 
