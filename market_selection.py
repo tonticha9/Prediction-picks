@@ -15,14 +15,19 @@ v3 (Nov 3 2026): LIVE layer. Inasoma prediction_record (siku 90) na kupima kama 
    QUALITY_LIVE=0 inazima layer hii. Data ikikosekana, injini inarudi kwenye jedwali la tuli.
 
 v4 (Nov 9 2026): dc_12 INARUHUSIWA kuwa Best Pick (marufuku ya kudumu imeondolewa).
-   - Kwenye kichujio cha ubora dc_12 inahesabiwa daraja B (data halisi: model iko chini ya
-     ukweli, 76.8% ilishinda 81.0%). Bado lazima izidi base rate kwa MIN_EDGE ya daraja B
-     na ipite LIVE layer (AUC).
-   - Admin anaweza kuizima kwa kitufe cha Best Pick switches (m:dc_12), au Render env
-     BEST_ALLOW_DC12=0 inairudisha kuwa Other Picks tu.
-   - over 1.5 haijaguswa (inabaki Other Picks).
-   - BEST_TIERS ikikosekana kwenye market_quality.py, thamani ya akiba ni {'A','B'}
-     (kichujio hakizimiki kimya).
+   Admin anaweza kuizima kwa kitufe cha Best Pick switches (m:dc_12), au Render env
+   BEST_ALLOW_DC12=0 inairudisha kuwa Other Picks tu. over 1.5 haijaguswa.
+
+v5 (Nov 9 2026): MADARAJA YANAJIREKEBISHA (si ya kudumu tena). Jedwali la market_quality.py
+   linabaki msingi, lakini daraja la kila soko linarekebishwa na matokeo halisi ya siku 90:
+   - KUPANDA (C -> B tu, kamwe A): picks >= 80, AUC >= 0.55, win rate halisi isiwe chini ya
+     probability ya wastani kwa zaidi ya pointi 3, na nusu mbili za dirisha hazijaharibika.
+   - KUSHUKA (A -> B, B -> C): picks >= 100 na probability ya wastani iko juu ya win rate
+     halisi kwa zaidi ya pointi 6 (overconfident). Kushuka hakufichi soko.
+   - Hali ikibadilika, daraja linarudi lenyewe (kinahesabiwa upya kila dakika 30).
+   - QUALITY_AUTO=0 inazima kurekebisha (jedwali la kudumu tu). Mabadiliko yanaandikwa kwenye logi.
+   - Override ya kudumu ya dc_12 = B (v4) imeondolewa: dc_12 inapanda kwa ushahidi tu.
+   - BEST_TIERS ikikosekana kwenye market_quality.py, thamani ya akiba ni {'A','B'}.
 """
 import math
 import os
@@ -63,12 +68,24 @@ HONEST_DAYS = 60        # dirisha la hit-rate halisi
 HONEST_BAND = 5.0       # +/- pointi za probability
 HONEST_MIN_N = 15       # picks za chini kuonyesha hit-rate
 
+# v5: madaraja yanayojirekebisha
+TIER_ORDER = ['X', 'C', 'B', 'A']
+PROMO_MIN_N = 80        # picks za chini kupandisha C -> B
+PROMO_AUC = 0.55        # AUC ya chini kupandisha
+PROMO_GAP = 3.0         # win rate halisi >= probability ya wastani - pointi hizi
+DEMOTE_GAP = 6.0        # probability ya wastani - win rate halisi > hii = overconfident, shusha
+
 _LIVE = {'ts': 0.0, 'data': None}
 
 
 def _dc12_best_allowed():
     """dc_12 inaruhusiwa kuwa Best Pick isipokuwa env BEST_ALLOW_DC12=0."""
     return os.environ.get('BEST_ALLOW_DC12', '1').strip().lower() not in ('0', 'off', 'false', 'no')
+
+
+def _auto_on():
+    """Madaraja yanajirekebisha isipokuwa env QUALITY_AUTO=0."""
+    return os.environ.get('QUALITY_AUTO', '1').strip().lower() not in ('0', 'off', 'false', 'no')
 
 
 def is_market_allowed(market):
@@ -103,7 +120,7 @@ def is_best_pick_excluded(market, allow_dc_best=False):
     """Masoko yasiyoruhusiwa kuwa Best Pick (yanaruhusiwa kuonekana Other Picks)."""
     m = str(market)
     if m == 'dc_12':
-        return not _dc12_best_allowed()   # v4: inaruhusiwa (BEST_ALLOW_DC12=0 inairudisha marufuku)
+        return not _dc12_best_allowed()   # inaruhusiwa (BEST_ALLOW_DC12=0 inairudisha marufuku)
     if m in ('dc_1x', 'dc_x2') and not allow_dc_best:
         return True                       # Admin anaweza kuruhusu
     if OVER_05_RE.match(m):
@@ -114,7 +131,7 @@ def is_best_pick_excluded(market, allow_dc_best=False):
 
 
 # ---------------------------------------------------------------------------
-# QUALITY GATE (Step 8B) - jedwali la tuli
+# QUALITY GATE (Step 8B) - jedwali la msingi + marekebisho ya moja kwa moja (v5)
 # ---------------------------------------------------------------------------
 def _gate_mode():
     """'0' = imezimwa, 'soft' = daraja tu, '1' = kamili (chaguo-msingi)."""
@@ -140,6 +157,39 @@ def _quality_key(market):
     return m, False
 
 
+def _shift_tier(tier, steps):
+    if tier not in TIER_ORDER:
+        return tier
+    i = max(0, min(len(TIER_ORDER) - 1, TIER_ORDER.index(tier) + steps))
+    return TIER_ORDER[i]
+
+
+def _tier_from_stats(st, static_tier):
+    """Daraja la moja kwa moja kutoka takwimu za siku 90. Rudisha (daraja, maelezo).
+    Kupanda: C -> B tu. Kushuka: A -> B au B -> C tu (haifichi soko)."""
+    try:
+        if not st or static_tier not in TIER_ORDER:
+            return static_tier, None
+        n = st['n']
+        if static_tier in ('A', 'B') and n >= LIVE_MIN_N and (st['mean_p'] - st['rate']) > DEMOTE_GAP:
+            return _shift_tier(static_tier, -1), 'imeshushwa (overconfident)'
+        if (static_tier == 'C' and n >= PROMO_MIN_N and st.get('auc') is not None
+                and st['auc'] >= PROMO_AUC and st['rate'] >= st['mean_p'] - PROMO_GAP
+                and st.get('stable', True)):
+            return 'B', 'imepandishwa (data inaunga mkono)'
+    except Exception:
+        pass
+    return static_tier, None
+
+
+def live_tier(market, static_tier):
+    """(daraja, maelezo) kwa soko, kwa kuzingatia data halisi ya siku 90."""
+    if not _auto_on():
+        return static_tier, None
+    stats = (_live().get('stats') or {})
+    return _tier_from_stats(stats.get(str(market)), static_tier)
+
+
 def quality_info(market, probability):
     """Taarifa ya ubora wa soko kwa probability husika, au None kama soko halimo
     kwenye jedwali (masoko yasiyojulikana hayachujwi na jedwali; LIVE layer inayakagua)."""
@@ -148,14 +198,15 @@ def quality_info(market, probability):
         q = QUALITY.get(key)
         if q is None:
             return None
-        tier, skill, base = q
-        if key == 'dc_12' and _dc12_best_allowed():
-            tier = 'B'                    # v4: data halisi inaunga mkono (model iko chini ya ukweli)
+        static_tier, skill, base = q
+        tier, note = live_tier(market, static_tier)
         base_eff = (100.0 - base) if is_under else base
         edge = float(probability or 0) - base_eff
         min_edge = MIN_EDGE.get(tier, 0.0)
         return {
             'tier': tier,
+            'static_tier': static_tier,
+            'tier_note': note,
             'skill': skill,
             'base_rate': round(base_eff, 1),
             'edge': round(edge, 1),
@@ -229,6 +280,53 @@ def _auc(pos, neg):
     return (rank_sum - n1 * (n1 + 1) / 2.0) / (n1 * n0)
 
 
+def _market_stats(items):
+    """Takwimu za soko moja: n, win rate %, probability ya wastani %, AUC, utulivu wa nusu mbili."""
+    n = len(items)
+    wins = sum(y for _p, y, _d in items)
+    mean_p = sum(p for p, _y, _d in items) / n
+    rate = 100.0 * wins / n
+    pos = [p for p, y, _d in items if y]
+    neg = [p for p, y, _d in items if not y]
+    auc = _auc(pos, neg) if (len(pos) >= LIVE_MIN_CLASS and len(neg) >= LIVE_MIN_CLASS) else None
+    stable = True
+    try:
+        ordered = sorted(items, key=lambda t: t[2])
+        half = n // 2
+        for part in (ordered[:half], ordered[half:]):
+            pp = [p for p, y, _d in part if y]
+            nn = [p for p, y, _d in part if not y]
+            if len(pp) >= 5 and len(nn) >= 5 and _auc(pp, nn) < 0.50:
+                stable = False          # nusu moja inaonyesha soko linafanya kinyume
+    except Exception:
+        pass
+    return {'n': n, 'rate': rate, 'mean_p': mean_p, 'auc': auc, 'stable': stable}
+
+
+def _log_tier_changes(stats):
+    """Andika kwenye logi ya Render kila soko ambalo daraja lake limebadilika (uwazi)."""
+    if not _auto_on() or not QUALITY:
+        return
+    try:
+        lines = []
+        for m, st in stats.items():
+            key, _u = _quality_key(m)
+            q = QUALITY.get(key)
+            if q is None:
+                continue
+            tier, note = _tier_from_stats(st, q[0])
+            if note:
+                lines.append(f"{m}: {q[0]} -> {tier} {note} "
+                             f"(n={st['n']}, win={st['rate']:.1f}%, wastani={st['mean_p']:.1f}%, "
+                             f"AUC={'-' if st['auc'] is None else round(st['auc'], 3)})")
+        for ln in lines:
+            print(f'[market_selection] tier {ln}')
+        if not lines:
+            print('[market_selection] tier: hakuna mabadiliko ya daraja (jedwali la msingi linatumika)')
+    except Exception as e:
+        print(f'[market_selection] tier log imeshindwa: {type(e).__name__}: {e}')
+
+
 def _load_live():
     from models import db, PredictionRecord as PR
     since = datetime.utcnow() - timedelta(days=LIVE_DAYS)
@@ -261,7 +359,16 @@ def _load_live():
             continue
         auc = _auc(pos, neg)
         disc[m] = ('none' if auc < LIVE_AUC_MIN else 'ok', auc, n)
-    return {'m': by_m, 'f': by_f, 'disc': disc}
+
+    stats = {}
+    for m, items in by_m.items():
+        if len(items) >= 30:
+            try:
+                stats[m] = _market_stats(items)
+            except Exception:
+                pass
+    _log_tier_changes(stats)
+    return {'m': by_m, 'f': by_f, 'disc': disc, 'stats': stats}
 
 
 def _live():
@@ -356,6 +463,24 @@ def live_report():
     return sorted(out, key=lambda r: (r['verdict'] != 'none', r['market']))
 
 
+def tier_report():
+    """Kwa Admin baadaye: masoko yenye daraja lililobadilika kwa data halisi."""
+    out = []
+    try:
+        for m, st in ((_live().get('stats')) or {}).items():
+            key, _u = _quality_key(m)
+            q = QUALITY.get(key)
+            if q is None:
+                continue
+            tier, note = _tier_from_stats(st, q[0])
+            out.append({'market': m, 'static': q[0], 'live': tier, 'note': note, 'n': st['n'],
+                        'win': round(st['rate'], 1), 'mean_p': round(st['mean_p'], 1),
+                        'auc': None if st['auc'] is None else round(st['auc'], 3)})
+    except Exception:
+        pass
+    return sorted(out, key=lambda r: (r['note'] is None, r['market']))
+
+
 # ---------------------------------------------------------------------------
 def _parse_threshold(market):
     m = THRESHOLD_RE.match(market)
@@ -426,7 +551,8 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
 
     Quality gate (QUALITY_GATE): masoko ya daraja X yanafichwa (isipokuwa over 0.5 ya
     magoli, Other Picks tu); Best Pick lazima iwe daraja A/B (na, kwenye mode '1',
-    probability izidi base rate kwa margin ya daraja). dc_12 inahesabiwa daraja B (v4).
+    probability izidi base rate kwa margin ya daraja). Daraja linarekebishwa na data
+    halisi ya siku 90 (v5).
     LIVE layer (v3): soko ambalo data halisi inaonyesha halitofautishi washindi na
     walioshindwa haliwezi kuwa Best Pick (linabaki Other Picks). Goals hazigusiwi.
 
