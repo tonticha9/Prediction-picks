@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Man United vs Aston Villa: dc_12 @1.28 + Sevilla vs Betis: dc_12 @1.28,1.64,77.5
-3,3,Man United vs Aston Villa: dc_12 @1.28 + Ajax vs Den Haag: dc_1x @1.05 + Alaves vs La Coruna: dc_x2 @1.80,2.42,55.0
-5,4,Sassuolo vs Genoa: dc_x2 @1.57 + Le Havre vs Lorient: dc_12 @1.33 + Club Brugge vs Anderlecht: dc_1x @1.14 + Alaves vs La Coruna: dc_x2 @1.80,4.28,38.6
-7,5,St. Gilloise vs Genk: dc_1x @1.17 + Le Havre vs Lorient: dc_12 @1.33 + St Truiden vs Waregem: dc_1x @1.22 + Coventry vs Crystal Palace: dc_x2 @1.62 + Liverpool vs Man United: home_win @1.83,5.63,28.3
-10,6,Alaves vs La Coruna: dc_x2 @1.80 + Liverpool vs Man United: home_win @1.83 + Hoffenheim vs Schalke 04: dc_1x @1.17 + Kilmarnock vs Aberdeen: dc_12 @1.28 + Rennes vs Lille: dc_1x @1.33 + Elche vs Betis: dc_12 @1.28,8.4,20.0
+2,2,Utrecht vs Cambuur: dc_1x @1.25 + Sevilla vs Betis: dc_12 @1.28,1.6,72.5
+3,3,Marseille vs Le Mans: dc_1x @1.11 + Liverpool vs Man United: home_win @1.83 + Utrecht vs Cambuur: dc_1x @1.25,2.54,51.7
+5,4,Napoli vs Torino: dc_1x @1.11 + Sevilla vs Betis: dc_12 @1.28 + Sassuolo vs Genoa: dc_x2 @1.57 + Liverpool vs Man United: home_win @1.83,4.08,35.9
+7,6,Sevilla vs Betis: dc_12 @1.28 + Marseille vs Le Mans: dc_1x @1.11 + Werder Bremen vs Hamburg: dc_1x @1.20 + Sassuolo vs Genoa: dc_x2 @1.57 + Bournemouth vs Nott'M Forest: dc_1x @1.28 + Liverpool vs Man United: home_win @1.83,6.27,25.5
+10,6,Utrecht vs Cambuur: dc_1x @1.25 + Monza vs Fiorentina: dc_x2 @1.33 + Lille vs Lyon: dc_1x @1.36 + Sassuolo vs Genoa: dc_x2 @1.57 + Liverpool vs Man United: home_win @1.83 + Vallecano vs Valencia: dc_12 @1.30,8.44,18.2
