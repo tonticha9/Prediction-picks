@@ -1,0 +1,44 @@
+# .github/workflows/instant_settle.yml
+# SETTLER YA PAPO HAPO: kila dakika 5, inasettle mechi zilizokwisha haraka.
+# Job A (hourly_catchup) inabaki kama ilivyo (dataset + marekebisho + VOID).
+# v2: ukaguzi kila sekunde 30 (API haina kikomo cha vitendo).
+
+name: Instant Settle
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: instant-settle
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Instant settle
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          LOOP_SECONDS: '285'
+          POLL_SECONDS: '30'
+          MIN_MINUTES: '90'
+        run: python .github/scripts/instant_settle.py
