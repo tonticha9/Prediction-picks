@@ -15,23 +15,26 @@ v3 (Nov 3 2026): LIVE layer. Inasoma prediction_record (siku 90) na kupima kama 
    QUALITY_LIVE=0 inazima layer hii. Data ikikosekana, injini inarudi kwenye jedwali la tuli.
 
 v4 (Nov 9 2026): dc_12 INARUHUSIWA kuwa Best Pick (marufuku ya kudumu imeondolewa).
-   Admin anaweza kuizima kwa kitufe cha Best Pick switches (m:dc_12), au Render env
    BEST_ALLOW_DC12=0 inairudisha kuwa Other Picks tu. over 1.5 haijaguswa.
 
-v5 (Nov 9 2026): MADARAJA YANAJIREKEBISHA (si ya kudumu tena). Jedwali la market_quality.py
-   linabaki msingi, lakini daraja la kila soko linarekebishwa na matokeo halisi ya siku 90:
-   - KUPANDA (C -> B tu, kamwe A): picks >= 80, AUC >= 0.55, win rate halisi isiwe chini ya
-     probability ya wastani kwa zaidi ya pointi 3, na nusu mbili za dirisha hazijaharibika.
-   - KUSHUKA (A -> B, B -> C): picks >= 100 na probability ya wastani iko juu ya win rate
-     halisi kwa zaidi ya pointi 6 (overconfident). Kushuka hakufichi soko.
-   - Hali ikibadilika, daraja linarudi lenyewe (kinahesabiwa upya kila dakika 30).
-   - QUALITY_AUTO=0 inazima kurekebisha (jedwali la kudumu tu). Mabadiliko yanaandikwa kwenye logi.
-   - Override ya kudumu ya dc_12 = B (v4) imeondolewa: dc_12 inapanda kwa ushahidi tu.
-   - BEST_TIERS ikikosekana kwenye market_quality.py, thamani ya akiba ni {'A','B'}.
+v5 (Nov 9 2026): MADARAJA YANAJIREKEBISHA kwa matokeo halisi ya siku 90 (kupanda C -> B tu,
+   kushuka A -> B / B -> C tu, kikomo na uthabiti). QUALITY_AUTO=0 inazima.
+
+v6 (Nov 9 2026): BASE RATES ZA MOJA KWA MOJA + masoko mapya.
+   - Workflow ya kila wiki (quality_weekly.yml) inahesabu base rate halisi ya miezi 12 ya kila
+     soko kutoka dataset nzima, na kuiandika kwenye flags quality_br_*. Hapa inatumika badala
+     ya base rate ya kudumu, kwa masoko yenye mechi 1500+ na ikiwa haijahama zaidi ya pointi 12
+     dhidi ya jedwali la msingi (kinyume chake = tatizo la data, jedwali la msingi linabaki).
+     Data ya zaidi ya siku 21 inapuuzwa. QUALITY_BASERATE=0 inazima.
+   - Masoko yasiyo kwenye jedwali la msingi (mf. ya nusu ya kwanza/pili) hayapiti bila kichujio
+     tena: yanaanza daraja C na base rate halisi, yanapanda B kwa ushahidi (v5). QUALITY_NEWMARKETS=0
+     inazima (tabia ya zamani: yanapita bila kichujio cha daraja).
 """
+import json
 import math
 import os
 import re
+import sys
 import time
 from datetime import date, datetime, timedelta
 
@@ -75,7 +78,14 @@ PROMO_AUC = 0.55        # AUC ya chini kupandisha
 PROMO_GAP = 3.0         # win rate halisi >= probability ya wastani - pointi hizi
 DEMOTE_GAP = 6.0        # probability ya wastani - win rate halisi > hii = overconfident, shusha
 
+# v6: base rates za moja kwa moja (kutoka quality_weekly.yml)
+BR_TTL = 1800           # sekunde kabla ya kusoma flags tena
+BR_MIN_N = 1500         # mechi za chini zenye data kwa soko
+BR_MAX_SHIFT = 12.0     # mabadiliko makubwa kuliko hii dhidi ya jedwali la msingi hayakubaliwi
+BR_MAX_AGE_DAYS = 21    # data ya zamani kuliko hii inapuuzwa
+
 _LIVE = {'ts': 0.0, 'data': None}
+_BR = {'ts': 0.0, 'data': None}
 
 
 def _dc12_best_allowed():
@@ -86,6 +96,16 @@ def _dc12_best_allowed():
 def _auto_on():
     """Madaraja yanajirekebisha isipokuwa env QUALITY_AUTO=0."""
     return os.environ.get('QUALITY_AUTO', '1').strip().lower() not in ('0', 'off', 'false', 'no')
+
+
+def _br_on():
+    """Base rates za moja kwa moja zinatumika isipokuwa env QUALITY_BASERATE=0."""
+    return os.environ.get('QUALITY_BASERATE', '1').strip().lower() not in ('0', 'off', 'false', 'no')
+
+
+def _newmarkets_on():
+    """Masoko yasiyo kwenye jedwali yanapewa daraja la kuanzia isipokuwa env QUALITY_NEWMARKETS=0."""
+    return os.environ.get('QUALITY_NEWMARKETS', '1').strip().lower() not in ('0', 'off', 'false', 'no')
 
 
 def is_market_allowed(market):
@@ -131,7 +151,67 @@ def is_best_pick_excluded(market, allow_dc_best=False):
 
 
 # ---------------------------------------------------------------------------
-# QUALITY GATE (Step 8B) - jedwali la msingi + marekebisho ya moja kwa moja (v5)
+# BASE RATES ZA MOJA KWA MOJA (v6): flags quality_br_* zilizoandikwa na quality_weekly.yml
+# ---------------------------------------------------------------------------
+def _get_flag_fn():
+    """get_flag kutoka app (bila kuagiza app mara ya pili)."""
+    for name in ('app', '__main__'):
+        mod = sys.modules.get(name)
+        fn = getattr(mod, 'get_flag', None) if mod is not None else None
+        if callable(fn):
+            return fn
+    return None
+
+
+def _load_base_rates():
+    gf = _get_flag_fn()
+    if gf is None:
+        raise RuntimeError('get_flag haipatikani')
+    meta = gf('quality_br_meta', '') or ''
+    if not meta or '|' not in meta:
+        return {}
+    _ts, slot, n = meta.split('|')
+    text = ''.join(gf(f'quality_br_{slot}_{i}', '') or '' for i in range(int(n)))
+    d = json.loads(text)
+    saved = datetime.fromisoformat(d['t'])
+    if (datetime.utcnow() - saved) > timedelta(days=BR_MAX_AGE_DAYS):
+        print(f"[market_selection] base rates za zamani (zaidi ya siku {BR_MAX_AGE_DAYS}) - zinapuuzwa")
+        return {}
+    out = {str(k): (float(v[0]), int(v[1])) for k, v in (d.get('m') or {}).items()
+           if int(v[1]) >= BR_MIN_N}
+    big = []
+    for m, (rate, _n) in out.items():
+        key, is_under = _quality_key(m)
+        q = QUALITY.get(key)
+        if q is not None:
+            static_eff = (100.0 - q[2]) if is_under else q[2]
+            if abs(rate - static_eff) >= 5.0:
+                big.append(f"{m} {static_eff:.1f}->{rate:.1f}")
+    print(f"[market_selection] base rates za moja kwa moja: masoko {len(out)}"
+          + (f"; yaliyohama 5+: {', '.join(big[:10])}" if big else ''))
+    return out
+
+
+def _base_rates():
+    """{soko: (base_rate_%, n)} au {} (jedwali la msingi linatumika)."""
+    if not _br_on():
+        return {}
+    now = time.time()
+    if _BR['data'] is not None and now - _BR['ts'] < BR_TTL:
+        return _BR['data']
+    try:
+        _BR['data'] = _load_base_rates()
+        _BR['ts'] = now
+    except Exception as e:
+        print(f'[market_selection] base rates hazipatikani: {type(e).__name__}: {e}')
+        if _BR['data'] is None:
+            _BR['data'] = {}
+        _BR['ts'] = now - BR_TTL + 300      # jaribu tena baada ya dakika 5
+    return _BR['data']
+
+
+# ---------------------------------------------------------------------------
+# QUALITY GATE (Step 8B) - jedwali la msingi + marekebisho ya moja kwa moja
 # ---------------------------------------------------------------------------
 def _gate_mode():
     """'0' = imezimwa, 'soft' = daraja tu, '1' = kamili (chaguo-msingi)."""
@@ -191,16 +271,24 @@ def live_tier(market, static_tier):
 
 
 def quality_info(market, probability):
-    """Taarifa ya ubora wa soko kwa probability husika, au None kama soko halimo
-    kwenye jedwali (masoko yasiyojulikana hayachujwi na jedwali; LIVE layer inayakagua)."""
+    """Taarifa ya ubora wa soko kwa probability husika, au None kama haiwezekani kuhukumu
+    (soko halimo kwenye jedwali na halina base rate halisi, au QUALITY_NEWMARKETS=0)."""
     try:
         key, is_under = _quality_key(market)
         q = QUALITY.get(key)
+        br = _base_rates().get(str(market))          # (rate, n) au None
         if q is None:
-            return None
-        static_tier, skill, base = q
+            # v6: soko jipya (halimo kwenye jedwali) - daraja la kuanzia C + base rate halisi
+            if br is None or not _newmarkets_on():
+                return None
+            static_tier, skill, base_eff, src = 'C', None, br[0], 'live-new'
+        else:
+            static_tier, skill, base = q
+            base_eff = (100.0 - base) if is_under else base
+            src = 'static'
+            if br is not None and abs(br[0] - base_eff) <= BR_MAX_SHIFT:
+                base_eff, src = br[0], 'live'
         tier, note = live_tier(market, static_tier)
-        base_eff = (100.0 - base) if is_under else base
         edge = float(probability or 0) - base_eff
         min_edge = MIN_EDGE.get(tier, 0.0)
         return {
@@ -209,6 +297,7 @@ def quality_info(market, probability):
             'tier_note': note,
             'skill': skill,
             'base_rate': round(base_eff, 1),
+            'base_src': src,
             'edge': round(edge, 1),
             'min_edge': min_edge,
             'informative': (tier != 'X') and edge >= min_edge,
@@ -312,17 +401,18 @@ def _log_tier_changes(stats):
         for m, st in stats.items():
             key, _u = _quality_key(m)
             q = QUALITY.get(key)
-            if q is None:
+            start = q[0] if q is not None else ('C' if _newmarkets_on() else None)
+            if start is None:
                 continue
-            tier, note = _tier_from_stats(st, q[0])
+            tier, note = _tier_from_stats(st, start)
             if note:
-                lines.append(f"{m}: {q[0]} -> {tier} {note} "
+                lines.append(f"{m}: {start} -> {tier} {note} "
                              f"(n={st['n']}, win={st['rate']:.1f}%, wastani={st['mean_p']:.1f}%, "
                              f"AUC={'-' if st['auc'] is None else round(st['auc'], 3)})")
         for ln in lines:
             print(f'[market_selection] tier {ln}')
         if not lines:
-            print('[market_selection] tier: hakuna mabadiliko ya daraja (jedwali la msingi linatumika)')
+            print('[market_selection] tier: hakuna mabadiliko ya daraja (daraja la kuanzia linatumika)')
     except Exception as e:
         print(f'[market_selection] tier log imeshindwa: {type(e).__name__}: {e}')
 
@@ -470,10 +560,11 @@ def tier_report():
         for m, st in ((_live().get('stats')) or {}).items():
             key, _u = _quality_key(m)
             q = QUALITY.get(key)
-            if q is None:
+            start = q[0] if q is not None else ('C' if _newmarkets_on() else None)
+            if start is None:
                 continue
-            tier, note = _tier_from_stats(st, q[0])
-            out.append({'market': m, 'static': q[0], 'live': tier, 'note': note, 'n': st['n'],
+            tier, note = _tier_from_stats(st, start)
+            out.append({'market': m, 'static': start, 'live': tier, 'note': note, 'n': st['n'],
                         'win': round(st['rate'], 1), 'mean_p': round(st['mean_p'], 1),
                         'auc': None if st['auc'] is None else round(st['auc'], 3)})
     except Exception:
@@ -552,7 +643,7 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
     Quality gate (QUALITY_GATE): masoko ya daraja X yanafichwa (isipokuwa over 0.5 ya
     magoli, Other Picks tu); Best Pick lazima iwe daraja A/B (na, kwenye mode '1',
     probability izidi base rate kwa margin ya daraja). Daraja linarekebishwa na data
-    halisi ya siku 90 (v5).
+    halisi ya siku 90 (v5) na base rate ni ya miezi 12 ya moja kwa moja (v6).
     LIVE layer (v3): soko ambalo data halisi inaonyesha halitofautishi washindi na
     walioshindwa haliwezi kuwa Best Pick (linabaki Other Picks). Goals hazigusiwi.
 
@@ -604,7 +695,7 @@ def select_markets(entries, threshold_pct, formula='hybrid', allow_dc_best=False
             return False                      # data halisi: haitofautishi
         qi = quality_info(e[0], e[1])
         if qi is None:
-            return True                       # soko lisilojulikana kwenye jedwali: LIVE layer imeshaliangalia
+            return True                       # soko lisilojulikana na bila base rate halisi: LIVE layer imeshaliangalia
         if qi['tier'] not in BEST_TIERS:
             return False
         if mode == '1' and qi['edge'] < qi['min_edge']:
