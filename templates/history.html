@@ -18,7 +18,6 @@
   .roi-big { font-size:28px; font-weight:800; }
   .roi-day { display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid rgba(255,255,255,.07); text-decoration:none; color:inherit; font-size:13px; }
   .caution-flag { font-size:12px; color:#f59e0b; margin-top:3px; }
-  .cb-wait { font-size:12px; color:#f59e0b; margin-top:4px; }
 </style>
 
 {% macro result_badge(result) %}
@@ -66,7 +65,6 @@
 <div class="hx-tabs">
   <a class="hx-tab {{ 'active' if tier=='predictions' else '' }}" href="{{ url_for('history', tier='predictions', date=selected_date) }}">Predictions</a>
   <a class="hx-tab {{ 'active' if tier=='value_bets' else '' }}" href="{{ url_for('history', tier='value_bets', date=selected_date) }}">Value Bets</a>
-  <a class="hx-tab {{ 'active' if tier=='combos' else '' }}" href="{{ url_for('history', tier='combos', date=selected_date) }}">Combos</a>
 </div>
 
 <div class="hx-date">
@@ -215,83 +213,6 @@
       {% if r.result == 'WON' and r.odds %}<div class="dl-up" style="font-size:12px;">+{{ '%.2f'|format(r.odds - 1) }}u</div>
       {% elif r.result == 'LOST' %}<div class="dl-down" style="font-size:12px;">-1.00u</div>{% endif %}
     </div>
-  </div>
-  {% endfor %}
-
-{% elif tier == 'combos' %}
-  <div style="font-size:12px; color:var(--text-dim); margin-bottom:12px;">
-    Formula ya sasa: <b>{{ combo_formula }}</b> — badilisha kwenye Admin ili uone
-    combos zingekuwaje kwa formula nyingine (isipokuwa 'random_threshold',
-    ambayo inaonyesha ZILIZOONYESHWA HALISI siku hiyo, si simulation).
-  </div>
-
-  {# ---- Winrate ya combos halisi (siku 30 zilizopita) ---- #}
-  {% if combo_overview and combo_overview.days %}
-  <div class="match-card" style="margin-bottom:12px;">
-    <div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">Combos halisi zilizoonyeshwa — siku {{ combo_overview.days|length }} zilizopita</div>
-    <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px; flex-wrap:wrap; gap:6px;">
-      <div>
-        ✅ {{ combo_overview.total.won }} WON &nbsp; ❌ {{ combo_overview.total.lost }} LOST &nbsp; ⚪ {{ combo_overview.total.void }} VOID
-        {% if combo_overview.total.pending %}&nbsp; ⏳ {{ combo_overview.total.pending }}{% endif %}
-      </div>
-      {% if combo_overview.total.win_rate is not none %}<div style="font-weight:700;">{{ combo_overview.total.win_rate }}% win rate</div>{% endif %}
-    </div>
-  </div>
-  <details class="match-card" style="margin-bottom:14px;">
-    <summary style="cursor:pointer; font-weight:700; font-size:14px;">📆 Winrate ya kila siku</summary>
-    <div style="margin-top:8px;">
-      {% for d in combo_overview.days %}
-      <a class="roi-day" href="{{ url_for('history', tier='combos', date=d.date) }}">
-        <span>{{ d.date }}{% if d.date == selected_date %} ◀{% endif %}
-          <span style="color:var(--text-dim);">· combos {{ d.n }} · ✅{{ d.won }} ❌{{ d.lost }}{% if d.pending %} ⏳{{ d.pending }}{% endif %}</span></span>
-        {% if d.win_rate is not none %}
-          <b style="color: {{ 'var(--emerald)' if d.won >= d.lost else 'var(--red)' }};">{{ d.win_rate }}%</b>
-        {% else %}<span style="color:var(--text-dim);">—</span>{% endif %}
-      </a>
-      {% endfor %}
-    </div>
-  </details>
-  {% endif %}
-
-  {% if combo_note %}
-  <div style="font-size:13px; color:var(--text-dim); margin-bottom:14px; padding:10px 12px; border:1px solid var(--border, #333); border-radius:10px;">
-    ℹ️ {{ combo_note }}
-  </div>
-  {% endif %}
-
-  {% if summary %}
-  <div class="match-card" style="margin-bottom:16px;">
-    <div style="font-size:12px; color:var(--text-dim); margin-bottom:6px;">Siku ya {{ selected_date }}</div>
-    <div style="display:flex; justify-content:space-between; align-items:center; font-size:14px; flex-wrap:wrap; gap:6px;">
-      <div>
-        ✅ {{ summary.won }} WON &nbsp; ❌ {{ summary.lost }} LOST &nbsp; ⚪ {{ summary.void }} VOID
-        {% if summary.pending %}&nbsp; ⏳ {{ summary.pending }} PENDING{% endif %}
-      </div>
-      {% if summary.win_rate is not none %}<div style="font-weight:700;">{{ summary.win_rate }}% win rate</div>{% endif %}
-    </div>
-  </div>
-  {% endif %}
-  {% if not combos_list %}<div class="empty-state">Hakuna combos kwa tarehe hii.</div>{% endif %}
-
-  {% for c in combos_list %}
-  <div class="match-card">
-    <div class="match-card-header">
-      <div class="match-teams">Combo #{{ loop.index }} — Legs {{ c.legs|length }}</div>
-      <div class="match-meta">{{ c.combined_probability }}% · {{ result_badge(c.result) }}</div>
-    </div>
-    {% if c.result == 'PENDING' and c.waiting %}
-    <div class="cb-wait">⏳ Inasubiri mechi za: {{ c.waiting }}</div>
-    {% endif %}
-    {% for leg in c.legs %}
-    <div class="other-pick-row">
-      <div class="mk-main">
-        <div class="mk-name">{{ leg.home }} vs {{ leg.away }} — {{ leg.market }}</div>
-        <div class="mk-sub">{{ leg.probability }}%{% if leg.has_odds %} · @{{ leg.odds }}{% endif %}{% if leg.date %} · 📅 {{ leg.date }}{% if leg.other_day %} (siku nyingine){% endif %}{% endif %}</div>
-        {% if leg.actual %}<div class="mk-actual">📊 {{ leg.actual }}</div>{% endif %}
-      </div>
-      <div>{{ result_badge(leg.result) }}</div>
-    </div>
-    {% endfor %}
   </div>
   {% endfor %}
 {% endif %}
