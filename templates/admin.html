@@ -88,7 +88,6 @@
   <a href="#health">🩺 Hali</a>
   <a href="#bestpick">🎚️ Best Pick</a>
   <a href="#picks">🎯 Picks</a>
-  <a href="#combos">🧩 Combos</a>
   {% if admin_tools_ok %}<a href="#ai">🤖 AI</a>{% endif %}
   <a href="#api">🔑 API Key</a>
   <a href="#data">🗂️ Data</a>
@@ -266,40 +265,7 @@
     </div>
   </details>
 
-  <details class="ad-sec" id="combos">
-    <summary>🧩 Combos</summary>
-    <div class="ad-body">
-      <p class="ad-hint" style="margin:0 0 10px;">Kila combo inachukua legs kutoka MECHI TOFAUTI.</p>
-      <div class="form-group">
-        <label>Combo Leg Formula</label>
-        <select name="combo_leg_formula">
-          {% for f in formula_choices %}
-            <option value="{{ f }}" {{ 'selected' if settings.combo_leg_formula==f else '' }}>
-              {% if f == 'random_threshold' %}Random (soko lolote ≥ kiwango cha chini)
-              {% elif f == 'ev_odds_only' %}EV ya juu zaidi (mechi zenye odds)
-              {% elif f == 'highest_probability' %}Probability ya juu zaidi (yoyote)
-              {% elif f == 'highest_probability_odds_only' %}Probability ya juu zaidi (zenye odds)
-              {% endif %}
-            </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="ad-sub">Idadi ya legs</div>
-      <div class="form-group"><label>Minimum legs</label>
-        <input type="number" name="combo_min_legs" value="{{ settings.combo_min_legs }}" min="1" max="10"></div>
-      <div class="form-group"><label>Maximum legs</label>
-        <input type="number" name="combo_max_legs" value="{{ settings.combo_max_legs }}" min="1" max="10"></div>
-      <div class="ad-sub">Vizingiti</div>
-      <div class="form-group"><label>Probability ya chini kwa LEG (%)</label>
-        <input type="number" step="0.1" name="combo_min_leg_probability" value="{{ settings.combo_min_leg_probability }}" min="0" max="100"></div>
-      <div class="form-group"><label>Probability ya chini kwa COMBO NZIMA (%)</label>
-        <input type="number" step="0.1" name="combo_min_combined_probability" value="{{ settings.combo_min_combined_probability }}" min="0" max="100"></div>
-      <div class="form-group"><label>Combos za juu kwa siku</label>
-        <input type="number" name="max_combos_per_day" value="{{ settings.max_combos_per_day }}" min="1" max="500"></div>
-    </div>
-  </details>
-
-  <div class="ad-savebar"><button class="btn" type="submit">💾 Hifadhi Mipangilio ya Picks na Combos</button></div>
+  <div class="ad-savebar"><button class="btn" type="submit">💾 Hifadhi Mipangilio ya Picks</button></div>
 </form>
 
 {% if admin_tools_ok %}
@@ -350,7 +316,7 @@
 <details class="ad-sec" id="data">
   <summary>🗂️ Data</summary>
   <div class="ad-body">
-    <p class="ad-hint" style="margin:0 0 10px;">Baada ya kupakia CSV mpya kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo (pamoja na Combos mpya).</p>
+    <p class="ad-hint" style="margin:0 0 10px;">Baada ya kupakia CSV mpya kwenye folder ya data/, bonyeza hii kuzisasisha na kuhifadhi history ya leo.</p>
     <form method="POST" action="{{ url_for('admin_refresh') }}">
       <button class="btn btn-secondary" type="submit">🔄 Refresh Data</button>
     </form>
