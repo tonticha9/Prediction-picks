@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Utrecht vs Cambuur: dc_1x @1.25 + Sevilla vs Betis: dc_12 @1.28,1.6,76.0
-3,3,Alaves vs La Coruna: dc_x2 @1.80 + Como vs Cagliari: dc_1x @1.08 + Sevilla vs Betis: dc_12 @1.28,2.49,60.3
-5,3,Alaves vs La Coruna: dc_x2 @1.80 + Sevilla vs Betis: dc_12 @1.28 + Liverpool vs Man United: home_win @1.83,4.22,42.2
-7,5,Monza vs Fiorentina: dc_x2 @1.33 + Liverpool vs Man United: home_win @1.83 + Sevilla vs Betis: dc_12 @1.28 + Bayern Munich vs Fc Koln: dc_1x @1.01 + Alaves vs La Coruna: dc_x2 @1.80,5.66,30.6
-10,5,Coventry vs Crystal Palace: dc_x2 @1.62 + Liverpool vs Man United: home_win @1.83 + Bologna vs Udinese: dc_1x @1.18 + Alaves vs La Coruna: dc_x2 @1.80 + Chelsea vs Leeds: dc_12 @1.28,8.06,22.3
+2,2,Levante vs Racing Santander: dc_1x @1.36 + Sevilla vs Betis: dc_12 @1.28,1.74,80.0
+3,3,Roma vs Monza: dc_1x @1.05 + Alaves vs La Coruna: dc_x2 @1.80 + Sevilla vs Betis: dc_12 @1.28,2.42,62.8
+5,4,Alaves vs La Coruna: dc_x2 @1.80 + Asteras Tripolis vs Aris: dc_12 @1.36 + Psv Eindhoven vs Go Ahead Eagles: dc_1x @1.08 + Panetolikos vs Volos Nfc: dc_x2 @1.57,4.15,39.5
+7,6,Asteras Tripolis vs Aris: dc_12 @1.36 + Volos Nfc vs Asteras Tripolis: dc_x2 @1.44 + Swansea vs West Brom: dc_12 @1.33 + Levante vs Racing Santander: dc_1x @1.36 + Utrecht vs Cambuur: dc_1x @1.36 + Elche vs Ath Madrid: dc_12 @1.22,5.88,32.2
+10,6,Panetolikos vs Volos Nfc: dc_x2 @1.57 + Sassuolo vs Genoa: dc_x2 @1.50 + Alaves vs La Coruna: dc_x2 @1.80 + Elversberg vs Freiburg: dc_x2 @1.33 + Torino vs Lazio: dc_x2 @1.28 + Utrecht vs Cambuur: dc_1x @1.36,9.81,19.2
