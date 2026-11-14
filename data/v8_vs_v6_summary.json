@@ -1,0 +1,15 @@
+{
+ "generated": "2026-11-14 09:47 UTC",
+ "archive_files_v6": 22,
+ "archive_files_v8": 22,
+ "matches_with_results": 365,
+ "rows_evaluated": 9802,
+ "markets_total": 51,
+ "markets_tested": 35,
+ "v8_better": 1,
+ "v6_better": 1,
+ "same": 33,
+ "mean_diff_ll": -0.0001,
+ "first_match": "2026-10-18",
+ "last_match": "2026-11-08"
+}
