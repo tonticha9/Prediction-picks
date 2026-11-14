@@ -14,6 +14,9 @@
 # v7 (Nov 7 2026): (1) calibration inaendeshwa kupitia calib_epoch.py (inapuuza rekodi za zamani za masoko yaliyobadilishwa injini);
 #                  (2) release_monitor.py: ufuatiliaji wa matokeo halisi + rollback ya kiotomatiki (inaita retrain_weekly mode=rollback);
 #                  (3) inaripoti hali kwa /api/ops/report (chanzo 'nightly_predictions').
+# v8 (Nov 14 2026): V8 sasa ina hatua zake zinazoonekana: (1) nakala ya chanzo cha predictions_v8.csv inahifadhiwa mapema;
+#                  (2) hatua mpya inaandika data/predictions_v8.csv kamili kwa app (haiandiki faili tupu kamwe);
+#                  (3) archive_shadow inaendeshwa baada yake, kisha ulinzi unarudisha nakala kamili kama faili la app limekuwa tupu.
 
 name: Nightly Predictions Update
 
@@ -89,8 +92,99 @@ jobs:
             fi
           done
 
-          # Kivuli cha v8 (HIARI - haivunji chochote ikishindwa)
+          # v8: nakala ya chanzo cha V8 (faili kubwa zaidi ya predictions_v8.csv iliyopakuliwa), kabla ya kitu chochote kuligusa
+          rm -f /tmp/v8_src.csv
+          V8_SRC=""
+          best=0
+          while IFS= read -r f; do
+            s=$(wc -c < "$f")
+            if [ "$s" -gt "$best" ]; then best=$s; V8_SRC="$f"; fi
+          done < <(find . -name 'predictions_v8.csv' -not -path './.git/*' -not -path './shadow/*' 2>/dev/null)
+          if [ -n "$V8_SRC" ] && [ "$best" -gt 2000 ]; then
+            cp "$V8_SRC" /tmp/v8_src.csv
+            echo "ℹ️ V8 chanzo: $V8_SRC ($best bytes)"
+          else
+            echo "::warning::V8: sikupata predictions_v8.csv yenye data (kubwa kuliko 2000 bytes) kwenye kaggle_output/ wala data/."
+          fi
+
+      # v8: andika data/predictions_v8.csv kamili kwa app (haiandiki faili tupu kamwe)
+      - name: V8 - weka predictions_v8.csv kwenye data/ (app)
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        run: |
+          python - <<'PY'
+          import os, sys
+          import pandas as pd
+
+          SRC = "/tmp/v8_src.csv"
+          DST = "data/predictions_v8.csv"
+          BAK = "/tmp/v8_app_copy.csv"
+          NEED = ["HomeTeam", "AwayTeam", "match_date", "market"]
+          WANT = ["HomeTeam", "AwayTeam", "match_date", "market", "probability_%", "pro_tier", "real_odds"]
+
+          if not os.path.exists(SRC):
+              print("::warning::V8: hakuna faili la chanzo. Faili la app halijabadilishwa.")
+              sys.exit(0)
+
+          df = pd.read_csv(SRC, dtype=str, keep_default_na=False)
+          print("ℹ️ V8 chanzo: safu %d, nguzo: %s" % (len(df), list(df.columns)))
+
+          missing = [c for c in NEED if c not in df.columns]
+          has_prob = any(str(c).lower().startswith("probab") for c in df.columns)
+          if missing or not has_prob:
+              print("::warning::V8: nguzo zinazohitajika hazipo (zinazokosekana: %s). Faili la app halijabadilishwa." % missing)
+              sys.exit(0)
+          if len(df) == 0:
+              print("::warning::V8: chanzo hakina safu. Faili la app halijabadilishwa.")
+              sys.exit(0)
+
+          if all(c in df.columns for c in WANT):
+              df = df[WANT]
+
+          n_rows = len(df)
+          n_match = len(df[["HomeTeam", "AwayTeam", "match_date"]].drop_duplicates())
+          md = df["match_date"]
+          n_iso = int(md.str.match(r"^\d{4}-\d{2}-\d{2}$").sum())
+          n_iso_t = int(md.str.match(r"^\d{4}-\d{2}-\d{2}[ T]").sum())
+          n_other = n_rows - n_iso - n_iso_t
+          print("ℹ️ V8 match_date: YYYY-MM-DD=%d, tarehe+saa=%d, nyingine=%d" % (n_iso, n_iso_t, n_other))
+          print("ℹ️ V8 mifano ya match_date: %s" % md.head(3).tolist())
+
+          os.makedirs("data", exist_ok=True)
+          df.to_csv(DST, index=False)
+          df.to_csv(BAK, index=False)
+          print("✅ data/predictions_v8.csv: safu %d, mechi %d" % (n_rows, n_match))
+          PY
+
+      # v8: kivuli cha v8 (hiari) + ulinzi: kama faili la app limekuwa tupu, rudisha nakala kamili
+      - name: V8 - archive_shadow + ulinzi wa faili la app
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        run: |
           python .github/scripts/archive_shadow.py || echo "::warning::archive_shadow imeshindwa (haiathiri app)."
+          python - <<'PY'
+          import os, shutil
+          import pandas as pd
+
+          DST = "data/predictions_v8.csv"
+          BAK = "/tmp/v8_app_copy.csv"
+
+          def nrows(path):
+              try:
+                  return len(pd.read_csv(path, dtype=str, keep_default_na=False))
+              except Exception:
+                  return 0
+
+          n = nrows(DST) if os.path.exists(DST) else 0
+          b = nrows(BAK) if os.path.exists(BAK) else 0
+          if n == 0 and b > 0:
+              shutil.copyfile(BAK, DST)
+              print("⚠️ archive_shadow iliacha faili la app tupu - nimerudisha nakala kamili (safu %d)." % b)
+              n = b
+          elif n == 0:
+              print("::warning::V8: data/predictions_v8.csv ni tupu na sina nakala ya kurudisha.")
+          print("✅ data/predictions_v8.csv ya mwisho: safu %d" % n)
+          PY
 
       # v5: maktaba za app (ili scripts zifikie database kama hourly_catchup inavyofanya)
       - name: Install app requirements (for calibration + monitor)
