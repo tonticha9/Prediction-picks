@@ -1,11 +1,15 @@
 """
-.github/scripts/archive_shadow.py
+.github/scripts/archive_shadow.py  (v2 - Nov 14 2026)
 
 Inahifadhi utabiri wa "kivuli" wa v8 (na wa v6 wa siku hiyo kwa ulinganisho) kwenye repo.
 HAIVUNJI chochote: faili ikikosekana au kitu kikishindwa, inaonya tu na kumaliza vizuri.
 
+v2: tarehe (match_date) zinasomwa kwa muundo WOWOTE (2026-11-14, 2026-11-14 00:00:00,
+    14/11/2026, ...) na kuandikwa upya kama YYYY-MM-DD. Safu zisizo na tarehe inayosomeka
+    zinahifadhiwa (si kuachwa kimya). Faili ya app HAIFUTWI kwa data tupu.
+
 Matokeo:
-  data/predictions_v8.csv              mechi za leo hadi siku 4 mbele (kwa app, hatua ya 3)
+  data/predictions_v8.csv              mechi za leo hadi siku 4 mbele (kwa app)
   shadow/archive/<tarehe>_v8.csv.gz    utabiri wa v8 (leo hadi siku 3)
   shadow/archive/<tarehe>_v6.csv.gz    utabiri wa v6 (predictions.csv) wa siku hiyo hiyo
   shadow/health_log.csv                alama za ukaguzi wa muundo kila siku
@@ -41,10 +45,50 @@ def summary(text):
         pass
 
 
+def parse_dates(series):
+    """Rudisha (maandishi YYYY-MM-DD au '' kama haisomeki). Inakubali miundo mchanganyiko."""
+    s = series.astype(str).str.strip()
+    s = s.where(~s.str.lower().isin(['', 'nan', 'nat', 'none']), '')
+    out = pd.Series('', index=s.index, dtype=object)
+
+    # 1) YYYY-MM-DD mwanzoni (pamoja na saa nyuma yake)
+    iso = pd.to_datetime(s.str[:10], format='%Y-%m-%d', errors='coerce')
+    ok = iso.notna()
+    out[ok] = iso[ok].dt.strftime('%Y-%m-%d')
+
+    # 2) zilizobaki: jaribu miundo mingine (mfano 14/11/2026, 14.11.2026)
+    rest = (~ok) & (s != '')
+    if rest.any():
+        sub = s[rest].str.replace('.', '/', regex=False)
+        try:
+            p = pd.to_datetime(sub, format='mixed', dayfirst=True, errors='coerce')
+        except Exception:
+            p = pd.to_datetime(sub, dayfirst=True, errors='coerce')
+        good = p.notna()
+        idx = p.index[good]
+        out.loc[idx] = p[good].dt.strftime('%Y-%m-%d')
+    return out
+
+
+def prep(df, name):
+    """Safisha match_date. Rudisha (df, idadi ya safu zisizo na tarehe inayosomeka)."""
+    df = df.copy()
+    df['match_date'] = parse_dates(df['match_date'])
+    bad = int((df['match_date'] == '').sum())
+    ok = df.loc[df['match_date'] != '', 'match_date']
+    rng = f"{ok.min()} .. {ok.max()}" if len(ok) else "hakuna tarehe inayosomeka"
+    print(f"ℹ️ {name}: safu {len(df):,} | tarehe {rng} | zisizosomeka {bad:,}")
+    return df, bad
+
+
 def window(df, today, days):
+    """Mechi za leo hadi siku 'days' mbele. Safu zisizo na tarehe zinahifadhiwa
+    (faili hizi zina mechi zijazo tu, kwa hiyo si salama kuzitupa kimya)."""
     lo = today.isoformat()
     hi = (today + datetime.timedelta(days=days)).isoformat()
-    return df[(df['match_date'] >= lo) & (df['match_date'] <= hi)]
+    d = df['match_date']
+    keep = ((d >= lo) & (d <= hi)) | (d == '')
+    return df[keep]
 
 
 def md_table(df):
@@ -53,6 +97,10 @@ def md_table(df):
     for _, r in df.iterrows():
         lines.append('| ' + ' | '.join(str(r[c]) for c in cols) + ' |')
     return '\n'.join(lines)
+
+
+def n_matches(df):
+    return df[['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0] if len(df) else 0
 
 
 def main():
@@ -66,26 +114,38 @@ def main():
     if v8.empty or 'match_date' not in v8.columns:
         print("⚠️ predictions_v8.csv ni tupu au haina match_date - naruka.")
         return
-    v8['match_date'] = v8['match_date'].astype(str)
+    v8, bad8 = prep(v8, 'v8')
     v6 = pd.read_csv(V6) if os.path.exists(V6) else pd.DataFrame()
-    if len(v6):
-        v6['match_date'] = v6['match_date'].astype(str)
+    bad6 = 0
+    if len(v6) and 'match_date' in v6.columns:
+        v6, bad6 = prep(v6, 'v6')
+    else:
+        v6 = pd.DataFrame()
 
     os.makedirs('data', exist_ok=True)
     os.makedirs(os.path.join('shadow', 'archive'), exist_ok=True)
 
-    # 1) Faili ya hivi karibuni kwa app
+    # 1) Faili ya hivi karibuni kwa app (HAIFUTWI kwa data tupu)
     latest = window(v8, today, LATEST_DAYS)
-    latest.to_csv(os.path.join('data', 'predictions_v8.csv'), index=False)
-    print(f"✅ data/predictions_v8.csv: safu {len(latest):,}, mechi {latest[KEYS[:3]].drop_duplicates().shape[0]}")
+    if len(latest):
+        latest.to_csv(os.path.join('data', 'predictions_v8.csv'), index=False)
+        print(f"✅ data/predictions_v8.csv: safu {len(latest):,}, mechi {n_matches(latest)}")
+    else:
+        print(f"::warning::Hakuna safu za v8 kati ya {d0} na siku {LATEST_DAYS} mbele - "
+              f"data/predictions_v8.csv ya zamani imebaki (haikufutwa).")
+    if bad8:
+        print(f"::warning::Safu {bad8:,} za v8 hazina tarehe inayosomeka (zimehifadhiwa bila tarehe).")
 
-    # 2) Archive ya kudumu (compressed)
+    # 2) Archive ya kudumu (compressed) - hakuna faili tupu
     a8 = window(v8, today, ARCHIVE_DAYS)
-    a8.to_csv(os.path.join('shadow', 'archive', f'{d0}_v8.csv.gz'), index=False, compression='gzip')
-    if len(v6):
-        a6 = window(v6, today, ARCHIVE_DAYS)
+    if len(a8):
+        a8.to_csv(os.path.join('shadow', 'archive', f'{d0}_v8.csv.gz'), index=False, compression='gzip')
+    a6 = window(v6, today, ARCHIVE_DAYS) if len(v6) else pd.DataFrame()
+    if len(a6):
         a6.to_csv(os.path.join('shadow', 'archive', f'{d0}_v6.csv.gz'), index=False, compression='gzip')
-    print(f"✅ archive ya {d0} imehifadhiwa (v8 safu {len(a8):,}" + (f", v6 safu {len(a6):,})" if len(v6) else ")"))
+    print(f"✅ archive ya {d0}: v8 safu {len(a8):,}, v6 safu {len(a6):,}")
+    if len(a8) == 0 or (len(v6) and len(a6) == 0):
+        print("::warning::Archive ya leo ina safu 0 kwa v6 au v8 - angalia muundo wa match_date hapo juu.")
 
     # 3) Health log
     if os.path.exists(HEALTH):
@@ -102,7 +162,7 @@ def main():
             print(f"⚠️ health log imeshindwa: {e}")
 
     # 4) Ulinganisho v6 dhidi ya v8 (mechi zilezile, masoko yale yale)
-    if len(v6):
+    if len(v6) and len(latest):
         a = window(v6, today, LATEST_DAYS)[KEYS + ['probability_%']].rename(columns={'probability_%': 'p6'})
         b = latest[KEYS + ['probability_%']].rename(columns={'probability_%': 'p8'})
         m = a.merge(b, on=KEYS, how='inner')
