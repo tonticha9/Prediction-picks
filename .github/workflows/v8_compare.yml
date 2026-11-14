@@ -2,6 +2,7 @@
 # V1: kupima V8 dhidi ya v6 kwa kila soko (mechi zilizokwisha). Matokeo: tab ya "Summary" ya run
 # na faili data/v8_vs_v6.csv + data/v8_vs_v6_summary.json kwenye repo.
 # Inaendeshwa kila siku saa 06:30 UTC (baada ya nightly) au kwa mkono (Run workflow).
+# v2 (Nov 14 2026): psycopg (toleo la 3) imeongezwa pamoja na psycopg2, kiungo cha database kinaweza kutumia yoyote.
 
 name: V8 vs v6 Compare
 
@@ -31,7 +32,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install libraries
-        run: pip install pandas numpy sqlalchemy psycopg2-binary
+        run: pip install pandas numpy sqlalchemy psycopg2-binary "psycopg[binary]"
 
       - name: Compare V8 vs v6
         env:
