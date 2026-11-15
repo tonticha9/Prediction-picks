@@ -301,33 +301,32 @@ Aston Villa,Everton,2026-12-02,home_goals_over_15,56.2,PRO_STRONG,
 Aston Villa,Everton,2026-12-02,cards_range_3_5,60.4,PRO_MEDIUM,
 Aston Villa,Everton,2026-12-02,dc_x2,55.4,PRO_STRONG,
 Aston Villa,Sunderland,2026-11-21,away_goals_under_25,91.2,PRO_STRONG,
-Aston Villa,Sunderland,2026-11-21,dc_1x,86.1,PRO_STRONG,1.18
-Aston Villa,Sunderland,2026-11-21,home_goals_over_05,84.9,PRO_STRONG,
-Aston Villa,Sunderland,2026-11-21,goals_over_15,78.4,PRO_MEDIUM,1.25
+Aston Villa,Sunderland,2026-11-21,dc_1x,85.5,PRO_STRONG,1.18
+Aston Villa,Sunderland,2026-11-21,home_goals_over_05,83.5,PRO_STRONG,
+Aston Villa,Sunderland,2026-11-21,goals_over_15,76.9,PRO_MEDIUM,1.25
+Aston Villa,Sunderland,2026-11-21,home_goals_under_25,77.8,PRO_STRONG,
 Aston Villa,Sunderland,2026-11-21,both_teams_carded,80.2,PRO_STRONG,
-Aston Villa,Sunderland,2026-11-21,dc_12,73.5,PRO_STRONG,1.28
+Aston Villa,Sunderland,2026-11-21,dc_12,75.5,PRO_STRONG,1.28
 Aston Villa,Sunderland,2026-11-21,booking_pts_under_55,68.8,PRO_MEDIUM,
-Aston Villa,Sunderland,2026-11-21,home_goals_under_25,71.0,PRO_STRONG,
-Aston Villa,Sunderland,2026-11-21,away_goals_under_15,67.3,PRO_STRONG,
-Aston Villa,Sunderland,2026-11-21,away_goals_over_05,65.2,PRO_STRONG,
+Aston Villa,Sunderland,2026-11-21,away_goals_under_15,67.2,PRO_STRONG,
+Aston Villa,Sunderland,2026-11-21,away_goals_over_05,64.3,PRO_STRONG,
 Aston Villa,Sunderland,2026-11-21,booking_pts_over_35,67.0,PRO_MEDIUM,
-Aston Villa,Sunderland,2026-11-21,goals_over_25,58.0,PRO_MEDIUM,1.8
+Aston Villa,Sunderland,2026-11-21,home_win,60.4,PRO_STRONG,1.75
 Aston Villa,Sunderland,2026-11-21,home_win_either_half,61.4,PRO_MEDIUM,
-Aston Villa,Sunderland,2026-11-21,home_win,59.0,PRO_STRONG,1.73
 Aston Villa,Sunderland,2026-11-21,booking_pts_under_45,53.5,PRO_MEDIUM,
-Aston Villa,Sunderland,2026-11-21,home_goals_over_15,57.3,PRO_STRONG,
+Aston Villa,Sunderland,2026-11-21,goals_over_25,53.5,PRO_MEDIUM,1.8
 Aston Villa,Sunderland,2026-11-21,cards_range_3_5,60.6,PRO_MEDIUM,
 Atalanta,Inter,2026-11-22,away_goals_over_05,86.9,PRO_STRONG,
-Atalanta,Inter,2026-11-22,goals_over_15,82.0,PRO_MEDIUM,1.12
+Atalanta,Inter,2026-11-22,goals_over_15,82.1,PRO_MEDIUM,1.12
 Atalanta,Inter,2026-11-22,home_goals_under_25,82.6,PRO_STRONG,
-Atalanta,Inter,2026-11-22,dc_x2,79.3,PRO_STRONG,1.17
+Atalanta,Inter,2026-11-22,dc_x2,79.4,PRO_STRONG,1.17
 Atalanta,Inter,2026-11-22,both_teams_carded,80.6,PRO_STRONG,
 Atalanta,Inter,2026-11-22,home_goals_over_05,76.9,PRO_STRONG,
-Atalanta,Inter,2026-11-22,dc_12,74.9,PRO_STRONG,1.2
+Atalanta,Inter,2026-11-22,dc_12,74.8,PRO_STRONG,1.2
 Atalanta,Inter,2026-11-22,booking_pts_under_55,65.7,PRO_MEDIUM,
 Atalanta,Inter,2026-11-22,away_goals_under_25,69.0,PRO_STRONG,
 Atalanta,Inter,2026-11-22,dc_x2_and_over_15,68.6,PRO_MEDIUM,
-Atalanta,Inter,2026-11-22,goals_over_25,66.2,PRO_MEDIUM,1.4
+Atalanta,Inter,2026-11-22,goals_over_25,66.5,PRO_MEDIUM,1.4
 Atalanta,Inter,2026-11-22,home_goals_under_15,67.7,PRO_STRONG,
 Atalanta,Inter,2026-11-22,away_win_either_half,66.0,PRO_STRONG,
 Atalanta,Inter,2026-11-22,away_goals_over_15,61.6,PRO_STRONG,
@@ -652,18 +651,18 @@ Bologna,Udinese,2026-11-22,away_goals_under_25,93.9,PRO_STRONG,
 Bologna,Udinese,2026-11-22,both_teams_carded,87.7,PRO_STRONG,
 Bologna,Udinese,2026-11-22,home_goals_over_05,87.8,PRO_STRONG,
 Bologna,Udinese,2026-11-22,dc_1x,84.3,PRO_STRONG,1.17
-Bologna,Udinese,2026-11-22,goals_over_15,76.4,PRO_MEDIUM,1.28
+Bologna,Udinese,2026-11-22,goals_over_15,76.8,PRO_MEDIUM,1.28
 Bologna,Udinese,2026-11-22,home_goals_under_25,75.7,PRO_STRONG,
 Bologna,Udinese,2026-11-22,booking_pts_over_35,76.3,PRO_MEDIUM,
 Bologna,Udinese,2026-11-22,away_goals_over_05,73.7,PRO_STRONG,
 Bologna,Udinese,2026-11-22,home_win_either_half,73.3,PRO_MEDIUM,
 Bologna,Udinese,2026-11-22,dc_12,69.7,PRO_STRONG,1.28
-Bologna,Udinese,2026-11-22,away_goals_under_15,68.0,PRO_STRONG,
+Bologna,Udinese,2026-11-22,away_goals_under_15,67.5,PRO_STRONG,
 Bologna,Udinese,2026-11-22,booking_pts_under_55,57.3,PRO_MEDIUM,
 Bologna,Udinese,2026-11-22,dc_1x_and_over_15,58.5,PRO_STRONG,
 Bologna,Udinese,2026-11-22,home_goals_over_15,56.5,PRO_STRONG,
+Bologna,Udinese,2026-11-22,goals_over_25,53.0,PRO_MEDIUM,1.91
 Bologna,Udinese,2026-11-22,cards_range_3_5,60.4,PRO_MEDIUM,
-Bologna,Udinese,2026-11-22,goals_over_25,52.5,PRO_MEDIUM,1.91
 Bolton,Portsmouth,2026-11-21,home_goals_under_25,84.2,PRO_STRONG,
 Bolton,Portsmouth,2026-11-21,away_goals_under_25,83.6,PRO_STRONG,
 Bolton,Portsmouth,2026-11-21,home_goals_over_05,77.7,PRO_STRONG,
@@ -713,11 +712,11 @@ Bournemouth,Hull,2026-12-05,away_goals_over_05,58.6,PRO_STRONG,
 Bournemouth,Hull,2026-12-05,home_win_and_over_15,56.7,PRO_STRONG,
 Bournemouth,Hull,2026-12-05,booking_pts_over_45,56.5,PRO_MEDIUM,
 Bournemouth,Nott'M Forest,2026-11-21,home_goals_over_05,90.4,PRO_STRONG,
-Bournemouth,Nott'M Forest,2026-11-21,away_goals_under_25,88.3,PRO_STRONG,
+Bournemouth,Nott'M Forest,2026-11-21,away_goals_under_25,88.1,PRO_STRONG,
 Bournemouth,Nott'M Forest,2026-11-21,both_teams_carded,86.2,PRO_STRONG,
 Bournemouth,Nott'M Forest,2026-11-21,dc_1x,82.4,PRO_STRONG,1.25
 Bournemouth,Nott'M Forest,2026-11-21,goals_over_15,80.9,PRO_MEDIUM,1.25
-Bournemouth,Nott'M Forest,2026-11-21,dc_12,71.9,PRO_STRONG,1.28
+Bournemouth,Nott'M Forest,2026-11-21,dc_12,72.9,PRO_STRONG,1.28
 Bournemouth,Nott'M Forest,2026-11-21,goals_over_25,65.6,PRO_MEDIUM,1.8
 Bournemouth,Nott'M Forest,2026-11-21,away_goals_over_05,66.9,PRO_STRONG,
 Bournemouth,Nott'M Forest,2026-11-21,home_win_either_half,67.8,PRO_MEDIUM,
@@ -727,6 +726,7 @@ Bournemouth,Nott'M Forest,2026-11-21,booking_pts_under_55,60.9,PRO_MEDIUM,
 Bournemouth,Nott'M Forest,2026-11-21,dc_1x_and_over_15,57.5,PRO_STRONG,
 Bournemouth,Nott'M Forest,2026-11-21,home_goals_over_15,56.6,PRO_STRONG,
 Bournemouth,Nott'M Forest,2026-11-21,booking_pts_over_45,56.5,PRO_MEDIUM,
+Bournemouth,Nott'M Forest,2026-11-21,home_win,55.1,PRO_STRONG,1.95
 Brentford,Arsenal,2026-12-02,both_teams_carded,87.1,PRO_STRONG,
 Brentford,Arsenal,2026-12-02,away_goals_over_05,80.9,PRO_STRONG,
 Brentford,Arsenal,2026-12-02,dc_x2,74.8,PRO_STRONG,
@@ -1091,12 +1091,11 @@ Chelsea,Leeds,2026-11-21,away_goals_over_05,75.2,PRO_STRONG,
 Chelsea,Leeds,2026-11-21,booking_pts_under_55,69.1,PRO_MEDIUM,
 Chelsea,Leeds,2026-11-21,dc_1x,70.5,PRO_STRONG,1.25
 Chelsea,Leeds,2026-11-21,home_goals_under_25,71.3,PRO_STRONG,
-Chelsea,Leeds,2026-11-21,goals_over_25,70.2,PRO_MEDIUM,1.73
+Chelsea,Leeds,2026-11-21,goals_over_25,69.9,PRO_MEDIUM,1.73
 Chelsea,Leeds,2026-11-21,booking_pts_over_35,69.6,PRO_MEDIUM,
 Chelsea,Leeds,2026-11-21,home_goals_over_15,64.5,PRO_STRONG,
 Chelsea,Leeds,2026-11-21,dc_1x_and_over_15,63.7,PRO_STRONG,
 Chelsea,Leeds,2026-11-21,home_win_either_half,62.9,PRO_MEDIUM,
-Chelsea,Leeds,2026-11-21,btts,55.0,PRO_MEDIUM,1.67
 Chelsea,Liverpool,2026-12-05,away_goals_under_25,83.3,PRO_STRONG,
 Chelsea,Liverpool,2026-12-05,home_goals_over_05,81.0,PRO_STRONG,
 Chelsea,Liverpool,2026-12-05,away_goals_over_05,78.5,PRO_STRONG,
@@ -1157,7 +1156,7 @@ Corum,Kocaelispor,2026-11-29,booking_pts_under_55,58.0,PRO_MEDIUM,
 Corum,Kocaelispor,2026-11-29,booking_pts_over_45,57.0,PRO_MEDIUM,
 Coventry,Crystal Palace,2026-11-21,away_goals_under_25,85.5,PRO_STRONG,
 Coventry,Crystal Palace,2026-11-21,goals_over_15,80.7,PRO_MEDIUM,1.2
-Coventry,Crystal Palace,2026-11-21,home_goals_under_25,81.7,PRO_STRONG,
+Coventry,Crystal Palace,2026-11-21,home_goals_under_25,81.8,PRO_STRONG,
 Coventry,Crystal Palace,2026-11-21,home_goals_over_05,82.1,PRO_STRONG,
 Coventry,Crystal Palace,2026-11-21,booking_pts_under_55,75.7,PRO_MEDIUM,
 Coventry,Crystal Palace,2026-11-21,away_goals_over_05,72.8,PRO_STRONG,
@@ -1166,10 +1165,10 @@ Coventry,Crystal Palace,2026-11-21,dc_x2,70.8,PRO_STRONG,1.57
 Coventry,Crystal Palace,2026-11-21,dc_12,67.2,PRO_STRONG,1.28
 Coventry,Crystal Palace,2026-11-21,booking_pts_under_45,59.6,PRO_MEDIUM,
 Coventry,Crystal Palace,2026-11-21,dc_1x_and_over_15,64.7,PRO_STRONG,
-Coventry,Crystal Palace,2026-11-21,goals_over_25,61.5,PRO_MEDIUM,1.67
+Coventry,Crystal Palace,2026-11-21,goals_over_25,61.4,PRO_MEDIUM,1.67
 Coventry,Crystal Palace,2026-11-21,dc_1x,59.2,PRO_STRONG,1.4
 Coventry,Crystal Palace,2026-11-21,cards_range_3_5,61.6,PRO_MEDIUM,
-Coventry,Crystal Palace,2026-11-21,away_goals_under_15,56.6,PRO_STRONG,
+Coventry,Crystal Palace,2026-11-21,away_goals_under_15,56.5,PRO_STRONG,
 Coventry,Ipswich,2026-12-01,away_goals_under_25,83.3,PRO_STRONG,
 Coventry,Ipswich,2026-12-01,home_goals_over_05,83.3,PRO_STRONG,
 Coventry,Ipswich,2026-12-01,dc_1x,81.4,PRO_STRONG,
@@ -2725,8 +2724,8 @@ Malaga,Ath Bilbao,2026-11-28,booking_pts_under_55,56.9,PRO_MEDIUM,
 Man City,Fulham,2026-11-21,away_goals_under_25,95.0,PRO_STRONG,
 Man City,Fulham,2026-11-21,home_goals_over_05,93.7,PRO_STRONG,
 Man City,Fulham,2026-11-21,dc_1x,92.1,PRO_STRONG,1.1
+Man City,Fulham,2026-11-21,goals_over_15,83.1,PRO_MEDIUM,1.14
 Man City,Fulham,2026-11-21,dc_12,83.9,PRO_STRONG,1.18
-Man City,Fulham,2026-11-21,goals_over_15,82.7,PRO_MEDIUM,1.14
 Man City,Fulham,2026-11-21,home_win_either_half,81.6,PRO_MEDIUM,
 Man City,Fulham,2026-11-21,both_teams_carded,79.8,PRO_STRONG,
 Man City,Fulham,2026-11-21,booking_pts_under_55,70.9,PRO_MEDIUM,
@@ -2735,8 +2734,8 @@ Man City,Fulham,2026-11-21,away_goals_under_15,74.6,PRO_STRONG,
 Man City,Fulham,2026-11-21,dc_1x_and_over_15,72.2,PRO_STRONG,
 Man City,Fulham,2026-11-21,away_goals_over_05,71.9,PRO_STRONG,
 Man City,Fulham,2026-11-21,home_goals_over_15,68.1,PRO_STRONG,
-Man City,Fulham,2026-11-21,goals_over_25,65.5,PRO_MEDIUM,1.5
-Man City,Fulham,2026-11-21,home_goals_under_25,62.3,PRO_STRONG,
+Man City,Fulham,2026-11-21,goals_over_25,66.2,PRO_MEDIUM,1.5
+Man City,Fulham,2026-11-21,home_goals_under_25,61.6,PRO_STRONG,
 Man City,Fulham,2026-11-21,booking_pts_over_35,65.9,PRO_MEDIUM,
 Man City,Fulham,2026-11-21,home_win_and_over_15,58.1,PRO_STRONG,
 Man City,Fulham,2026-11-21,booking_pts_under_45,53.5,PRO_MEDIUM,
@@ -2891,11 +2890,11 @@ Milan,Frosinone,2026-11-22,away_goals_under_25,91.4,PRO_STRONG,
 Milan,Frosinone,2026-11-22,dc_1x,90.9,PRO_STRONG,1.14
 Milan,Frosinone,2026-11-22,both_teams_carded,89.2,PRO_STRONG,
 Milan,Frosinone,2026-11-22,home_goals_over_05,88.8,PRO_STRONG,
-Milan,Frosinone,2026-11-22,goals_over_15,83.1,PRO_MEDIUM,1.11
+Milan,Frosinone,2026-11-22,goals_over_15,83.2,PRO_MEDIUM,1.11
 Milan,Frosinone,2026-11-22,away_goals_over_05,76.3,PRO_STRONG,
 Milan,Frosinone,2026-11-22,booking_pts_over_35,77.1,PRO_STRONG,
 Milan,Frosinone,2026-11-22,home_goals_under_25,72.3,PRO_STRONG,
-Milan,Frosinone,2026-11-22,goals_over_25,67.1,PRO_MEDIUM,1.36
+Milan,Frosinone,2026-11-22,goals_over_25,67.4,PRO_MEDIUM,1.36
 Milan,Frosinone,2026-11-22,away_goals_under_15,68.2,PRO_STRONG,
 Milan,Frosinone,2026-11-22,home_win_either_half,67.5,PRO_MEDIUM,
 Milan,Frosinone,2026-11-22,dc_1x_and_over_15,63.3,PRO_STRONG,
@@ -3122,11 +3121,11 @@ Newcastle,Arsenal,2026-11-21,both_teams_carded,80.2,PRO_STRONG,
 Newcastle,Arsenal,2026-11-21,dc_12,76.1,PRO_STRONG,1.22
 Newcastle,Arsenal,2026-11-21,dc_x2_and_over_15,73.6,PRO_MEDIUM,
 Newcastle,Arsenal,2026-11-21,booking_pts_under_55,68.8,PRO_MEDIUM,
-Newcastle,Arsenal,2026-11-21,home_goals_over_05,72.3,PRO_STRONG,
+Newcastle,Arsenal,2026-11-21,home_goals_over_05,72.2,PRO_STRONG,
 Newcastle,Arsenal,2026-11-21,away_goals_under_25,70.4,PRO_STRONG,
 Newcastle,Arsenal,2026-11-21,home_goals_under_15,70.0,PRO_STRONG,
 Newcastle,Arsenal,2026-11-21,away_win_either_half,68.2,PRO_STRONG,
-Newcastle,Arsenal,2026-11-21,goals_over_25,66.1,PRO_MEDIUM,1.73
+Newcastle,Arsenal,2026-11-21,goals_over_25,66.0,PRO_MEDIUM,1.73
 Newcastle,Arsenal,2026-11-21,away_goals_over_15,65.0,PRO_STRONG,
 Newcastle,Arsenal,2026-11-21,booking_pts_over_35,66.6,PRO_MEDIUM,
 Newcastle,Arsenal,2026-11-21,booking_pts_under_45,53.5,PRO_MEDIUM,
@@ -3156,7 +3155,7 @@ Newcastle,Sunderland,2026-12-06,cards_range_3_5,60.6,PRO_MEDIUM,
 Nice,Paris Sg,2026-11-21,home_goals_under_25,90.2,PRO_STRONG,
 Nice,Paris Sg,2026-11-21,away_goals_over_05,89.0,PRO_STRONG,
 Nice,Paris Sg,2026-11-21,goals_over_15,83.0,PRO_MEDIUM,1.11
-Nice,Paris Sg,2026-11-21,dc_x2,82.9,PRO_STRONG,1.14
+Nice,Paris Sg,2026-11-21,dc_x2,82.9,PRO_STRONG,1.12
 Nice,Paris Sg,2026-11-21,dc_12,77.2,PRO_STRONG,1.18
 Nice,Paris Sg,2026-11-21,both_teams_carded,80.2,PRO_STRONG,
 Nice,Paris Sg,2026-11-21,away_win_either_half,72.2,PRO_STRONG,
@@ -3529,20 +3528,20 @@ Paris Sg,Lorient,2026-11-28,home_win_1h,59.5,PRO_STRONG,
 Paris Sg,Lorient,2026-11-28,dc_1x_and_over_25,57.4,PRO_STRONG,
 Paris Sg,Lorient,2026-11-28,cards_range_3_5,61.2,PRO_MEDIUM,
 Parma,Roma,2026-11-21,home_goals_under_25,91.6,PRO_STRONG,
-Parma,Roma,2026-11-21,away_goals_over_05,90.1,PRO_STRONG,
+Parma,Roma,2026-11-21,away_goals_over_05,90.3,PRO_STRONG,
 Parma,Roma,2026-11-21,dc_x2,84.7,PRO_STRONG,1.07
-Parma,Roma,2026-11-21,goals_over_15,79.1,PRO_MEDIUM,1.17
-Parma,Roma,2026-11-21,dc_12,80.5,PRO_STRONG,1.17
+Parma,Roma,2026-11-21,dc_12,81.4,PRO_STRONG,1.17
+Parma,Roma,2026-11-21,goals_over_15,79.3,PRO_MEDIUM,1.17
 Parma,Roma,2026-11-21,home_goals_under_15,79.4,PRO_STRONG,
-Parma,Roma,2026-11-21,dc_x2_and_over_15,73.8,PRO_MEDIUM,
+Parma,Roma,2026-11-21,dc_x2_and_over_15,73.7,PRO_MEDIUM,
 Parma,Roma,2026-11-21,away_win_either_half,70.7,PRO_STRONG,
-Parma,Roma,2026-11-21,away_goals_under_25,70.0,PRO_STRONG,
-Parma,Roma,2026-11-21,away_win,70.8,PRO_STRONG,1.3
-Parma,Roma,2026-11-21,away_goals_over_15,64.7,PRO_STRONG,
-Parma,Roma,2026-11-21,goals_over_25,58.9,PRO_MEDIUM,1.57
-Parma,Roma,2026-11-21,dc_x2_and_over_25,58.3,PRO_STRONG,
+Parma,Roma,2026-11-21,away_goals_under_25,69.8,PRO_STRONG,
+Parma,Roma,2026-11-21,away_win,71.9,PRO_STRONG,1.27
+Parma,Roma,2026-11-21,away_goals_over_15,65.2,PRO_STRONG,
+Parma,Roma,2026-11-21,goals_over_25,59.3,PRO_MEDIUM,1.57
+Parma,Roma,2026-11-21,dc_x2_and_over_25,59.7,PRO_STRONG,
 Parma,Roma,2026-11-21,dc_12_and_over_25,58.1,PRO_MEDIUM,
-Parma,Roma,2026-11-21,away_win_2h,56.7,PRO_MEDIUM,
+Parma,Roma,2026-11-21,away_win_2h,57.0,PRO_MEDIUM,
 Parma,Roma,2026-11-21,home_goals_over_05,55.1,PRO_STRONG,
 Parma,Roma,2026-11-21,btts,55.8,PRO_MEDIUM,1.95
 Porto,Sp Lisbon,2026-11-29,away_goals_under_25,91.7,PRO_STRONG,
@@ -3847,21 +3846,21 @@ Santa Clara,Porto,2026-12-05,away_goals_over_15,58.6,PRO_STRONG,
 Santa Clara,Porto,2026-12-05,home_goals_over_05,57.3,PRO_STRONG,
 Santa Clara,Porto,2026-12-05,booking_pts_over_45,56.6,PRO_MEDIUM,
 Sassuolo,Genoa,2026-11-22,home_goals_under_25,90.9,PRO_STRONG,
-Sassuolo,Genoa,2026-11-22,away_goals_under_25,85.6,PRO_STRONG,
+Sassuolo,Genoa,2026-11-22,away_goals_under_25,85.7,PRO_STRONG,
 Sassuolo,Genoa,2026-11-22,away_goals_over_05,83.2,PRO_STRONG,
 Sassuolo,Genoa,2026-11-22,both_teams_carded,81.1,PRO_STRONG,
 Sassuolo,Genoa,2026-11-22,goals_over_15,75.8,PRO_MEDIUM,1.28
 Sassuolo,Genoa,2026-11-22,dc_x2,74.3,PRO_STRONG,1.5
 Sassuolo,Genoa,2026-11-22,home_goals_over_05,70.5,PRO_STRONG,
 Sassuolo,Genoa,2026-11-22,booking_pts_under_55,65.7,PRO_MEDIUM,
-Sassuolo,Genoa,2026-11-22,away_goals_under_15,68.1,PRO_STRONG,
-Sassuolo,Genoa,2026-11-22,dc_1x,60.9,PRO_STRONG,1.44
-Sassuolo,Genoa,2026-11-22,dc_12,62.2,PRO_STRONG,1.36
+Sassuolo,Genoa,2026-11-22,away_goals_under_15,68.6,PRO_STRONG,
+Sassuolo,Genoa,2026-11-22,dc_1x,61.2,PRO_STRONG,1.44
+Sassuolo,Genoa,2026-11-22,dc_12,62.0,PRO_STRONG,1.36
 Sassuolo,Genoa,2026-11-22,booking_pts_over_35,67.0,PRO_MEDIUM,
 Sassuolo,Genoa,2026-11-22,cards_range_3_5,61.9,PRO_MEDIUM,
-Sassuolo,Genoa,2026-11-22,home_goals_under_15,57.4,PRO_STRONG,
+Sassuolo,Genoa,2026-11-22,home_goals_under_15,57.5,PRO_STRONG,
 Sassuolo,Genoa,2026-11-22,dc_x2_and_over_15,57.2,PRO_MEDIUM,
-Sassuolo,Genoa,2026-11-22,goals_over_25,53.6,PRO_MEDIUM,1.91
+Sassuolo,Genoa,2026-11-22,goals_over_25,53.4,PRO_MEDIUM,1.91
 Sassuolo,Genoa,2026-11-22,booking_pts_under_45,51.7,PRO_MEDIUM,
 Sassuolo,Napoli,2026-11-29,away_goals_over_05,86.8,PRO_STRONG,
 Sassuolo,Napoli,2026-11-29,home_goals_under_25,84.2,PRO_STRONG,
@@ -4878,9 +4877,9 @@ Ath Bilbao,Espanol,2026-11-20 00:00:00,goals_over_05,92.1,PRO_DERIVED,
 Bayern Munich,Fc Koln,2026-11-20 00:00:00,goals_over_05,95.9,PRO_DERIVED,
 Cercle Brugge,Westerlo,2026-11-20 00:00:00,goals_over_05,94.6,PRO_DERIVED,
 Troyes,Le Havre,2026-11-20 00:00:00,goals_over_05,92.3,PRO_DERIVED,
-Aston Villa,Sunderland,2026-11-21 00:00:00,goals_over_05,93.6,PRO_DERIVED,
+Aston Villa,Sunderland,2026-11-21 00:00:00,goals_over_05,92.9,PRO_DERIVED,
 Lille,Lyon,2026-11-21 00:00:00,goals_over_05,91.2,PRO_DERIVED,
-Parma,Roma,2026-11-21 00:00:00,goals_over_05,93.9,PRO_DERIVED,
+Parma,Roma,2026-11-21 00:00:00,goals_over_05,94.0,PRO_DERIVED,
 Lens,Toulouse,2026-11-21 00:00:00,goals_over_05,93.7,PRO_DERIVED,
 Amedspor,Rizespor,2026-11-21 00:00:00,goals_over_05,95.4,PRO_DERIVED,
 Genclerbirligi,Gaziantep,2026-11-21 00:00:00,goals_over_05,91.8,PRO_DERIVED,
@@ -4930,7 +4929,7 @@ Kilmarnock,Aberdeen,2026-11-21 00:00:00,goals_over_05,92.1,PRO_DERIVED,
 Celtic,St Mirren,2026-11-21 00:00:00,goals_over_05,94.9,PRO_DERIVED,
 Leverkusen,Paderborn,2026-11-21 00:00:00,goals_over_05,95.8,PRO_DERIVED,
 Millwall,Qpr,2026-11-21 00:00:00,goals_over_05,94.9,PRO_DERIVED,
-Newcastle,Arsenal,2026-11-21 00:00:00,goals_over_05,95.2,PRO_DERIVED,
+Newcastle,Arsenal,2026-11-21 00:00:00,goals_over_05,95.1,PRO_DERIVED,
 Falkirk,St Johnstone,2026-11-21 00:00:00,goals_over_05,92.1,PRO_DERIVED,
 Charleroi,St Truiden,2026-11-21 00:00:00,goals_over_05,92.1,PRO_DERIVED,
 Wolves,Charlton,2026-11-21 00:00:00,goals_over_05,93.9,PRO_DERIVED,
@@ -4948,7 +4947,7 @@ Ajax,Den Haag,2026-11-22 00:00:00,goals_over_05,95.8,PRO_DERIVED,
 Milan,Frosinone,2026-11-22 00:00:00,goals_over_05,95.2,PRO_DERIVED,
 Werder Bremen,Hamburg,2026-11-22 00:00:00,goals_over_05,94.4,PRO_DERIVED,
 Panathinaikos,Ofi Crete,2026-11-22 00:00:00,goals_over_05,94.9,PRO_DERIVED,
-Atalanta,Inter,2026-11-22 00:00:00,goals_over_05,95.3,PRO_DERIVED,
+Atalanta,Inter,2026-11-22 00:00:00,goals_over_05,95.4,PRO_DERIVED,
 Levadeiakos,Atromitos,2026-11-22 00:00:00,goals_over_05,89.7,PRO_DERIVED,
 Burnley,Blackburn,2026-11-22 00:00:00,goals_over_05,92.7,PRO_DERIVED,
 Waasland-Beveren,Gent,2026-11-22 00:00:00,goals_over_05,93.0,PRO_DERIVED,
@@ -4965,7 +4964,7 @@ Twente,Willem Ii,2026-11-22 00:00:00,goals_over_05,95.3,PRO_DERIVED,
 Barcelona,Villarreal,2026-11-22 00:00:00,goals_over_05,95.9,PRO_DERIVED,
 Kortrijk,St. Gilloise,2026-11-22 00:00:00,goals_over_05,96.3,PRO_DERIVED,
 Marseille,Le Mans,2026-11-22 00:00:00,goals_over_05,95.4,PRO_DERIVED,
-Bologna,Udinese,2026-11-22 00:00:00,goals_over_05,93.7,PRO_DERIVED,
+Bologna,Udinese,2026-11-22 00:00:00,goals_over_05,93.8,PRO_DERIVED,
 Racing Santander,Sociedad,2026-11-22 00:00:00,goals_over_05,95.7,PRO_DERIVED,
 Lommel SK,Standard,2026-11-22 00:00:00,goals_over_05,89.0,PRO_DERIVED,
 Getafe,Ath Madrid,2026-11-22 00:00:00,goals_over_05,93.7,PRO_DERIVED,
@@ -5059,9 +5058,9 @@ Ath Bilbao,Espanol,2026-11-20 00:00:00,goals_under_35,73.8,PRO_DERIVED,
 Bayern Munich,Fc Koln,2026-11-20 00:00:00,goals_over_35,55.3,PRO_DERIVED,
 Cercle Brugge,Westerlo,2026-11-20 00:00:00,goals_under_35,59.3,PRO_DERIVED,
 Troyes,Le Havre,2026-11-20 00:00:00,goals_under_35,72.3,PRO_DERIVED,
-Aston Villa,Sunderland,2026-11-21 00:00:00,goals_under_35,65.7,PRO_DERIVED,
+Aston Villa,Sunderland,2026-11-21 00:00:00,goals_under_35,70.7,PRO_DERIVED,
 Lille,Lyon,2026-11-21 00:00:00,goals_under_35,75.2,PRO_DERIVED,
-Parma,Roma,2026-11-21 00:00:00,goals_under_35,64.0,PRO_DERIVED,
+Parma,Roma,2026-11-21 00:00:00,goals_under_35,63.6,PRO_DERIVED,
 Lens,Toulouse,2026-11-21 00:00:00,goals_under_35,61.2,PRO_DERIVED,
 Amedspor,Rizespor,2026-11-21 00:00:00,goals_under_35,66.8,PRO_DERIVED,
 Genclerbirligi,Gaziantep,2026-11-21 00:00:00,goals_under_35,70.2,PRO_DERIVED,
@@ -5092,12 +5091,12 @@ Nijmegen,Psv Eindhoven,2026-11-21 00:00:00,goals_over_35,55.2,PRO_DERIVED,
 Utrecht,Cambuur,2026-11-21 00:00:00,goals_under_35,61.8,PRO_DERIVED,
 Sevilla,Betis,2026-11-21 00:00:00,goals_under_35,62.1,PRO_DERIVED,
 Genk,RAAL La Louviere,2026-11-21 00:00:00,goals_under_35,60.5,PRO_DERIVED,
-Man City,Fulham,2026-11-21 00:00:00,goals_under_35,58.9,PRO_DERIVED,
+Man City,Fulham,2026-11-21 00:00:00,goals_under_35,58.6,PRO_DERIVED,
 Bournemouth,Nott'M Forest,2026-11-21 00:00:00,goals_under_35,57.7,PRO_DERIVED,
 Alaves,La Coruna,2026-11-21 00:00:00,goals_under_35,74.9,PRO_DERIVED,
 Kilmarnock,Aberdeen,2026-11-21 00:00:00,goals_under_35,70.9,PRO_DERIVED,
 Millwall,Qpr,2026-11-21 00:00:00,goals_under_35,61.6,PRO_DERIVED,
-Newcastle,Arsenal,2026-11-21 00:00:00,goals_under_35,60.3,PRO_DERIVED,
+Newcastle,Arsenal,2026-11-21 00:00:00,goals_under_35,60.4,PRO_DERIVED,
 Falkirk,St Johnstone,2026-11-21 00:00:00,goals_under_35,67.3,PRO_DERIVED,
 Charleroi,St Truiden,2026-11-21 00:00:00,goals_under_35,69.8,PRO_DERIVED,
 Wolves,Charlton,2026-11-21 00:00:00,goals_under_35,60.7,PRO_DERIVED,
@@ -5121,11 +5120,11 @@ Juventus,Venezia,2026-11-22 00:00:00,goals_under_35,57.5,PRO_DERIVED,
 Osasuna,Malaga,2026-11-22 00:00:00,goals_under_35,77.1,PRO_DERIVED,
 Panetolikos,Volos Nfc,2026-11-22 00:00:00,goals_under_35,78.4,PRO_DERIVED,
 Augsburg,Mainz,2026-11-22 00:00:00,goals_under_35,61.0,PRO_DERIVED,
-Sassuolo,Genoa,2026-11-22 00:00:00,goals_under_35,73.5,PRO_DERIVED,
+Sassuolo,Genoa,2026-11-22 00:00:00,goals_under_35,73.8,PRO_DERIVED,
 Barcelona,Villarreal,2026-11-22 00:00:00,goals_over_35,55.5,PRO_DERIVED,
 Kortrijk,St. Gilloise,2026-11-22 00:00:00,goals_under_35,57.2,PRO_DERIVED,
 Marseille,Le Mans,2026-11-22 00:00:00,goals_under_35,60.6,PRO_DERIVED,
-Bologna,Udinese,2026-11-22 00:00:00,goals_under_35,71.6,PRO_DERIVED,
+Bologna,Udinese,2026-11-22 00:00:00,goals_under_35,71.5,PRO_DERIVED,
 Racing Santander,Sociedad,2026-11-22 00:00:00,goals_under_35,59.2,PRO_DERIVED,
 Lommel SK,Standard,2026-11-22 00:00:00,goals_under_35,66.1,PRO_DERIVED,
 Getafe,Ath Madrid,2026-11-22 00:00:00,goals_under_35,70.5,PRO_DERIVED,
