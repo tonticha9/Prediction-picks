@@ -14,7 +14,7 @@ import pandas as pd
 
 sys.path.insert(0, os.getcwd())
 
-DAYS_BACK = 75
+DAYS_BACK = 105
 
 COLS = {'FTHG': 'fthg', 'FTAG': 'ftag', 'HTHG': 'hthg', 'HTAG': 'htag',
         'HC': 'hc', 'AC': 'ac', 'HY': 'hy', 'AY': 'ay', 'HR': 'hr', 'AR': 'ar',
