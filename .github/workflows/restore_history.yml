@@ -1,7 +1,4 @@
 # .github/workflows/restore_history.yml
-# MOJA KWA MOJA: inarudisha History ya siku chache kutoka git history
-# kwenda database mpya. Endesha kwa mkono tu (workflow_dispatch).
-
 name: Restore History From Git
 
 on:
@@ -21,7 +18,7 @@ on:
 jobs:
   restore:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 360   # kikomo cha juu cha GitHub (masaa 6)
 
     steps:
       - name: Checkout (git history yote)
@@ -39,7 +36,8 @@ jobs:
 
       - name: Restore history
         env:
+          PYTHONUNBUFFERED: '1'
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DAYS: ${{ github.event.inputs.days }}
           DRY_RUN: ${{ github.event.inputs.dry_run }}
-        run: python .github/scripts/restore_history_from_git.py
+        run: python -u .github/scripts/restore_history_from_git.py
