@@ -1,10 +1,11 @@
 """
 .github/scripts/restore_history_from_git.py
 
-v4: inarudisha History kutoka git kwenda database.
-- Kila chunk ina commit yake (kazi haipotei ikikatika)
-- Retry mara 3 kila chunk ikifeli kwa muunganisho
-- Keepalive ya database, log yenye muda, output ya moja kwa moja
+v5:
+- Imeondoa 'options=-c statement_timeout' (Neon pooler haikubali)
+- Kwa kila siku, inajaribu commits zote za siku hiyo (kutoka ya mwisho kurudi nyuma)
+  hadi ipate moja yenye data (commit ya mwisho ikiwa tupu haipotezi siku)
+- Kila chunk ina commit yake + retry mara 3, keepalive, log yenye muda
 - Salama kurudia: haiongezi nakala
 
 Env: DATABASE_URL (lazima), DAYS (default 7), DRY_RUN (yes/no),
@@ -109,11 +110,12 @@ def is_banned(market, section):
     return False
 
 
-def normalize(df, section, snap_date):
+def normalize(df, section, snap_date, quiet=False):
     need = ['match_date', 'HomeTeam', 'AwayTeam', 'market']
     miss = [c for c in need if c not in df.columns]
     if miss:
-        log(f"   ⚠️ {section}: safu zinazokosekana {miss} - naruka")
+        if not quiet:
+            log(f"   ⚠️ {section}: safu zinazokosekana {miss} - naruka")
         return None
     md = pd.to_datetime(df['match_date'], errors='coerce', format='mixed')
     if getattr(md.dt, 'tz', None) is not None:
@@ -147,6 +149,7 @@ def clean_records(df, cols):
 
 # ------------------------------------------------------------------ db
 def make_engine():
+    # Hakuna 'options' (Neon pooler haikubali startup parameters kama statement_timeout)
     return create_engine(
         DB_URL,
         pool_pre_ping=True,
@@ -156,7 +159,6 @@ def make_engine():
             'keepalives_idle': 30,
             'keepalives_interval': 10,
             'keepalives_count': 5,
-            'options': '-c statement_timeout=300000',
         },
     )
 
@@ -177,7 +179,7 @@ def write_chunks(engine, table, recs, label, skip_conflict):
                         conn.execute(table.insert(), part)
                 break
             except (OperationalError, DBAPIError) as e:
-                log(f"   ⚠️ {label} chunk {i // CHUNK + 1} ilifeli (jaribio {attempt}/{RETRIES}): {str(e)[:150]}")
+                log(f"   ⚠️ {label} chunk {i // CHUNK + 1} ilifeli (jaribio {attempt}/{RETRIES}): {str(e)[:200]}")
                 try:
                     engine.dispose()
                 except Exception:
@@ -207,40 +209,56 @@ def main():
         log("❌ Hakuna commit za data/predictions.csv kwenye git history.")
         sys.exit(1)
 
+    # commits zote za kila siku (kwa mpangilio wa muda, za zamani kwanza)
     per_day = {}
     for sha, t in commits:
         d = (t + EAT).date()
         if first_day <= d <= today:
-            per_day[d] = sha
+            per_day.setdefault(d, []).append(sha)
 
     if not per_day:
         log("❌ Hakuna commit ndani ya siku zilizoombwa.")
         sys.exit(1)
 
     frames = []
+    days_with_data = 0
+    empty_days = []
     for d in sorted(per_day):
-        sha = per_day[d]
+        shas = per_day[d]
         t1 = time.time()
-        p = read_csv_at(sha, 'data/predictions.csv')
-        v = read_csv_at(sha, 'data/value_bets.csv')
+        used = None
         np_ = nv_ = 0
-        if p is not None:
-            x = normalize(p, 'prediction', d)
-            if x is not None:
-                frames.append(x)
-                np_ = len(x)
-        if v is not None:
-            x = normalize(v, 'value_bet', d)
-            if x is not None:
-                frames.append(x)
-                nv_ = len(x)
-        log(f"   {d}  commit {sha[:7]}  predictions={np_:,}  value_bets={nv_:,}  ({time.time() - t1:.1f}s)")
+        tried = 0
+        # jaribu kuanzia commit ya MWISHO ya siku, rudi nyuma hadi upate yenye data
+        for sha in reversed(shas):
+            tried += 1
+            p = read_csv_at(sha, 'data/predictions.csv')
+            v = read_csv_at(sha, 'data/value_bets.csv')
+            xp = normalize(p, 'prediction', d, quiet=True) if p is not None else None
+            xv = normalize(v, 'value_bet', d, quiet=True) if v is not None else None
+            n1 = len(xp) if xp is not None else 0
+            n2 = len(xv) if xv is not None else 0
+            if n1 + n2 > 0:
+                if n1:
+                    frames.append(xp)
+                if n2:
+                    frames.append(xv)
+                used, np_, nv_ = sha, n1, n2
+                break
+        if used:
+            days_with_data += 1
+            extra = f" (nimejaribu commit {tried}/{len(shas)})" if tried > 1 else ""
+            log(f"   {d}  commit {used[:7]}  predictions={np_:,}  value_bets={nv_:,}{extra}  ({time.time() - t1:.1f}s)")
+        else:
+            empty_days.append(d)
+            log(f"   {d}  ⚠️ hakuna data kwenye commits {len(shas)} za siku hii")
 
     if not frames:
         log("❌ Hakuna mistari iliyosomeka.")
         sys.exit(1)
     allrows = pd.concat(frames, ignore_index=True)
-    log(f"📦 Jumla ya mistari ya prediction_daily: {len(allrows):,}  (siku zilizopatikana: {len(per_day)} kati ya {DAYS})")
+    log(f"📦 Jumla ya mistari ya prediction_daily: {len(allrows):,}")
+    log(f"📦 Siku zenye data: {days_with_data} kati ya {DAYS}  (siku zisizo na data: {len(empty_days)})")
 
     played = allrows[allrows['match_date'] < now_eat].sort_values('snap_date')
     key = ['section', 'match_date', 'home_team', 'away_team', 'market']
