@@ -2,6 +2,7 @@
 # SETTLER YA PAPO HAPO: kila dakika 5, inasettle mechi zilizokwisha haraka.
 # Job A (hourly_catchup) inabaki kama ilivyo (dataset + marekebisho + VOID).
 # v2: ukaguzi kila sekunde 30 (API haina kikomo cha vitendo).
+# v3: 'requests' imeongezwa kwenye install (script ilikufa na ModuleNotFoundError).
 
 name: Instant Settle
 
@@ -30,7 +31,9 @@ jobs:
           cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install requests
+          pip install -r requirements.txt
 
       - name: Instant settle
         env:
