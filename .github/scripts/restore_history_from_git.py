@@ -1,41 +1,52 @@
 """
 .github/scripts/restore_history_from_git.py
 
-MOJA KWA MOJA: inarudisha History ya siku chache (default 7) kwenye database
-mpya kwa kusoma data/predictions.csv na data/value_bets.csv kutoka git history.
+v4: inarudisha History kutoka git kwenda database.
+- Kila chunk ina commit yake (kazi haipotei ikikatika)
+- Retry mara 3 kila chunk ikifeli kwa muunganisho
+- Keepalive ya database, log yenye muda, output ya moja kwa moja
+- Salama kurudia: haiongezi nakala
 
-- HAIINGIZI app.py (hakuna db.create_all, hakuna Flask).
-- HAITUMII AllSportsAPI. Matokeo (WON/LOST) yanajazwa na Job A baadaye.
-- Salama kuendeshwa mara nyingi: haiongezi rekodi zilizokwisha kuwepo.
-
-v2: URL ya database inalazimishwa kutumia dereva wa psycopg2 (SQLAlchemy mpya
-    ilikuwa inajaribu 'psycopg' v3 ambayo haipo).
-
-Env vars: DATABASE_URL (lazima), DAYS (default 7), DRY_RUN (yes/no),
-          MAX_DAYS_AHEAD (default 3)
+Env: DATABASE_URL (lazima), DAYS (default 7), DRY_RUN (yes/no),
+     MAX_DAYS_AHEAD (default 3)
 """
 import io
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 
 import pandas as pd
 from sqlalchemy import MetaData, Table, create_engine, inspect, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.exc import DBAPIError, OperationalError
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except Exception:
+    pass
+
+T0 = time.time()
+
+
+def log(msg):
+    print(f"[{time.time() - T0:7.1f}s] {msg}", flush=True)
+
 
 EAT = timedelta(hours=3)
 DAYS = int(os.environ.get('DAYS') or 7)
 AHEAD = int(os.environ.get('MAX_DAYS_AHEAD') or 3)
 DRY = (os.environ.get('DRY_RUN') or 'no').strip().lower() in ('yes', 'true', '1')
 DB_URL = (os.environ.get('DATABASE_URL') or '').strip()
-CHUNK = 2000
+CHUNK = 1000
+GIT_TIMEOUT = 180
+RETRIES = 3
 
 if not DB_URL:
-    print("❌ DATABASE_URL haipo (angalia GitHub Secrets).")
+    log("❌ DATABASE_URL haipo (angalia GitHub Secrets).")
     sys.exit(1)
 
-# Lazimisha dereva wa psycopg2 (si psycopg v3)
 if DB_URL.startswith('postgres://'):
     DB_URL = 'postgresql+psycopg2://' + DB_URL[len('postgres://'):]
 elif DB_URL.startswith('postgresql://'):
@@ -44,8 +55,12 @@ elif DB_URL.startswith('postgresql://'):
 
 # ------------------------------------------------------------------ git
 def run_git(args):
-    r = subprocess.run(['git'] + args, capture_output=True)
-    return r.returncode, r.stdout
+    try:
+        r = subprocess.run(['git'] + args, capture_output=True, timeout=GIT_TIMEOUT)
+        return r.returncode, r.stdout
+    except subprocess.TimeoutExpired:
+        log(f"   ⚠️ git {' '.join(args[:2])} imezidi {GIT_TIMEOUT}s - naruka")
+        return 1, b''
 
 
 def list_commits(path, since_iso):
@@ -73,7 +88,7 @@ def read_csv_at(sha, path):
     try:
         return pd.read_csv(io.BytesIO(out))
     except Exception as e:
-        print(f"   ⚠️ {path}@{sha[:7]} haisomeki ({e})")
+        log(f"   ⚠️ {path}@{sha[:7]} haisomeki ({e})")
         return None
 
 
@@ -98,7 +113,7 @@ def normalize(df, section, snap_date):
     need = ['match_date', 'HomeTeam', 'AwayTeam', 'market']
     miss = [c for c in need if c not in df.columns]
     if miss:
-        print(f"   ⚠️ {section}: safu zinazokosekana {miss} - naruka")
+        log(f"   ⚠️ {section}: safu zinazokosekana {miss} - naruka")
         return None
     md = pd.to_datetime(df['match_date'], errors='coerce', format='mixed')
     if getattr(md.dt, 'tz', None) is not None:
@@ -130,6 +145,52 @@ def clean_records(df, cols):
     return d.to_dict('records')
 
 
+# ------------------------------------------------------------------ db
+def make_engine():
+    return create_engine(
+        DB_URL,
+        pool_pre_ping=True,
+        connect_args={
+            'connect_timeout': 30,
+            'keepalives': 1,
+            'keepalives_idle': 30,
+            'keepalives_interval': 10,
+            'keepalives_count': 5,
+            'options': '-c statement_timeout=300000',
+        },
+    )
+
+
+def write_chunks(engine, table, recs, label, skip_conflict):
+    total = len(recs)
+    if total == 0:
+        log(f"   {label}: hakuna cha kuandika")
+        return engine
+    for i in range(0, total, CHUNK):
+        part = recs[i:i + CHUNK]
+        for attempt in range(1, RETRIES + 1):
+            try:
+                with engine.begin() as conn:
+                    if skip_conflict:
+                        conn.execute(pg_insert(table).on_conflict_do_nothing(), part)
+                    else:
+                        conn.execute(table.insert(), part)
+                break
+            except (OperationalError, DBAPIError) as e:
+                log(f"   ⚠️ {label} chunk {i // CHUNK + 1} ilifeli (jaribio {attempt}/{RETRIES}): {str(e)[:150]}")
+                try:
+                    engine.dispose()
+                except Exception:
+                    pass
+                if attempt == RETRIES:
+                    log("❌ Imeshindwa baada ya majaribio yote. Zilizokwisha andikwa zimebaki; endesha tena.")
+                    sys.exit(1)
+                time.sleep(5 * attempt)
+        if (i // CHUNK) % 5 == 0 or i + CHUNK >= total:
+            log(f"   {label}: {min(i + CHUNK, total):,}/{total:,}")
+    return engine
+
+
 # ------------------------------------------------------------------ main
 def main():
     now_utc = datetime.now(timezone.utc)
@@ -138,16 +199,14 @@ def main():
     first_day = today - timedelta(days=DAYS - 1)
     since = (now_utc - timedelta(days=DAYS + 3)).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    print(f"📅 Leo (EAT): {today} | nairudisha {DAYS} siku: {first_day} hadi {today} | DRY_RUN={DRY}")
+    log(f"📅 Leo (EAT): {today} | nairudisha {DAYS} siku: {first_day} hadi {today} | DRY_RUN={DRY}")
 
     commits = list_commits('data/predictions.csv', since)
+    log(f"   Commits za predictions.csv: {len(commits)}")
     if not commits:
-        print("❌ Hakuna commit za data/predictions.csv kwenye git history. "
-              "Hakikisha checkout ina fetch-depth: 0.")
+        log("❌ Hakuna commit za data/predictions.csv kwenye git history.")
         sys.exit(1)
-    print(f"   Commits za predictions.csv: {len(commits)}")
 
-    # commit ya MWISHO ya kila siku (siku = EAT, kama app inavyohesabu snap_date)
     per_day = {}
     for sha, t in commits:
         d = (t + EAT).date()
@@ -155,12 +214,13 @@ def main():
             per_day[d] = sha
 
     if not per_day:
-        print("❌ Hakuna commit ndani ya siku zilizoombwa.")
+        log("❌ Hakuna commit ndani ya siku zilizoombwa.")
         sys.exit(1)
 
     frames = []
     for d in sorted(per_day):
         sha = per_day[d]
+        t1 = time.time()
         p = read_csv_at(sha, 'data/predictions.csv')
         v = read_csv_at(sha, 'data/value_bets.csv')
         np_ = nv_ = 0
@@ -174,15 +234,14 @@ def main():
             if x is not None:
                 frames.append(x)
                 nv_ = len(x)
-        print(f"   {d}  commit {sha[:7]}  predictions={np_:,}  value_bets={nv_:,}")
+        log(f"   {d}  commit {sha[:7]}  predictions={np_:,}  value_bets={nv_:,}  ({time.time() - t1:.1f}s)")
 
     if not frames:
-        print("❌ Hakuna mistari iliyosomeka.")
+        log("❌ Hakuna mistari iliyosomeka.")
         sys.exit(1)
     allrows = pd.concat(frames, ignore_index=True)
-    print(f"\n📦 Jumla ya mistari ya prediction_daily: {len(allrows):,}")
+    log(f"📦 Jumla ya mistari ya prediction_daily: {len(allrows):,}  (siku zilizopatikana: {len(per_day)} kati ya {DAYS})")
 
-    # ---------------- rekodi za prediction_record (mechi zilizokwisha anza)
     played = allrows[allrows['match_date'] < now_eat].sort_values('snap_date')
     key = ['section', 'match_date', 'home_team', 'away_team', 'market']
     g = played.groupby(key, sort=False)
@@ -196,66 +255,74 @@ def main():
     rec['result'] = 'PENDING'
     rec['settled_at'] = None
     rec['created_at'] = now_utc.replace(tzinfo=None)
-    print(f"📦 Rekodi za prediction_record (mechi zilizokwisha anza): {len(rec):,}")
+    log(f"📦 Rekodi za prediction_record (mechi zilizokwisha anza): {len(rec):,}")
 
     if DRY:
-        print("\nℹ️ DRY_RUN=yes - hakuna kilichoandikwa kwenye database.")
+        log("ℹ️ DRY_RUN=yes - hakuna kilichoandikwa kwenye database.")
         return
 
-    engine = create_engine(DB_URL, pool_pre_ping=True)
+    log("🔌 Naunganisha database...")
+    engine = make_engine()
     insp = inspect(engine)
     tables = set(insp.get_table_names())
+    log("🔌 Imeunganika.")
     missing = [t for t in ('prediction_daily', 'prediction_record') if t not in tables]
     if missing:
-        print(f"❌ Jedwali hazipo kwenye database mpya: {missing}")
-        print("   Fungua app (Render) mara moja ili db.create_all() izitengeneze, kisha endesha tena.")
+        log(f"❌ Jedwali hazipo kwenye database mpya: {missing}")
+        log("   Fungua app (Render) mara moja ili db.create_all() izitengeneze, kisha endesha tena.")
         sys.exit(1)
 
     md = MetaData()
     t_daily = Table('prediction_daily', md, autoload_with=engine)
     t_rec = Table('prediction_record', md, autoload_with=engine)
 
-    with engine.begin() as conn:
+    with engine.connect() as conn:
         before_d = conn.execute(text('SELECT COUNT(*) FROM prediction_daily')).scalar()
         before_r = conn.execute(text('SELECT COUNT(*) FROM prediction_record')).scalar()
+    log(f"   Kabla: daily={before_d:,} record={before_r:,}")
 
-        # --- prediction_daily (unique constraint inazuia nakala)
-        dcols = ['snap_date', 'section', 'match_date', 'home_team', 'away_team',
-                 'market', 'probability', 'real_odds', 'pro_tier']
-        dcols = [c for c in dcols if c in t_daily.c]
-        recs = clean_records(allrows, dcols)
-        for i in range(0, len(recs), CHUNK):
-            conn.execute(pg_insert(t_daily).on_conflict_do_nothing(), recs[i:i + CHUNK])
+    # --- prediction_daily
+    dcols = ['snap_date', 'section', 'match_date', 'home_team', 'away_team',
+             'market', 'probability', 'real_odds', 'pro_tier']
+    dcols = [c for c in dcols if c in t_daily.c]
+    recs = clean_records(allrows, dcols)
+    engine = write_chunks(engine, t_daily, recs, 'prediction_daily', True)
 
-        # --- prediction_record (hakuna unique constraint: tunaangalia wenyewe)
-        existing = set()
-        if len(rec) > 0:
-            lo = rec['match_date'].min()
+    # --- prediction_record (ukaguzi wa nakala kwa merge)
+    new_rec = rec
+    if len(rec) > 0:
+        lo = rec['match_date'].min().to_pydatetime()
+        with engine.connect() as conn:
             rows = conn.execute(text(
                 "SELECT match_date, home_team, away_team, market, section "
-                "FROM prediction_record WHERE match_date >= :lo"), {'lo': lo.to_pydatetime()})
-            for r in rows:
-                existing.add((pd.Timestamp(r[0]), r[1], r[2], r[3], r[4]))
-        mask = [
-            (pd.Timestamp(r.match_date), r.home_team, r.away_team, r.market, r.section) not in existing
-            for r in rec.itertuples()
-        ]
-        new_rec = rec[mask]
-        rcols = ['match_date', 'home_team', 'away_team', 'market', 'section',
-                 'probability', 'first_probability', 'first_real_odds', 'first_pro_tier',
-                 'real_odds', 'ev_percent', 'pro_tier', 'result', 'settled_at',
-                 'shown_date', 'created_at']
-        rcols = [c for c in rcols if c in t_rec.c]
-        recs2 = clean_records(new_rec, rcols)
-        for i in range(0, len(recs2), CHUNK):
-            conn.execute(t_rec.insert(), recs2[i:i + CHUNK])
+                "FROM prediction_record WHERE match_date >= :lo"), {'lo': lo}).fetchall()
+        log(f"   prediction_record zilizopo kwenye kipindi hiki: {len(rows):,}")
+        if rows:
+            ex = pd.DataFrame(rows, columns=['match_date', 'home_team', 'away_team', 'market', 'section'])
+            ex['match_date'] = pd.to_datetime(ex['match_date'], errors='coerce')
+            if getattr(ex['match_date'].dt, 'tz', None) is not None:
+                ex['match_date'] = ex['match_date'].dt.tz_localize(None)
+            ex = ex.drop_duplicates()
+            ex['_exists'] = 1
+            merged = rec.merge(ex, on=['match_date', 'home_team', 'away_team', 'market', 'section'], how='left')
+            new_rec = merged[merged['_exists'].isna()].drop(columns=['_exists'])
+    log(f"   prediction_record mpya za kuingiza: {len(new_rec):,}")
 
+    rcols = ['match_date', 'home_team', 'away_team', 'market', 'section',
+             'probability', 'first_probability', 'first_real_odds', 'first_pro_tier',
+             'real_odds', 'ev_percent', 'pro_tier', 'result', 'settled_at',
+             'shown_date', 'created_at']
+    rcols = [c for c in rcols if c in t_rec.c]
+    recs2 = clean_records(new_rec, rcols)
+    engine = write_chunks(engine, t_rec, recs2, 'prediction_record', False)
+
+    with engine.connect() as conn:
         after_d = conn.execute(text('SELECT COUNT(*) FROM prediction_daily')).scalar()
         after_r = conn.execute(text('SELECT COUNT(*) FROM prediction_record')).scalar()
 
-    print(f"\n✅ prediction_daily: {before_d:,} -> {after_d:,}  (+{after_d - before_d:,})")
-    print(f"✅ prediction_record: {before_r:,} -> {after_r:,}  (+{after_r - before_r:,}, zote PENDING)")
-    print("ℹ️ Job A (hourly_catchup) itazisuluhisha WON/LOST/VOID kutoka dataset kwenye run zake zijazo.")
+    log(f"✅ prediction_daily: {before_d:,} -> {after_d:,}  (+{after_d - before_d:,})")
+    log(f"✅ prediction_record: {before_r:,} -> {after_r:,}  (+{after_r - before_r:,}, zote PENDING)")
+    log("ℹ️ Job A (hourly_catchup) itazisuluhisha WON/LOST/VOID kwenye run zake zijazo.")
 
 
 if __name__ == '__main__':
