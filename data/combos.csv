@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Kasimpasa vs Alanyaspor: dc_1x @1.28 + Buyuksehyr vs Corum: dc_1x @1.25,1.6,77.4
-3,2,Volos Nfc vs Asteras Tripolis: dc_x2 @1.44 + Alaves vs La Coruna: dc_x2 @1.67,2.4,60.1
-5,5,Alaves vs La Coruna: dc_x2 @1.67 + Espanol vs Getafe: dc_1x @1.28 + Levante vs Racing Santander: dc_1x @1.36 + Hibernian vs Dundee: dc_1x @1.18 + Kasimpasa vs Alanyaspor: dc_1x @1.28,4.39,39.9
-7,6,Asteras Tripolis vs Aris: dc_12 @1.36 + Volos Nfc vs Asteras Tripolis: dc_x2 @1.44 + Swansea vs West Brom: dc_12 @1.33 + Levante vs Racing Santander: dc_1x @1.36 + Utrecht vs Cambuur: dc_1x @1.30 + Elche vs Ath Madrid: dc_12 @1.22,5.62,31.4
-10,6,Alaves vs La Coruna: dc_x2 @1.67 + Academica vs Alverca: dc_x2 @1.53 + Stoke vs Birmingham: dc_1x @1.53 + Moreirense vs Santa Clara: dc_x2 @1.28 + Erzurum Bb vs Goztep: dc_x2 @1.40 + Telstar vs Zwolle: dc_12 @1.28,8.97,18.5
+2,2,Levante vs Racing Santander: dc_1x @1.36 + Arsenal vs Man City: dc_12 @1.28,1.74,77.5
+3,3,Alaves vs La Coruna: dc_x2 @1.67 + Aek vs Paok: dc_12 @1.25 + Sheffield United vs Watford: dc_1x @1.17,2.44,58.9
+5,5,Alaves vs La Coruna: dc_x2 @1.67 + Frosinone vs Parma: dc_12 @1.22 + West Ham vs Preston: dc_12 @1.10 + Levante vs Racing Santander: dc_1x @1.36 + Sassuolo vs Genoa: dc_x2 @1.44,4.39,41.0
+7,6,Dortmund vs Leverkusen: dc_12 @1.25 + Ein Frankfurt vs Hoffenheim: dc_1x @1.44 + Sociedad vs Sevilla: dc_1x @1.36 + Volos Nfc vs Asteras Tripolis: dc_x2 @1.44 + Udinese vs Fiorentina: dc_x2 @1.36 + Milan vs Frosinone: dc_1x @1.17,5.61,28.5
+10,6,Sociedad vs Sevilla: dc_1x @1.36 + Panetolikos vs Volos Nfc: dc_x2 @1.57 + Cambuur vs Sparta Rotterdam: dc_1x @1.50 + Cercle Brugge vs Westerlo: dc_1x @1.36 + Lens vs Toulouse: dc_1x @1.25 + Coventry vs Crystal Palace: dc_x2 @1.53,8.33,18.7
