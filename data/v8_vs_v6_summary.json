@@ -1,15 +1,15 @@
 {
- "generated": "2026-11-21 14:52 UTC",
- "archive_files_v6": 27,
- "archive_files_v8": 27,
- "matches_with_results": 370,
- "rows_evaluated": 9937,
- "markets_total": 51,
+ "generated": "2026-11-22 14:49 UTC",
+ "archive_files_v6": 28,
+ "archive_files_v8": 28,
+ "matches_with_results": 426,
+ "rows_evaluated": 11437,
+ "markets_total": 52,
  "markets_tested": 35,
  "v8_better": 1,
  "v6_better": 1,
  "same": 33,
- "mean_diff_ll": -0.0004,
+ "mean_diff_ll": -0.0014,
  "first_match": "2026-10-18",
  "last_match": "2026-11-21"
 }
