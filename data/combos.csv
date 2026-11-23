@@ -1,6 +1,7 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Arsenal vs Man City: dc_12 @1.28 + Levante vs Racing Santander: dc_1x @1.36,1.74,79.6
-3,4,Man United vs Brentford: dc_12 @1.28 + Coventry vs Ipswich: dc_1x @1.40 + Frosinone vs Parma: dc_12 @1.22 + Liverpool vs Sunderland: dc_1x @1.10,2.4,61.7
-5,4,Sociedad vs Sevilla: dc_1x @1.36 + Southampton vs Middlesbrough: dc_1x @1.67 + Charlton vs Lincoln: dc_1x @1.50 + Arsenal vs Man City: dc_12 @1.28,4.36,40.9
-7,6,Buyuksehyr vs Corum: dc_1x @1.28 + Bournemouth vs Brighton: dc_1x @1.40 + Aek vs Paok: dc_12 @1.25 + Arsenal vs Man City: dc_12 @1.28 + Celta vs Villarreal: dc_1x @1.50 + Sunderland vs Tottenham: dc_12 @1.33,5.72,31.6
-10,6,Hibernian vs Dundee: dc_1x @1.18 + Charlton vs Lincoln: dc_1x @1.50 + Brest vs Paris FC: dc_1x @1.62 + Stoke vs Millwall: dc_1x @1.36 + Celta vs Villarreal: dc_1x @1.50 + Burnley vs Birmingham: dc_1x @1.50,8.77,20.4
+2,2,Levante vs Racing Santander: dc_1x @1.36 + Frosinone vs Parma: dc_12 @1.22,1.66,80.6
+3,3,Coventry vs Ipswich: dc_1x @1.36 + Stoke vs Millwall: dc_1x @1.36 + Buyuksehyr vs Corum: dc_1x @1.30,2.4,63.2
+5,6,Espanol vs Getafe: dc_1x @1.22 + Aberdeen vs Dundee: dc_12 @1.28 + Rizespor vs Kasimpasa: dc_12 @1.25 + Arsenal vs Man City: dc_12 @1.28 + Levante vs Racing Santander: dc_1x @1.36 + Frosinone vs Parma: dc_12 @1.22,4.15,41.5
+7,6,Bournemouth vs Brighton: dc_1x @1.44 + Stoke vs Millwall: dc_1x @1.36 + Telstar vs Groningen: dc_12 @1.28 + Coventry vs Ipswich: dc_1x @1.36 + Asteras Tripolis vs Kifisia: dc_1x @1.36 + Arsenal vs Man City: dc_12 @1.28,5.93,31.8
+10,6,Barcelona vs Ath Madrid: dc_12 @1.17 + Burnley vs Birmingham: dc_1x @1.50 + Levante vs Elche: dc_12 @1.28 + Ein Frankfurt vs Werder Bremen: home_win @2.05 + Stoke vs Millwall: dc_1x @1.36 + For Sittard vs Zwolle: dc_12 @1.28,8.02,18.4
+15,6,Brentford vs Everton: dc_1x @1.36 + Ein Frankfurt vs Werder Bremen: home_win @2.05 + Aston Villa vs Everton: dc_1x @1.28 + Watford vs Blackburn: dc_x2 @1.50 + Academica vs Alverca: dc_x2 @1.50 + Kalamata vs Levadeiakos: dc_x2 @1.53,12.29,12.0
