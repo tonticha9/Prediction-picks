@@ -1,5 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Levante vs Racing Santander: dc_1x @1.36 + Frosinone vs Parma: dc_12 @1.22,1.66,79.5
-3,3,Charlton vs Lincoln: dc_1x @1.46 + Asteras Tripolis vs Aris: dc_12 @1.36 + Frosinone vs Parma: dc_12 @1.22,2.42,58.3
-5,5,Arsenal vs Man City: dc_12 @1.28 + Everton vs Liverpool: dc_x2 @1.36 + Sociedad vs Sevilla: dc_1x @1.36 + Fc Koln vs Elversberg: dc_1x @1.28 + Levante vs Racing Santander: dc_1x @1.36,4.12,38.4
-7,5,Erzurum Bb vs Goztep: dc_x2 @1.40 + Valencia vs Osasuna: dc_1x @1.36 + Panetolikos vs Volos Nfc: dc_x2 @1.57 + Charlton vs Lincoln: dc_1x @1.46 + Levante vs Racing Santander: dc_1x @1.36,5.94,31.9
+2,2,Arsenal vs Man City: dc_12 @1.28 + Levante vs Racing Santander: dc_1x @1.36,1.74,79.6
+3,4,Man United vs Brentford: dc_12 @1.28 + Coventry vs Ipswich: dc_1x @1.40 + Frosinone vs Parma: dc_12 @1.22 + Liverpool vs Sunderland: dc_1x @1.10,2.4,61.7
+5,4,Sociedad vs Sevilla: dc_1x @1.36 + Southampton vs Middlesbrough: dc_1x @1.67 + Charlton vs Lincoln: dc_1x @1.50 + Arsenal vs Man City: dc_12 @1.28,4.36,40.9
+7,6,Buyuksehyr vs Corum: dc_1x @1.28 + Bournemouth vs Brighton: dc_1x @1.40 + Aek vs Paok: dc_12 @1.25 + Arsenal vs Man City: dc_12 @1.28 + Celta vs Villarreal: dc_1x @1.50 + Sunderland vs Tottenham: dc_12 @1.33,5.72,31.6
+10,6,Hibernian vs Dundee: dc_1x @1.18 + Charlton vs Lincoln: dc_1x @1.50 + Brest vs Paris FC: dc_1x @1.62 + Stoke vs Millwall: dc_1x @1.36 + Celta vs Villarreal: dc_1x @1.50 + Burnley vs Birmingham: dc_1x @1.50,8.77,20.4
