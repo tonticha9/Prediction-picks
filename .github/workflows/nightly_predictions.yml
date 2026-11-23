@@ -10,6 +10,7 @@
 # v3 (Oct 18 2026): kivuli cha v8 - archive_shadow.py (hiari kabisa).
 # v4 (Oct 25 2026): push inavuta mabadiliko mapya ya 'main' kwanza (git pull --rebase) na kujaribu tena hadi mara 5.
 # v5 (Oct 27 2026): calibration ya kila siku (daily_calibration.py), continue-on-error.
+# v9 (Nov 23 2026): ligi 5 mpya + vizingiti vya ligi 12 kupitia merge_leagues.py (continue-on-error).
 # v6 (Nov 1 2026): 'six' imeongezwa kwenye pip install.
 # v7 (Nov 7 2026): (1) calibration inaendeshwa kupitia calib_epoch.py (inapuuza rekodi za zamani za masoko yaliyobadilishwa injini);
 #                  (2) release_monitor.py: ufuatiliaji wa matokeo halisi + rollback ya kiotomatiki (inaita retrain_weekly mode=rollback);
@@ -215,12 +216,24 @@ jobs:
           ROLLBACK_ENABLED: 'yes'
         run: python .github/scripts/release_monitor.py
 
+      # v9 (Nov 23 2026): ligi 5 mpya + vizingiti vya ligi 12 (ligi x soko). Haivunji nightly: ikishindwa, data ya awali inabaki.
+      # Inaongeza safu ya 'league', inaongeza picks za ligi 5 (predictions_new5.csv), inaondoa masoko ambayo ligi haiwezi kutabiri.
+      # Kuzima vizingiti vya ligi 12 kwa dharura: weka GATES12_ENABLED: '0'
+      - name: Leagues - merge ligi 5 + vizingiti vya ligi 12
+        if: env.SKIP_UPDATE != 'true'
+        continue-on-error: true
+        env:
+          GATES12_ENABLED: '1'
+        run: python .github/scripts/merge_leagues.py
+
       - name: Commit and push updated data
         if: env.SKIP_UPDATE != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/predictions.csv data/value_bets.csv data/combos.csv
+          # v9: nakala za gates na ramani ya timu->ligi (zikiwepo tu)
+          for f in data/league_gates12.json data/team_league_map.csv; do if [ -f "$f" ]; then git add "$f" || true; fi; done
           # Faili za kivuli (zikiwepo tu)
           if [ -f data/predictions_v8.csv ]; then git add data/predictions_v8.csv || true; fi
           if [ -d shadow ]; then git add shadow || true; fi
