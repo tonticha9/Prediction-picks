@@ -1,0 +1,65 @@
+# .github/workflows/refresh_league_gates.yml
+#
+# KUJISASISHA KIOTOMATIKI KWA LIGI 5 + LIGI 12 (v1, Nov 23 2026)
+# Kila Jumapili (08:00 UTC) inaendesha notebook ya Kaggle 'add-league-lab-2' upya:
+#   - historia ya ligi 5 mpya inasasishwa,
+#   - vizingiti (gates) vya ligi 5 (new_leagues_gates.json) na vya ligi 12 (gates12.json) vinahesabiwa upya.
+# Nightly ya usiku huo (22:00 UTC) inachukua matokeo mapya yenyewe (L5 ndani ya Kaggle + merge_leagues.py kwenye GitHub).
+# Hakuna cha kufanya kwa mkono. Ikishindwa mara mbili, run inakuwa nyekundu na bango linaonekana /admin/ops.
+name: Refresh League Gates
+
+on:
+  schedule:
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-league-gates
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kaggle CLI
+        run: pip install kaggle pandas six
+
+      - name: Configure Kaggle credentials
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+
+      - name: Run add-league-lab-2 on Kaggle
+        env:
+          KAGGLE_SLUG: tonticha/add-league-lab-2
+          MAX_WAIT_MINUTES: '75'
+        run: python .github/scripts/run_kaggle_lab.py
+
+      - name: Report to ops monitor
+        if: always()
+        continue-on-error: true
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          JOB_STATUS: ${{ job.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$APP_URL" ]; then exit 0; fi
+          code=$(curl -s -m 25 -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/ops/report" \
+            -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" \
+            -d "{\"source\":\"refresh_league_gates\",\"status\":\"$JOB_STATUS\",\"detail\":\"league gates weekly\",\"url\":\"$RUN_URL\"}")
+          echo "ops report: HTTP $code"
