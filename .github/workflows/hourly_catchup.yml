@@ -5,6 +5,7 @@
 # na inasasisha saa za kuanza kwa mechi (EAT).
 # v7: kila dakika 30, diagnostic steps zimeondolewa, sync ya saa za mechi.
 # v8 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
+# v9 (Nov 24 2026): hatua mpya ya kusettle picks za ligi 5 mpya (settle_new5.py); saa za mechi za ligi 5.
 
 name: Hourly Catchup
 
@@ -64,6 +65,16 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python .github/scripts/sync_match_results.py
+
+      - name: Settle ligi 5 mpya (NOR, MEX, BRA, E2, EC)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+        run: python .github/scripts/settle_new5.py
 
       - name: Sync fixture kickoff times (EAT)
         if: ${{ !cancelled() }}
