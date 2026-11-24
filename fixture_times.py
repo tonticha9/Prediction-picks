@@ -1,5 +1,5 @@
 """
-fixture_times.py — Saa ya kuanza kwa kila mechi (EAT).
+fixture_times.py — Saa ya kuanza kwa kila mechi (EAT).  v2 (Nov 24 2026): inalinganisha pia kwa jina la karibu (ligi 5 mpya).
 
 Plugin ya admin_tools.py (PLUGINS). Haihitaji kuhariri app.py wala templates:
   - jedwali jipya 'fixture_time' (linatengenezwa lenyewe)
@@ -51,7 +51,7 @@ class FixtureTime(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
-_CACHE = {'t': 0.0, 'pair': {}, 'home': {}, 'away': {}}
+_CACHE = {'t': 0.0, 'pair': {}, 'home': {}, 'away': {}, 'bydate': {}}
 _TTL = 120   # sekunde
 
 
@@ -70,12 +70,13 @@ def _load():
         print(f'[fixture_times] kusoma jedwali kumeshindwa: {e}')
         _CACHE['t'] = now
         return
-    pair, home, away = {}, {}, {}
+    pair, home, away, bydate = {}, {}, {}, {}
     for r in rows:
         pair[(r.match_date, r.home_key, r.away_key)] = r.kickoff
+        bydate.setdefault(r.match_date, []).append((r.home_team or '', r.away_team or '', r.kickoff))
         home.setdefault((r.match_date, r.home_key), set()).add(r.kickoff)
         away.setdefault((r.match_date, r.away_key), set()).add(r.kickoff)
-    _CACHE.update(t=now, pair=pair, home=home, away=away)
+    _CACHE.update(t=now, pair=pair, home=home, away=away, bydate=bydate)
 
 
 def _to_date(v):
@@ -116,6 +117,17 @@ def kickoff(home, away, when):
             ts = table.get((dd, k))
             if ts and len(ts) == 1:
                 return next(iter(ts))
+    # v2 (Nov 24 2026): majina ya API na ya historia yakitofautiana (ligi 5 mpya: 'Bradford City' na 'Bradford'),
+    # linganisha kwa jina la karibu - pande ZOTE mbili lazima zilingane (name_match.py)
+    try:
+        import name_match
+        for off in offsets:
+            cands = _CACHE['bydate'].get(d + timedelta(days=off), [])
+            hit = name_match.find_fixture(home, away, cands, get=lambda c: (c[0], c[1]))
+            if hit:
+                return hit[2]
+    except Exception:
+        pass
     return ''
 
 
