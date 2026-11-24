@@ -11,6 +11,7 @@ Mwishoni inaripoti mechi ngapi za data/predictions.csv zimepata saa.
 v2: majaribio 3 kwa makosa ya API (502/5xx/429/timeout), key inafichwa kwenye logi,
     API ikiwa chini haizuii steps zingine (onyo, si kosa), na sync haihesabiwi
     kama imekamilika ikiwa ligi nyingi zimeshindwa (itajaribu tena run inayofuata).
+v3 (Nov 24 2026): ligi 5 mpya (NOR, MEX, BRA, E2, EC) zimeongezwa; ripoti ya coverage inatumia pia jina la karibu.
 """
 import os
 import re
@@ -25,7 +26,9 @@ sys.path.insert(0, os.getcwd())
 
 BASE_URL = "https://apiv2.allsportsapi.com/football/"
 LEAGUE_MAP = {'E0': 152, 'E1': 153, 'D1': 175, 'SP1': 302, 'F1': 168, 'I1': 207,
-              'N1': 244, 'B1': 63, 'P1': 266, 'T1': 322, 'G1': 178, 'SC0': 279}
+              'N1': 244, 'B1': 63, 'P1': 266, 'T1': 322, 'G1': 178, 'SC0': 279,
+              # v3 (Nov 24 2026): ligi 5 mpya
+              'NOR': 253, 'MEX': 235, 'BRA': 99, 'E2': 154, 'EC': 151}
 TZ = 'Africa/Dar_es_Salaam'
 DAYS_BACK = 2
 DAYS_AHEAD = 10
@@ -34,8 +37,8 @@ PRUNE_DAYS = 120
 
 API_RETRIES = 3
 API_BACKOFF = (2, 6)
-CIRCUIT_BREAKER = 4      # ligi 4 mfululizo zikishindwa = API iko chini
-MAX_FAILED_FOR_DONE = 2  # ligi zaidi ya hizi zikishindwa, sync haihesabiwi kukamilika
+CIRCUIT_BREAKER = 5      # ligi 5 mfululizo zikishindwa = API iko chini
+MAX_FAILED_FOR_DONE = 3  # ligi zaidi ya hizi zikishindwa, sync haihesabiwi kukamilika (v3: ligi 17)
 
 
 def redact(text):
@@ -211,10 +214,21 @@ def main():
             p = p.dropna().drop_duplicates()
             p = p[p['match_date'].dt.date >= now_eat.date()]
             miss = []
+            by_date = {}
+            for o in existing.values():
+                by_date.setdefault(o.match_date, []).append((o.home_team or '', o.away_team or '', o.kickoff))
+            try:
+                import name_match
+            except Exception:
+                name_match = None
             for _, r in p.iterrows():
                 d = r['match_date'].date()
                 hk, ak = team_key(r['HomeTeam']), team_key(r['AwayTeam'])
-                if not any((d + timedelta(days=o), hk, ak) in existing for o in (0, -1, 1)):
+                found = any((d + timedelta(days=o), hk, ak) in existing for o in (0, -1, 1))
+                if not found and name_match is not None:      # v3: jina la karibu (ligi 5 mpya), kama app inavyofanya
+                    found = any(name_match.find_fixture(r['HomeTeam'], r['AwayTeam'], by_date.get(d + timedelta(days=o), []),
+                                                        get=lambda c: (c[0], c[1])) is not None for o in (0, -1, 1))
+                if not found:
                     miss.append(f"{r['HomeTeam']} vs {r['AwayTeam']} {d}")
             print(f"📊 Mechi za predictions.csv: {len(p)}; zenye saa {len(p) - len(miss)}; bila saa {len(miss)}")
             for m in miss[:15]:
