@@ -37,6 +37,9 @@
                  color:#fecaca; font-size:13px; font-weight:700; text-align:center; text-decoration:none; }
     .nav-badge { display:inline-block; margin-left:6px; min-width:20px; padding:0 6px; border-radius:999px; background:#ef4444; color:#fff;
                  font-size:12px; font-weight:700; text-align:center; }
+    .lg-badge { display:inline-block; margin-left:8px; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700;
+                vertical-align:middle; white-space:nowrap; background:rgba(99,102,241,.18); color:#a5b4fc; }
+    .lg-badge.lg-new { background:rgba(239,68,68,.2); color:#fca5a5; border:1px solid rgba(239,68,68,.45); }
   </style>
 </head>
 <body>
@@ -115,6 +118,7 @@
 
   <button class="fab-top" id="fabTop" onclick="window.scrollTo({top:0, behavior:'smooth'})" aria-label="Juu">↑</button>
 
+  {{ league_script|default('')|safe }}
   <script>
     function toggleNav() {
       document.getElementById('navDrawer').classList.toggle('open');
@@ -130,14 +134,25 @@
       document.querySelectorAll('.other-picks').forEach(function (e) { e.classList.remove('open'); });
     }
     var _oddsOnly = false;
+    var _lgSel = '';
+    function _lgOk(el) {
+      if (!_lgSel) return true;
+      var lg = el.getAttribute('data-league');
+      if (lg === null) return true;
+      if (_lgSel === '__new') return (window.LEAGUE_NEW || []).indexOf(lg) !== -1;
+      return lg === _lgSel;
+    }
     function applyFilters() {
       var q = ((document.getElementById('matchSearch') || {}).value || '').toLowerCase().trim();
       var shown = 0;
       document.querySelectorAll('.match-card').forEach(function (c) {
         var t = ((c.querySelector('.match-teams') || c).textContent || '').toLowerCase();
-        var ok = (!q || t.indexOf(q) !== -1) && (!_oddsOnly || c.querySelector('.best-pick-extra'));
+        var ok = (!q || t.indexOf(q) !== -1) && (!_oddsOnly || c.querySelector('.best-pick-extra')) && _lgOk(c);
         c.style.display = ok ? '' : 'none';
         if (ok) shown++;
+      });
+      document.querySelectorAll('.value-row[data-league], .table-row[data-league]').forEach(function (r) {
+        r.style.display = _lgOk(r) ? '' : 'none';
       });
       var v = document.getElementById('visCount');
       if (v) v.textContent = shown;
@@ -148,10 +163,73 @@
       btn.classList.toggle('active', _oddsOnly);
       applyFilters();
     }
+    /* ===== Ligi (league_tools.py): jina la ligi, alama ya NEW na kichujio ===== */
+    function _nk(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+    function _lgTag(box, text, anchor) {
+      var i = text.indexOf(' vs ');
+      if (i < 0) return;
+      var M = window.LEAGUE_MAP || {};
+      var lg = M[_nk(text.slice(0, i))] || M[_nk(text.slice(i + 4))] || '';
+      box.setAttribute('data-league', lg || '?');
+      if (!lg) return;
+      var N = window.LEAGUE_NAMES || {}, W = window.LEAGUE_NEW || [];
+      var isNew = W.indexOf(lg) !== -1;
+      var b = document.createElement('span');
+      b.className = 'lg-badge' + (isNew ? ' lg-new' : '');
+      b.textContent = (isNew ? 'NEW · ' : '') + (N[lg] || lg);
+      anchor.appendChild(b);
+    }
+    function setLeague(v) {
+      _lgSel = v || '';
+      try { localStorage.setItem('lgSel', _lgSel); } catch (e) {}
+      applyFilters();
+    }
+    function leagueInit() {
+      try {
+        if (!window.LEAGUE_MAP) return;
+        document.querySelectorAll('.match-card').forEach(function (c) {
+          var t = c.querySelector('.match-teams');
+          if (t) _lgTag(c, t.textContent, t);
+        });
+        document.querySelectorAll('.value-row, .table-row').forEach(function (r) {
+          var t = r.classList.contains('value-row') ? r.querySelector('div[style*="font-weight:700"]') : r.querySelector('b');
+          if (t) _lgTag(r, t.textContent, t);
+        });
+        var present = {}, first = null;
+        document.querySelectorAll('[data-league]').forEach(function (e) {
+          var lg = e.getAttribute('data-league');
+          if (lg && lg !== '?') { present[lg] = 1; if (!first) first = e; }
+        });
+        var N = window.LEAGUE_NAMES || {}, W = window.LEAGUE_NEW || [];
+        var keys = Object.keys(present).sort(function (a, b) { return String(N[a] || a).localeCompare(String(N[b] || b)); });
+        if (!keys.length) return;
+        var bar = document.createElement('div');
+        bar.className = 'pro-bar';
+        bar.id = 'lgBar';
+        var sel = document.createElement('select');
+        sel.className = 'pro-input';
+        sel.id = 'lgSel';
+        function add(val, label) { var o = document.createElement('option'); o.value = val; o.textContent = label; sel.appendChild(o); }
+        add('', '🌍 Ligi zote (' + keys.length + ')');
+        if (keys.some(function (k) { return W.indexOf(k) !== -1; })) add('__new', '🆕 Ligi mpya tu');
+        keys.forEach(function (k) { add(k, (W.indexOf(k) !== -1 ? '🆕 ' : '') + (N[k] || k)); });
+        sel.onchange = function () { setLeague(this.value); };
+        bar.appendChild(sel);
+        var cont = document.querySelector('.container'), anchor = first;
+        while (anchor && anchor.parentNode !== cont) anchor = anchor.parentNode;
+        if (cont && anchor) cont.insertBefore(bar, anchor);
+        var saved = '';
+        try { saved = localStorage.getItem('lgSel') || ''; } catch (e) {}
+        var okSaved = false;
+        for (var i = 0; i < sel.options.length; i++) { if (sel.options[i].value === saved) okSaved = true; }
+        if (saved && okSaved) { sel.value = saved; _lgSel = saved; applyFilters(); }
+      } catch (e) { /* kichujio cha ligi kisivunje ukurasa */ }
+    }
     window.addEventListener('scroll', function () {
       var f = document.getElementById('fabTop');
       if (f) f.classList.toggle('show', window.scrollY > 500);
     });
+    leagueInit();
   </script>
   {% block scripts %}{% endblock %}
   <script>
