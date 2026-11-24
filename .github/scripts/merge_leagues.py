@@ -1,5 +1,8 @@
 """
-.github/scripts/merge_leagues.py  -  v1 (Nov 23 2026)
+.github/scripts/merge_leagues.py  -  v2 (Nov 24 2026)
+
+v2: kupakua gates sasa kunaandika KILA kitu (matokeo ya Kaggle, orodha ya faili, hali ya notebook) ili kama gates12.json
+    haipatikani tujue sababu; pia inatafuta gates kwenye faili yoyote ya .json ya output (si jina moja tu).
 
 Inaendeshwa na nightly_predictions.yml BAADA ya predictions.csv, value_bets.csv na combos.csv kuwekwa kwenye data/.
 Inafanya mambo manne, na kila moja linajilinda (likishindwa, data ya awali inabaki kama ilivyo):
@@ -21,6 +24,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import zipfile
@@ -54,30 +58,68 @@ def norm(s):
 
 
 # ---------------------------------------------------------------------------------- vizingiti (gates)
-def kaggle(args):
+def kaggle_run(args, timeout=900):
+    """Endesha amri ya kaggle. Rudisha (ok, maandishi ya stdout+stderr)."""
     try:
-        r = subprocess.run(['kaggle'] + args, capture_output=True, text=True, timeout=600)
-        if r.returncode != 0:
-            log(f"   kaggle {' '.join(args[:3])} imeshindwa: {r.stderr.strip()[:200]}")
-            return False
-        return True
+        r = subprocess.run(['kaggle'] + args, capture_output=True, text=True, timeout=timeout)
+        out = ((r.stdout or '') + (r.stderr or '')).strip()
+        return r.returncode == 0, out
     except Exception as e:
-        log(f"   kaggle imeshindwa: {type(e).__name__}: {e}")
-        return False
+        return False, f"{type(e).__name__}: {e}"
+
+
+def kaggle(args):
+    ok, out = kaggle_run(args, timeout=600)
+    if not ok:
+        log(f"   kaggle {' '.join(args[:3])} imeshindwa: {out[:200]}")
+    return ok
+
+
+def _is_gates_obj(o):
+    return isinstance(o, dict) and isinstance(o.get('prod_names'), dict) and isinstance(o.get('show'), dict)
+
+
+def find_fresh_gates(folder):
+    """Tafuta gates kwenye folda ya output ya Kaggle: gates12.json kwanza, kisha .json yoyote yenye 'prod_names' na 'show'."""
+    files = sorted(glob.glob(os.path.join(folder, '**', '*'), recursive=True))
+    files = [f for f in files if os.path.isfile(f)]
+    log(f"   faili za output ya {LAB_SLUG}: {len(files)}" + (" (HAKUNA)" if not files else ""))
+    for f in files[:40]:
+        log(f"      - {os.path.relpath(f, folder)} ({os.path.getsize(f):,} bytes)")
+    named = [f for f in files if os.path.basename(f) == 'gates12.json']
+    others = [f for f in files if f.endswith('.json') and f not in named and os.path.getsize(f) < 5_000_000]
+    for f in named + others:
+        try:
+            with open(f, encoding='utf-8') as fh:
+                o = json.load(fh)
+        except Exception as e:
+            if f in named:
+                warn(f"{os.path.basename(f)} haisomeki ({type(e).__name__}: {e}).")
+            continue
+        if _is_gates_obj(o):
+            if f not in named:
+                log(f"   gates zimepatikana kwenye faili lenye jina tofauti: {os.path.basename(f)}")
+            return o
+    return None
 
 
 def load_gates():
     """Rudisha (allowed: {liga: set(masoko)}, info). None ikiwa hakuna gates zinazoaminika."""
     fresh = None
-    if os.environ.get('SKIP_KAGGLE_FETCH') != '1' and kaggle(['kernels', 'output', LAB_SLUG, '-p', 'lab_output']):
-        cands = glob.glob('lab_output/**/gates12.json', recursive=True)
-        if cands:
-            try:
-                with open(cands[0], encoding='utf-8') as f:
-                    fresh = json.load(f)
+    if os.environ.get('SKIP_KAGGLE_FETCH') != '1':
+        shutil.rmtree('lab_output', ignore_errors=True)
+        ok, out = kaggle_run(['kernels', 'output', LAB_SLUG, '-p', 'lab_output'])
+        log(f"   kaggle kernels output {LAB_SLUG}: {'sawa' if ok else 'IMESHINDWA'}"
+            + (f" | {out[-300:]}" if out else ""))
+        if ok:
+            fresh = find_fresh_gates('lab_output')
+            if fresh is not None:
                 log(f"   gates12.json mpya imepakuliwa (last_played {fresh.get('last_played')})")
-            except Exception as e:
-                warn(f"gates12.json mpya imeharibika ({e}) - natumia nakala ya zamani.")
+            else:
+                st_ok, st = kaggle_run(['kernels', 'status', LAB_SLUG], timeout=120)
+                warn(f"{LAB_SLUG}: output ya toleo la mwisho HAINA gates12.json. Hali ya notebook: {st[-200:] or 'haijulikani'}. "
+                     f"Maana yake: toleo la mwisho la notebook halijaendeshwa kamili (Quick Save inaacha output tupu) "
+                     f"au G12 haikuendeshwa kwenye toleo hilo. Endesha workflow 'Refresh League Gates' kwa mkono.")
     gates = fresh
     if gates is None and os.path.exists(GATES_CACHE):
         try:
