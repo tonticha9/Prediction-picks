@@ -21,12 +21,19 @@
 #                  (2) data/release_state.json: release_id + run_id ya kila toleo lililochapishwa (kwa release_monitor);
 #                  (3) rollback: faili za artifact zinatolewa nje ya folda backup_prev/ (awali zisingepatikana);
 #                  (4) release_id inaonekana kwenye log na Summary.
+# v6 (Nov 25 2026): ulinzi wa retrain (baada ya wiki ya Nov 17 ambapo gate ilizuia kwa data ya zamani na run ikabaki
+#                  KIJANI bila mtu kujua):
+#                  (1) gate ikizuia, run inakuwa NYEKUNDU (retrain_and_publish.py v3) na /admin/ops inaonyesha sababu (outcome);
+#                  (2) ratiba ni Jumatatu hadi Alhamisi 18:00 UTC: Jumanne-Alhamisi ni majaribio ya KUJARIBU TENA, na
+#                      yanarukwa yenyewe ikiwa toleo lilichapishwa siku 5 zilizopita au gate ilizuia kwa sababu ya ubora (si data);
+#                      kwa hiyo data ikiwa ya zamani Jumatatu, retrain inajaribu tena kila siku hadi nightly ilete data mpya;
+#                  (3) kila run (isiyorukwa) inaandika data/retrain_attempt.json kwenye repo.
 
 name: Weekly Retrain Release
 
 on:
   schedule:
-    - cron: '0 18 * * 1'   # Jumatatu 18:00 UTC = 21:00 EAT
+    - cron: '0 18 * * 1-4'   # Jumatatu-Alhamisi 18:00 UTC (Jumatatu = retrain ya wiki; Jumanne-Alhamisi = kujaribu tena ikibidi)
   workflow_dispatch:
     inputs:
       mode:
@@ -61,15 +68,57 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # v6: ulinzi - run za ratiba za kujaribu tena zinarukwa kama hazihitajiki. Run ya mkono haikwepwi kamwe.
+      - name: Guard (kuruka run isiyohitajika)
+        id: guard
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          python - <<'PY'
+          import json, os, datetime
+          now = datetime.datetime.utcnow()
+          skip, why = False, ''
+
+          def load(p):
+              try:
+                  return json.load(open(p))
+              except Exception:
+                  return {}
+
+          def age_days(v):
+              try:
+                  return (now - datetime.datetime.fromisoformat(str(v)[:19])).total_seconds() / 86400
+              except Exception:
+                  return None
+
+          if os.environ.get('EVENT') == 'schedule':
+              pub_age = age_days(load('data/release_state.json').get('published_utc'))
+              att = load('data/retrain_attempt.json')
+              att_age = age_days(att.get('utc'))
+              if pub_age is not None and pub_age < 5:
+                  skip, why = True, f"toleo lilichapishwa siku {pub_age:.1f} zilizopita (< 5)"
+              elif att_age is not None and att_age < 5 and att.get('outcome') in ('blocked', 'markets_dropped'):
+                  skip, why = True, f"run ya siku {att_age:.1f} zilizopita ilizuiwa na gate ya ubora ({att.get('outcome')}); si data - sijaribu tena kabla ya wiki ijayo"
+          print(('RUKA: ' if skip else 'ENDELEA: ') + (why or 'run ya kawaida'))
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write('skip=' + ('true' if skip else 'false') + '\n')
+          sm = os.environ.get('GITHUB_STEP_SUMMARY')
+          if sm and skip:
+              open(sm, 'a').write('### Retrain imerukwa: ' + why + '\n')
+          PY
+
       - name: Set up Python
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Install Kaggle CLI
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         run: pip install kaggle pandas six
 
       - name: Configure Kaggle credentials
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         env:
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
           KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
@@ -79,7 +128,7 @@ jobs:
           chmod 600 ~/.kaggle/kaggle.json
 
       - name: Download saved release (rollback only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
+        if: ${{ steps.guard.outputs.skip != 'true' && github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
         uses: actions/download-artifact@v4
         with:
           name: prev-release
@@ -89,7 +138,7 @@ jobs:
 
       # v5: artifact inahifadhi faili ndani ya backup_prev/; script ya rollback inazitafuta moja kwa moja kwenye rollback_files/
       - name: Flatten rollback files (rollback only)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
+        if: ${{ steps.guard.outputs.skip != 'true' && github.event_name == 'workflow_dispatch' && inputs.mode == 'rollback' }}
         run: |
           if [ -d rollback_files/backup_prev ]; then
             cp -f rollback_files/backup_prev/* rollback_files/
@@ -98,6 +147,7 @@ jobs:
           ls -la rollback_files
 
       - name: Retrain / publish / rollback
+        if: ${{ steps.guard.outputs.skip != 'true' }}
         env:
           MODE: ${{ inputs.mode || 'retrain' }}
           PUBLISH: ${{ github.event_name == 'schedule' && 'yes' || inputs.publish }}
@@ -108,7 +158,7 @@ jobs:
       # v3 + v5: andika tukio la retrain na hali ya toleo (release_state.json) kwenye repo.
       # Hufanya kazi tu kama kitu kilichapishwa (folda publish_stage ipo).
       - name: Record retrain event + release state
-        if: success()
+        if: ${{ success() && steps.guard.outputs.skip != 'true' }}
         continue-on-error: true
         env:
           MODE: ${{ inputs.mode || 'retrain' }}
@@ -168,8 +218,39 @@ jobs:
             echo "::warning::Tukio la retrain halikusukumwa (haiathiri chochote)."
           fi
 
+      # v6: andika matokeo ya run hii (retrain_attempt.json) kwenye repo ili run za kujaribu tena ziamue; inafanya kazi hata run ikiwa nyekundu.
+      - name: Record retrain attempt (v6)
+        if: ${{ always() && steps.guard.outputs.skip != 'true' }}
+        continue-on-error: true
+        run: |
+          if [ ! -f data/retrain_attempt.json ]; then
+            echo "Hakuna retrain_attempt.json (run ilishindwa mapema sana)."
+            exit 0
+          fi
+          cat data/retrain_attempt.json; echo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/retrain_attempt.json
+          if git diff --staged --quiet; then
+            echo "Hakuna mabadiliko ya retrain_attempt.json."
+            exit 0
+          fi
+          git commit -m "Retrain attempt $(date -u +'%Y-%m-%d %H:%M')"
+          pushed=0
+          for i in 1 2 3 4 5; do
+            if git pull --rebase -X theirs origin main && git push; then
+              pushed=1
+              break
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep $((i*5))
+          done
+          if [ "$pushed" != "1" ]; then
+            echo "::warning::retrain_attempt.json haikusukumwa (haiathiri chochote)."
+          fi
+
       - name: Save previous release + gate report
-        if: always()
+        if: ${{ always() && steps.guard.outputs.skip != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: prev-release
@@ -181,7 +262,7 @@ jobs:
 
       # v5: ripoti hali kwa app (/admin/ops). Inafanya bango jekundu lijiponye lenyewe retrain ikifanikiwa.
       - name: Report to ops monitor
-        if: always()
+        if: ${{ always() && steps.guard.outputs.skip != 'true' }}
         continue-on-error: true
         env:
           APP_URL: ${{ secrets.APP_URL }}
@@ -192,7 +273,8 @@ jobs:
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           if [ -z "$APP_URL" ]; then exit 0; fi
+          OUTCOME=$(python -c "import json;print(json.load(open('data/retrain_attempt.json')).get('outcome',''))" 2>/dev/null || echo "")
           code=$(curl -s -m 25 -o /dev/null -w "%{http_code}" -X POST "$APP_URL/api/ops/report" \
             -H "X-Refresh-Secret: $REFRESH_SECRET" -H "Content-Type: application/json" \
-            -d "{\"source\":\"retrain_weekly\",\"status\":\"$JOB_STATUS\",\"detail\":\"mode=$MODE publish=$PUBLISH\",\"url\":\"$RUN_URL\"}")
+            -d "{\"source\":\"retrain_weekly\",\"status\":\"$JOB_STATUS\",\"detail\":\"mode=$MODE publish=$PUBLISH outcome=$OUTCOME\",\"url\":\"$RUN_URL\"}")
           echo "ops report: HTTP $code"
