@@ -1,6 +1,6 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Man United vs Brentford: dc_12 @1.28 + Marseille vs Nice: dc_12 @1.28,1.64,81.5
-3,2,Maritimo vs Nacional: dc_x2 @1.70 + Bournemouth vs Brighton: dc_1x @1.44,2.45,60.9
-5,4,Gaziantep vs Amedspor: dc_x2 @1.30 + Arsenal vs Man City: dc_12 @1.28 + Southampton vs Middlesbrough: dc_1x @1.67 + Bournemouth vs Brighton: dc_1x @1.44,4.0,43.4
-7,5,St Truiden vs Genk: dc_1x @1.40 + Burnley vs Birmingham: dc_1x @1.50 + Marseille vs Nice: dc_12 @1.28 + Venezia vs Bologna: dc_x2 @1.30 + Maritimo vs Nacional: dc_x2 @1.70,5.94,27.8
-10,6,Academica vs Alverca: dc_x2 @1.53 + Panetolikos vs Atromitos: dc_x2 @1.36 + Gaziantep vs Amedspor: dc_x2 @1.30 + Maritimo vs Nacional: dc_x2 @1.70 + Charlton vs Lincoln: dc_1x @1.50 + Alanyaspor vs Konyaspor: dc_12 @1.30,8.97,23.5
+2,2,Rizespor vs Kasimpasa: dc_12 @1.28 + Man United vs Brentford: dc_12 @1.28,1.64,84.8
+3,4,Man United vs Brentford: dc_12 @1.28 + Liverpool vs Sunderland: dc_1x @1.12 + Arsenal vs Man City: dc_12 @1.28 + Levante vs Racing Santander: dc_1x @1.36,2.5,68.2
+5,5,Levante vs Racing Santander: dc_1x @1.36 + Freiburg vs Rb Leipzig: dc_12 @1.28 + Getafe vs Valencia: dc_x2 @1.57 + Feyenoord vs Ajax: dc_12 @1.25 + Rb Leipzig vs Mainz: dc_1x @1.18,4.03,46.7
+7,6,Volos Nfc vs Asteras Tripolis: dc_x2 @1.50 + Panetolikos vs Atromitos: dc_x2 @1.36 + Maritimo vs Nacional: dc_x2 @1.70 + Valencia vs Osasuna: dc_1x @1.30 + Paok vs Volos Nfc: dc_1x @1.05 + Freiburg vs Rb Leipzig: dc_12 @1.28,6.06,30.8
+10,5,Venezia vs Sassuolo: dc_x2 @1.67 + St Johnstone vs St Mirren: dc_1x @1.36 + Volos Nfc vs Asteras Tripolis: dc_x2 @1.50 + Maritimo vs Nacional: dc_x2 @1.70 + Sparta Rotterdam vs Nijmegen: dc_1x @1.53,8.86,22.7

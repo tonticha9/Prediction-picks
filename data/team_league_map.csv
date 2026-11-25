@@ -10,26 +10,26 @@ Cordoba,SP1
 Balikesirspor,T1
 Erciyesspor,T1
 Cesena,I1
-Panthrakikos,G1
 Kallonis,G1
+Panthrakikos,G1
 Milton Keynes Dons,E1
-Ajaccio Gfco,F1
 Uniao Madeira,P1
+Ajaccio Gfco,F1
 Carpi,I1
 Mersin Idman Yurdu,T1
 Eskisehirspor,T1
 Veria,G1
-Sp Gijon,SP1
-Inverness C,SC0
-Nancy,F1
-Ingolstadt,D1
 Bastia,F1
+Inverness C,SC0
+Ingolstadt,D1
+Sp Gijon,SP1
+Nancy,F1
 Palermo,I1
 Pescara,I1
 Gaziantepspor,T1
 Adanaspor,T1
-Platanias,G1
 Kerkyra,G1
+Platanias,G1
 Burton,E1
 Roda,N1
 Karabukspor,T1
@@ -39,8 +39,8 @@ Graafschap,N1
 Feirense,P1
 Hannover,D1
 Nurnberg,D1
-Guingamp,F1
 Caen,F1
+Guingamp,F1
 Akhisar Belediyespor,T1
 Chievo,I1
 Bursaspor,T1
@@ -48,8 +48,8 @@ Amiens,F1
 Fortuna Dusseldorf,D1
 Panionios,G1
 Xanthi,G1
-Setubal,P1
 Aves,P1
+Setubal,P1
 Brescia,I1
 Spal,I1
 Mouscron,B1
@@ -58,44 +58,44 @@ Denizlispor,T1
 Hamilton,SC0
 Vvv Venlo,N1
 Eibar,SP1
-Huesca,SP1
 Crotone,I1
+Huesca,SP1
 Nimes,F1
 Benevento,I1
 Dijon,F1
 Peterboro,E1
 Barnsley,E1
-Belenenses,P1
-Greuther Furth,D1
 Bielefeld,D1
+Greuther Furth,D1
+Belenenses,P1
 Apollon,G1
+Altay,T1
 Yeni Malatyaspor,T1
 Bordeaux,F1
-Altay,T1
 Seraing,B1
 Oostende,B1
+Wigan,E1
 Blackpool,E1
 Reading,E1
-Wigan,E1
 Ionikos,G1
-Hertha,D1
 Pacos Ferreira,P1
+Hertha,D1
 Fc Emmen,N1
 Ajaccio,F1
 Spezia,I1
 Sampdoria,I1
 Umraniyespor,T1
 Giresunspor,T1
-Huddersfield,E1
 Rotherham,E1
-Eupen,B1
+Huddersfield,E1
 Giannina,G1
+Eupen,B1
 Rwd Molenbeek,B1
 Portimonense,P1
 Darmstadt,D1
 Chaves,P1
-Clermont,F1
 Vitesse,N1
+Clermont,F1
 Granada,SP1
 Almeria,SP1
 Salernitana,I1
@@ -103,59 +103,59 @@ Cadiz,SP1
 Ankaragucu,T1
 Pendikspor,T1
 Istanbulspor,T1
-Luton,E1
 Plymouth,E1
-Bochum,D1
+Luton,E1
 Reims,F1
 Boavista,P1
-Holstein Kiel,D1
+Bochum,D1
 Montpellier,F1
+Holstein Kiel,D1
 Farense,P1
+Almere City,N1
+Athens Kallithea,G1
 Lamia,G1
 Waalwijk,N1
 Ross County,SC0
-Almere City,N1
-Athens Kallithea,G1
-Las Palmas,SP1
 Leganes,SP1
 Valladolid,SP1
+Las Palmas,SP1
 Empoli,I1
+Ad. Demirspor,T1
 Hatayspor,T1
 Sivasspor,T1
-Ad. Demirspor,T1
 Vizela,P1
 Bodrum FK,T1
 Patro Eisden,B1
 RFC Liege,B1
-Leicester,E1
-Oxford Utd,E1
 Sheffield Weds,E1
-Nantes,F1
+Oxford Utd,E1
+Leicester,E1
 Arbroath,SC0
+Nantes,F1
 Beerschot Va,B1
 Rodez,F1
 Red Star,F1
 Dunfermline,SC0
 AVS,P1
 Tondela,P1
-Heidenheim,D1
 St. Pauli,D1
 Karagumruk,T1
-Nac Breda,N1
-Metz,F1
+Heidenheim,D1
 Volendam,N1
 Kayserispor,T1
 Heracles,N1
-Livingston,SC0
 Antalyaspor,T1
+Livingston,SC0
+Nac Breda,N1
+Metz,F1
 Wolfsburg,D1
-Larisa,G1
 Panserraikos,G1
+Larisa,G1
 Pisa,I1
-Girona,SP1
-Dender,B1
-Mallorca,SP1
 Oviedo,SP1
+Mallorca,SP1
+Dender,B1
+Girona,SP1
 Cremonese,I1
 Verona,I1
 Partick,SC0
@@ -166,216 +166,216 @@ Maritimo,P1
 Famalicao,P1
 Arouca,P1
 Casa Pia,P1
-Moreirense,P1
-Sp Lisbon,P1
 Alverca,P1
-Gil Vicente,P1
-Nacional,P1
-Guimaraes,P1
-Rio Ave,P1
+Sp Lisbon,P1
+Moreirense,P1
 Estrela,P1
 Santa Clara,P1
+Rio Ave,P1
+Guimaraes,P1
 Academica,P1
 Porto,P1
+Gil Vicente,P1
 Benfica,P1
 Sp Braga,P1
+Nacional,P1
+Cercle Brugge,B1
 Troyes,F1
 Bayern Munich,D1
-Ath Bilbao,SP1
-Cercle Brugge,B1
-Westerlo,B1
-Espanol,SP1
 Fc Koln,D1
 Le Havre,F1
-Aberdeen,SC0
-Rangers,SC0
-Dundee United,SC0
-Gaziantep,T1
-St Truiden,B1
-Freiburg,D1
-Stuttgart,D1
-West Brom,E1
-St Johnstone,SC0
-Lecce,I1
-Fulham,E0
-Qpr,E1
-Paris Sg,F1
-Betis,SP1
-Rb Leipzig,D1
-Birmingham,E1
-Paderborn,D1
-Excelsior,N1
-Hoffenheim,D1
-Dortmund,D1
-Hearts,SC0
-Antwerp,B1
-Leeds,E0
-RAAL La Louviere,B1
-St Mirren,SC0
-Torino,I1
-Club Brugge,B1
-Psv Eindhoven,N1
-Bristol City,E1
-Wrexham,E1
-Portsmouth,E1
-Fenerbahce,T1
-Arsenal,E0
-Toulouse,F1
-Heerenveen,N1
-Zwolle,N1
-Sunderland,E0
+Westerlo,B1
+Espanol,SP1
+Ath Bilbao,SP1
+Lyon,F1
+Auxerre,F1
 Aek,G1
-Cardiff,E1
-Ipswich,E0
-Rizespor,T1
-Nott'M Forest,E0
-Valencia,SP1
-Cagliari,I1
-Samsunspor,T1
-Charlton,E1
-Watford,E1
+Sunderland,E0
+Zwolle,N1
+Heerenveen,N1
+Toulouse,F1
+Arsenal,E0
+Fenerbahce,T1
+Brest,F1
 Cambuur,N1
+Torino,I1
+Ipswich,E0
+Leeds,E0
+La Coruna,SP1
+Watford,E1
+Celta,SP1
+Psv Eindhoven,N1
+Club Brugge,B1
+Nott'M Forest,E0
+Schalke 04,D1
 Kilmarnock,SC0
-Vallecano,SP1
-Bournemouth,E0
-Amedspor,T1
-Tottenham,E0
-Norwich,E1
-Kalamata,G1
-Aston Villa,E0
-Telstar,N1
-Como,I1
-Groningen,N1
-Newcastle,E0
-Kocaelispor,T1
-Bolton,E1
-Lincoln,E1
-Middlesbrough,E1
-Nijmegen,N1
-Mechelen,B1
-Napoli,I1
 Motherwell,SC0
-Lens,F1
-Wolves,E1
-Celtic,SC0
-Galatasaray,T1
-Dundee,SC0
 M'Gladbach,D1
 Ein Frankfurt,D1
-Feyenoord,N1
+Amedspor,T1
 Leverkusen,D1
-Stoke,E1
 Union Berlin,D1
 Sevilla,SP1
 Nice,F1
 Millwall,E1
 Man City,E0
 Lazio,I1
+Feyenoord,N1
 Falkirk,SC0
-Swansea,E1
-Schalke 04,D1
+Stoke,E1
 Elversberg,D1
-Charleroi,B1
-Genclerbirligi,T1
-Hibernian,SC0
-Waregem,B1
-Genk,B1
-Chelsea,E0
-La Coruna,SP1
-West Ham,E1
-Alaves,SP1
-Derby,E1
-Auxerre,F1
-Brest,F1
-Lyon,F1
-Crystal Palace,E0
-Roma,I1
-Celta,SP1
-Sheffield United,E1
-Preston,E1
+Vallecano,SP1
+Como,I1
+Celtic,SC0
+Parma,I1
+Bournemouth,E0
+Lille,F1
+Kalamata,G1
+Aston Villa,E0
+Telstar,N1
+Groningen,N1
+Lens,F1
+Newcastle,E0
+Kocaelispor,T1
+Bolton,E1
+Nijmegen,N1
 Utrecht,N1
-Southampton,E1
+Mechelen,B1
+Napoli,I1
+Tottenham,E0
+Chelsea,E0
+Alaves,SP1
+Real Madrid,SP1
 Monaco,F1
 Strasbourg,F1
-Lille,F1
 Coventry,E0
-Parma,I1
-Real Madrid,SP1
-Volos Nfc,G1
-Venezia,I1
-Man United,E0
-Inter,I1
-Ofi Crete,G1
-Frosinone,I1
-Oud-Heverlee Leuven,B1
-Le Mans,F1
-Genoa,I1
-Angers,F1
-Brighton,E0
-Ath Madrid,SP1
-Eyupspor,T1
-Goztep,T1
-Besiktas,T1
-Udinese,I1
-Blackburn,E1
-Alanyaspor,T1
-Villarreal,SP1
-Az Alkmaar,N1
+Roma,I1
+Genk,B1
+St Mirren,SC0
+Cagliari,I1
+Hearts,SC0
+West Brom,E1
+Valencia,SP1
+Freiburg,D1
+Birmingham,E1
+St Johnstone,SC0
+Excelsior,N1
+Lecce,I1
+Fulham,E0
+Paris Sg,F1
+Betis,SP1
+Rb Leipzig,D1
+Paderborn,D1
+Rizespor,T1
+Hoffenheim,D1
+Dortmund,D1
+Stuttgart,D1
+RAAL La Louviere,B1
+Waregem,B1
+Antwerp,B1
+Gaziantep,T1
+Genclerbirligi,T1
+Charleroi,B1
+Galatasaray,T1
+Dundee United,SC0
+Crystal Palace,E0
+St Truiden,B1
+Samsunspor,T1
 Atromitos,G1
-Den Haag,N1
+Alanyaspor,T1
+Ath Madrid,SP1
+Volos Nfc,G1
+Az Alkmaar,N1
 Sociedad,SP1
-Gent,B1
-Hamburg,D1
-Mainz,D1
-Willem Ii,N1
-Standard,B1
+Udinese,I1
+St. Gilloise,B1
+For Sittard,N1
 Rennes,F1
-Malaga,SP1
-Iraklis,G1
+Gent,B1
 Kifisia,G1
+Iraklis,G1
+Blackburn,E1
+Besiktas,T1
+Villarreal,SP1
+Den Haag,N1
+Goztep,T1
+Hamburg,D1
+Inter,I1
+Sassuolo,I1
+Werder Bremen,D1
 Osasuna,SP1
+Getafe,SP1
+Panetolikos,G1
+Sparta Rotterdam,N1
+Racing Santander,SP1
+Bologna,I1
+Kortrijk,B1
+Go Ahead Eagles,N1
+Lorient,F1
+Erzurum Bb,T1
+Paok,G1
+Olympiakos,G1
+Burnley,E1
+Konyaspor,T1
+Barcelona,SP1
+Levadeiakos,G1
+Ajax,N1
+Waasland-Beveren,B1
+Kasimpasa,T1
+Atalanta,I1
+Anderlecht,B1
+Milan,I1
+Paris FC,F1
+Oud-Heverlee Leuven,B1
+Frosinone,I1
+Angers,F1
+Man United,E0
+Ofi Crete,G1
+Le Mans,F1
+Brighton,E0
+Eyupspor,T1
+Standard,B1
+Willem Ii,N1
+Genoa,I1
+Mainz,D1
+Malaga,SP1
+Juventus,I1
 Augsburg,D1
 Twente,N1
 Lommel SK,B1
 Trabzonspor,T1
-Getafe,SP1
 Hull,E0
-Werder Bremen,D1
 Marseille,F1
-Liverpool,E0
-Atalanta,I1
-Paris FC,F1
-Milan,I1
-Anderlecht,B1
 Panathinaikos,G1
-Sassuolo,I1
-Juventus,I1
-Waasland-Beveren,B1
-Racing Santander,SP1
-Ajax,N1
-For Sittard,N1
-Paok,G1
-Kortrijk,B1
-Olympiakos,G1
-Go Ahead Eagles,N1
-Lorient,F1
-St. Gilloise,B1
-Panetolikos,G1
-Konyaspor,T1
-Bologna,I1
-Burnley,E1
-Kasimpasa,T1
-Barcelona,SP1
-Sparta Rotterdam,N1
-Levadeiakos,G1
-Erzurum Bb,T1
-Fiorentina,I1
-Corum,T1
+Liverpool,E0
+Venezia,I1
 Everton,E0
+Aris,G1
+Elche,SP1
+Fiorentina,I1
 Levante,SP1
+Buyuksehyr,T1
 Asteras Tripolis,G1
 Monza,I1
 Brentford,E0
-Buyuksehyr,T1
-Aris,G1
-Elche,SP1
+Corum,T1
+Southampton,E1
+Wrexham,E1
+Derby,E1
+Dundee,SC0
+Lincoln,E1
+Preston,E1
+Swansea,E1
+West Ham,E1
+Rangers,SC0
+Norwich,E1
+Middlesbrough,E1
+Cardiff,E1
+Charlton,E1
+Portsmouth,E1
+Hibernian,SC0
+Wolves,E1
+Bristol City,E1
+Sheffield United,E1
+Qpr,E1
+Aberdeen,SC0
