@@ -11,6 +11,10 @@ Usalama (fail-safe): ikiwa kuna shaka yoyote, HAICHAPISHI - production inabaki i
 v1 (Oct 27 2026)
 v2 (Oct 27 2026): gate inasomwa kama JSON ("pass": true/false, "fails": [...]).
                   Muundo usiojulikana = kosa jekundu (exit 1), si kimya.
+v3 (Nov 25 2026): (1) gate ikizuia, run sasa inakuwa NYEKUNDU (awali ilikuwa kijani kimya, na kwa siku 9 hakuna aliyejua kuwa
+                  toleo halikuchapishwa); (2) kila run inaandika data/retrain_attempt.json (outcome: published, dry_run_ok,
+                  stale, blocked, markets_dropped, error, ...); (3) gate ikizuia kwa sababu ya data ya zamani tu ('stale')
+                  workflow inajaribu tena siku zinazofuata (Jumanne-Alhamisi) hadi data iwe mpya.
 """
 import os
 import sys
@@ -47,6 +51,43 @@ def write_summary(text):
             f.write(text + "\n")
     except Exception:
         pass
+
+
+ATTEMPT_PATH = os.path.join('data', 'retrain_attempt.json')
+_ATTEMPT = {'written': False}
+
+
+def write_attempt(outcome, detail=''):
+    """Andika matokeo ya run hii (workflow inayasoma kuamua kujaribu tena). Haivunji kitu ikishindwa."""
+    try:
+        os.makedirs('data', exist_ok=True)
+        with open(ATTEMPT_PATH, 'w') as f:
+            json.dump({'utc': datetime.datetime.utcnow().isoformat(timespec='seconds'), 'mode': MODE,
+                       'publish': PUBLISH, 'outcome': outcome, 'detail': str(detail)[:300]}, f)
+        _ATTEMPT['written'] = True
+    except Exception as e:
+        print(f"::warning::siwezi kuandika {ATTEMPT_PATH}: {e}")
+
+
+def finish(outcome, msg, code):
+    """Malizia run: andika outcome + muhtasari; code != 0 = run nyekundu."""
+    write_attempt(outcome, msg)
+    write_summary(f"### Retrain: {msg}")
+    if code:
+        print(f"::error::Retrain: {msg}")
+    sys.exit(code)
+
+
+def gate_fail_kind(gate_text):
+    """'stale' ikiwa sababu ZOTE za gate kushindwa ni data ya zamani (itajirekebisha nightly ikisasisha data); vinginevyo 'blocked'."""
+    try:
+        g = json.loads(gate_text)
+    except Exception:
+        return 'blocked'
+    fails = g.get('fails') if isinstance(g, dict) else None
+    if fails and all('zamani' in str(x).lower() for x in fails):
+        return 'stale'
+    return 'blocked'
 
 
 def run_kaggle_cmd(args, allow_fail=False):
@@ -249,8 +290,7 @@ def do_retrain():
     gate_path = find_file(OUT_DIR, 'release_gate.json')
     if not gate_path:
         print("❌ release_gate.json haipo kwenye output. Sichapishi chochote.")
-        write_summary("### Retrain: release_gate.json haipo - HAKUNA kilichochapishwa")
-        sys.exit(1)
+        finish('missing_gate', "release_gate.json haipo - HAKUNA kilichochapishwa", 1)
     with open(gate_path, 'r', errors='replace') as f:
         gate_text = f.read()
     print("\n===== release_gate.json (sehemu ya mwanzo) =====")
@@ -260,23 +300,24 @@ def do_retrain():
     ready, why, unknown = gate_is_ready(gate_text)
     print(("✅ " if ready else "🛑 ") + why)
     if unknown:
-        write_summary(f"### Retrain: {why} - HAKUNA kilichochapishwa (angalia script)")
-        sys.exit(1)
+        finish('gate_unknown', f"{why} - HAKUNA kilichochapishwa (angalia script)", 1)
     if not ready:
-        write_summary(f"### Retrain: gate imezuia - production inabaki ilivyo ({why})")
-        sys.exit(0)
+        kind = gate_fail_kind(gate_text)
+        if kind == 'stale':
+            print("ℹ️ Gate imezuia kwa sababu ya DATA YA ZAMANI tu. Nightly ikisasisha features_full.parquet "
+                  "(usi-Quick Save notebook ya nightly), retrain itajaribu tena yenyewe siku zinazofuata.")
+            finish('stale', f"gate imezuia kwa data ya zamani - production inabaki ilivyo; itajaribu tena kesho ({why})", 1)
+        finish('blocked', f"gate imezuia - production inabaki ilivyo ({why})", 1)
 
     man_path = find_file(OUT_DIR, 'MANIFEST.json')
     if not man_path:
         print("❌ MANIFEST.json haipo kwenye output. Sichapishi chochote.")
-        write_summary("### Retrain: MANIFEST.json haipo - HAKUNA kilichochapishwa")
-        sys.exit(1)
+        finish('missing_manifest', "MANIFEST.json haipo - HAKUNA kilichochapishwa", 1)
     release_dir = os.path.dirname(man_path)
     ok, why2, man = check_release_dir(release_dir)
     print(("✅ " if ok else "❌ ") + "Ukaguzi wa release: " + why2)
     if not ok:
-        write_summary(f"### Retrain: ukaguzi wa release umeshindwa ({why2}) - HAKUNA kilichochapishwa")
-        sys.exit(1)
+        finish('release_check_failed', f"ukaguzi wa release umeshindwa ({why2}) - HAKUNA kilichochapishwa", 1)
 
     backed = backup_current_release()
     prev_man = None
@@ -288,29 +329,34 @@ def do_retrain():
     if prev_man and isinstance(prev_man.get('n_markets'), int) and man['n_markets'] < prev_man['n_markets']:
         msg = f"masoko yamepungua ({prev_man['n_markets']} -> {man['n_markets']})"
         print(f"🛑 {msg}. Sichapishi.")
-        write_summary(f"### Retrain: {msg} - HAKUNA kilichochapishwa")
-        sys.exit(0)
+        finish('markets_dropped', f"{msg} - HAKUNA kilichochapishwa", 1)
 
     if not PUBLISH:
         print("🧪 JARIBIO KAVU (publish=no): kila kitu kiko sawa, ila HAKUNA kilichochapishwa.")
-        write_summary(f"### Retrain: jaribio kavu limefaulu ({why2}); haikuchapishwa kwa kuwa publish=no")
-        return
+        finish('dry_run_ok', f"jaribio kavu limefaulu ({why2}); haikuchapishwa kwa kuwa publish=no", 0)
 
     stamp = datetime.datetime.utcnow().strftime('%Y-%m-%d')
     notes = f"Auto retrain {stamp}: {why2}"
     good = publish_dir(release_dir, notes)
-    write_summary(f"### Retrain: toleo jipya limechapishwa ({why2}) | backup: {'ndiyo' if backed else 'hapana'} | uthibitisho: {'sawa' if good else 'angalia'}")
+    detail = f"toleo jipya limechapishwa ({why2}) | backup: {'ndiyo' if backed else 'hapana'} | uthibitisho: {'sawa' if good else 'angalia'}"
     if not good:
-        sys.exit(1)
+        finish('publish_unverified', detail, 1)
     print("✅ Imekamilika. Nightly ijayo itatumia toleo jipya.")
+    finish('published', detail, 0)
 
 
 def main():
     print(f"MODE={MODE} | PUBLISH={PUBLISH} | notebook={RETRAIN_SLUG} | dataset={DATASET_SLUG}")
-    if MODE == 'rollback':
-        do_rollback()
-    else:
-        do_retrain()
+    try:
+        if MODE == 'rollback':
+            do_rollback()
+            write_attempt('rollback_done', 'rollback imekamilika')
+        else:
+            do_retrain()
+    except SystemExit as e:
+        if not _ATTEMPT['written']:
+            write_attempt('error', f"imeishia kabla ya hitimisho (exit {e.code})")
+        raise
 
 
 if __name__ == '__main__':
