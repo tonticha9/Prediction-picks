@@ -1,14 +1,11 @@
 {
- "release_id": "2026-11-22_202611240417",
- "published_utc": "2026-11-24T04:19:13",
- "run_id": "45322515047",
+ "release_id": "2026-11-24_202611252115",
+ "published_utc": "2026-11-25T21:16:35",
+ "run_id": "45699033689",
  "rolled_back": false,
  "n_markets": 64,
- "data_end": "2026-11-22",
- "tier_demoted": [
-  "cards_range_6_8",
-  "cards_range_9_20"
- ],
+ "data_end": "2026-11-24",
+ "tier_demoted": [],
  "history": [
   {
    "release_id": "2026-11-07_202611080636",
@@ -32,6 +29,12 @@
    "release_id": "2026-11-22_202611231835",
    "published_utc": "2026-11-23T18:36:47",
    "run_id": "45234803568",
+   "rolled_back": false
+  },
+  {
+   "release_id": "2026-11-22_202611240417",
+   "published_utc": "2026-11-24T04:19:13",
+   "run_id": "45322515047",
    "rolled_back": false
   }
  ]
