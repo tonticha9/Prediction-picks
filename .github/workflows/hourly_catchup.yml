@@ -6,6 +6,7 @@
 # v7: kila dakika 30, diagnostic steps zimeondolewa, sync ya saa za mechi.
 # v8 (Nov 1 2026): 'six' imeongezwa kwenye pip install (kaggle CLI ilishindwa bila hiyo).
 # v9 (Nov 24 2026): hatua mpya ya kusettle picks za ligi 5 mpya (settle_new5.py); saa za mechi za ligi 5.
+# v10 (Nov 25 2026): hatua mpya ya kuandika picks za ligi 5 kwenye database (ingest_new5.py) KABLA ya settle, ili History ziione.
 
 name: Hourly Catchup
 
@@ -65,6 +66,13 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: python .github/scripts/sync_match_results.py
+
+      - name: Rekodi picks za ligi 5 mpya kwenye database (History)
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: python .github/scripts/ingest_new5.py
 
       - name: Settle ligi 5 mpya (NOR, MEX, BRA, E2, EC)
         if: ${{ !cancelled() }}
