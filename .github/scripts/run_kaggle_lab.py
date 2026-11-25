@@ -1,5 +1,5 @@
 """
-.github/scripts/run_kaggle_lab.py  -  v2 (Nov 24 2026)
+.github/scripts/run_kaggle_lab.py  -  v3 (Nov 25 2026)
 
 Inaendesha notebook ya Kaggle (KAGGLE_SLUG, mfano tonticha/add-league-lab-2) upya kwa ratiba, ili
 historia na vizingiti (gates) vya ligi 5 mpya + ligi 12 vijisasishe vyenyewe kila wiki.
@@ -10,6 +10,13 @@ v2 (baada ya run ya Nov 23 iliyokaa QUEUED dakika 76 bila kuanza):
     na kuwasha Internet ikiwa imezimwa (notebook inahitaji API);
   - ikikaa QUEUED zaidi ya QUEUE_MAX_MIN (chaguo-msingi dakika 25) inasimama mapema na kueleza nini cha kufanya;
   - ikikamilika, inakagua kuwa output ina gates12.json (vinginevyo run inakuwa nyekundu).
+
+v3 (Nov 25 2026): nightly na retrain zinatumia funguo zilezile za Kaggle na zinakubali, kwa hiyo tofauti iko kwenye
+mipangilio ya notebook hii yenyewe. Sasa script:
+  - INAONYESHA metadata nzima ya notebook kwenye log (hakuna siri ndani yake), ili tuone tofauti halisi na nightly;
+  - inazima GPU/TPU na kuondoa 'machine_shape'/'accelerator' ya GPU/TPU (kama zipo), na kuwasha Internet;
+  - inaonyesha 'kernel_sources' (notebook nyingine zinazotumika kama input) kama chanzo cha tahadhari;
+  - ikikaa QUEUED zaidi ya QUEUE_MAX_MIN (chaguo-msingi dakika 15) inaonyesha hali ghafi na kusimama mapema.
 """
 import glob
 import json
@@ -20,7 +27,7 @@ import time
 
 SLUG = os.environ.get('KAGGLE_SLUG', 'tonticha/add-league-lab-2')
 MAX_WAIT_MIN = int(os.environ.get('MAX_WAIT_MINUTES', '75'))
-QUEUE_MAX_MIN = int(os.environ.get('QUEUE_MAX_MIN', '25'))
+QUEUE_MAX_MIN = int(os.environ.get('QUEUE_MAX_MIN', '15'))
 POLL_SEC = int(os.environ.get('POLL_SEC', '120'))
 ATTEMPTS = 2
 META = os.path.join('kaggle_lab_kernel', 'kernel-metadata.json')
@@ -32,23 +39,37 @@ def kaggle(args):
 
 
 def fix_metadata():
-    """Soma mipangilio ya notebook; zima GPU/TPU na washa Internet ikiwa imezimwa. Haivunji kitu ikishindwa."""
+    """Soma metadata ya notebook, ionyeshe yote, zima GPU/TPU/accelerator na washa Internet. Haivunji kitu ikishindwa."""
     try:
         with open(META, encoding='utf-8') as f:
             meta = json.load(f)
     except Exception as e:
         print(f"   siwezi kusoma {META}: {type(e).__name__}: {e} (naendelea bila kubadilisha mipangilio)")
         return
+    print("   ===== metadata ya notebook (kabla ya mabadiliko) =====")
+    print("   " + json.dumps(meta, indent=2, ensure_ascii=False).replace("\n", "\n   "))
+    print("   ======================================================")
+
     def on(v):
         return str(v).strip().lower() in ('true', '1', 'yes')
+
     print(f"   mipangilio: gpu={meta.get('enable_gpu')} tpu={meta.get('enable_tpu')} internet={meta.get('enable_internet')} "
           f"datasets={len(meta.get('dataset_sources') or [])} kernels={len(meta.get('kernel_sources') or [])}")
+    if meta.get('kernel_sources'):
+        print(f"   ::notice::notebook hii inatumia notebook nyingine kama input: {meta.get('kernel_sources')} "
+              f"(nightly haina hili; ni mgombea wa tofauti).")
     changed = False
     for key in ('enable_gpu', 'enable_tpu'):
         if key in meta and on(meta[key]):
             meta[key] = 'false'
             changed = True
-            print(f"   ::warning::{key} ilikuwa IMEWASHWA kwenye notebook; nimeizima kwa run hii (foleni ya GPU/TPU inaweza kukaa milele).")
+            print(f"   ::warning::{key} ilikuwa IMEWASHWA kwenye notebook; nimeizima kwa run hii.")
+    for key in ('machine_shape', 'accelerator'):
+        val = str(meta.get(key) or '').strip()
+        if val and not any(x in val.lower() for x in ('none', 'cpu')):
+            del meta[key]
+            changed = True
+            print(f"   ::warning::{key}='{val}' nimeiondoa kwa run hii (inaomba GPU/TPU; foleni yake inaweza kukaa milele).")
     if 'enable_internet' in meta and not on(meta['enable_internet']):
         meta['enable_internet'] = 'true'
         changed = True
@@ -103,6 +124,8 @@ def run_once():
         if 'queued' in low:
             queued_since = queued_since or time.time()
             if time.time() - queued_since > QUEUE_MAX_MIN * 60:
+                rc2, raw = kaggle(['kernels', 'status', SLUG])
+                print(f"   hali ghafi ya Kaggle: rc={rc2} {raw.strip()}")
                 return 'queued'
         else:
             queued_since = None
