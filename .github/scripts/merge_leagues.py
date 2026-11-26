@@ -1,5 +1,16 @@
 """
-.github/scripts/merge_leagues.py  -  v3 (Nov 26 2026)
+.github/scripts/merge_leagues.py  -  v5 (Nov 27 2026)
+
+v5 (HATUA F2): SHERIA YA USHAHIDI kwa masoko yenye base rate ya juu (over 0.5, base >= 90%): soko linaonyeshwa tu kama picks zake zinashinda
+    angalau pointi 1 (THIN_LIFT) juu ya base rate ya ligi hiyo kwenye gates. Faida ya chini ya hapo ni 'kelele' (mf. E2 over 0.5: 93.1% dhidi ya 92.5%).
+    Ligi 12: soko linaondolewa kwenye 'allowed' (kama gates nyingine). Ligi 5: inahesabiwa kwenye attach_rates5 (ufunguo 'thin' ndani ya 'rates5')
+    na picks za (ligi, soko) hilo haziongezwi. Inajisasisha yenyewe kila gates zinaposasishwa (kila Jumapili); hakuna kinachoendeshwa Kaggle.
+    Ligi isibaki bila soko lolote (ulinzi). Kwa namba za sasa ni E2 over 0.5 pekee inayoondoka; ligi 12 zote zinabaki.
+
+v4 (HATUA F1): inahifadhi pia base rate ya kila ligi x soko ya ligi 5 mpya (new_leagues_gates.json kutoka output ya lab) ndani ya
+    data/league_gates12.json chini ya ufunguo 'rates5' (faili hilo tayari linawekwa kwenye GitHub na nightly, hakuna faili jipya).
+    App (league_base_rates.py) inasoma 'rate' ya ligi 12 na 'rates5' ya ligi 5. Ikikosekana kwenye output ya leo, ya jana inabaki.
+
 
 v3: KOSA LA KUHESABU LIMEREKEBISHWA: log ya nightly ilionyesha "safu -21340 zimeondolewa" (idadi hasi) kwa sababu pandas 2.x ilibadilisha 'keep' kuwa object.
     Matokeo: ulinzi wa MAX_REMOVE_FRAC haukuweza kufanya kazi na idadi za log zilikuwa si sahihi. Sasa 'keep' ni numpy bool; idadi ni sahihi.
@@ -45,6 +56,9 @@ MAP_CACHE = os.path.join(DATA, 'team_league_map.csv')
 GATES_ENABLED = os.environ.get('GATES12_ENABLED', '1') != '0'
 MAX_REMOVE_FRAC = 0.70      # ulinzi: gates zisiondoe zaidi ya 70% ya safu za masoko yanayofunikwa
 PRED_COLS = ['HomeTeam', 'AwayTeam', 'match_date', 'market', 'probability_%', 'pro_tier', 'real_odds']
+THIN_BASE = 0.90          # sheria ya ushahidi inatumika kwa masoko yenye base rate >= hii (over 0.5)
+THIN_LIFT = 0.010         # faida ya chini inayohitajika dhidi ya base rate (pointi 1)
+THIN5 = set()             # {(ligi, soko)} ya ligi 5 yenye faida nyembamba (inajazwa na load_gates)
 GATE_NAMES = ['home_win', 'away_win', 'dc_1x', 'dc_x2', 'dc_12', 'btts', 'btts_no', 'goals_over_05', 'goals_over_15',
               'goals_over_25', 'goals_over_35', 'goals_under_25', 'goals_under_35']
 
@@ -107,8 +121,65 @@ def find_fresh_gates(folder):
     return None
 
 
+def _thin(rec):
+    """Kweli ikiwa soko lina base rate ya juu na picks zake hazizidi base rate kwa THIN_LIFT (faida nyembamba)."""
+    try:
+        pn = rec.get('pick_n') or 0
+        pw, br = rec.get('pick_win'), rec.get('base_rate')
+        return pn >= 1 and pw is not None and br is not None and br >= THIN_BASE and (pw - br) < THIN_LIFT
+    except Exception:
+        return False
+
+
+def _thin5_list(o):
+    """Kutoka new_leagues_gates.json: ['LIGI:soko'] ambayo hali zake zote za 'P' (zenye odds / bila odds) zina faida nyembamba."""
+    out = []
+    prod = o.get('prod_names') or {}
+    gn = o.get('gates_n') or {}
+    for lg, sides in (o.get('gates') or {}).items():
+        for sd, rw in (sides or {}).items():
+            rn = (gn.get(lg) or {}).get(sd) or {}
+            regs = [r for r in (rw, rn) if isinstance(r, dict) and r.get('verdict') == 'P']
+            mk = prod.get(sd)
+            if mk and regs and all(_thin(r) for r in regs):
+                out.append(f"{lg}:{mk}")
+    return sorted(out)
+
+
+def attach_rates5(gates, folder):
+    """Weka base rate ya ligi 5 mpya kwenye gates['rates5'] (kutoka new_leagues_gates.json). Isipopatikana, ya awali inabaki."""
+    found = None
+    try:
+        for f in sorted(glob.glob(os.path.join(folder, '**', 'new_leagues_gates.json'), recursive=True)):
+            with open(f, encoding='utf-8') as fh:
+                o = json.load(fh)
+            if isinstance(o, dict) and isinstance(o.get('rate'), dict) and o['rate'] and isinstance(o.get('prod_names'), dict):
+                found = {'rate': o['rate'], 'prod_names': o['prod_names'], 'last_played': o.get('last_played'),
+                         'thin': _thin5_list(o)}
+                break
+    except Exception as e:
+        warn(f"new_leagues_gates.json haisomeki ({type(e).__name__}: {e}) - rates za ligi 5 hazikusasishwa.")
+    if found is not None:
+        gates['rates5'] = found
+        log(f"   rates za ligi 5 mpya zimehifadhiwa: ligi {sorted(found['rate'])} (last_played {found.get('last_played')}) | faida nyembamba: {found['thin'] or 'hakuna'}")
+        return True
+    try:
+        if os.path.exists(GATES_CACHE):
+            with open(GATES_CACHE, encoding='utf-8') as fh:
+                old = json.load(fh)
+            if isinstance(old.get('rates5'), dict):
+                gates['rates5'] = old['rates5']
+                log("   new_leagues_gates.json haikupatikana leo - rates za ligi 5 za awali zimebaki.")
+                return False
+    except Exception as e:
+        log(f"   siwezi kusoma rates za awali za ligi 5: {e}")
+    log("   rates za ligi 5 hazipo (app itatumia base rate ya jumla kwa ligi 5).")
+    return False
+
+
 def load_gates():
     """Rudisha (allowed: {liga: set(masoko)}, info). None ikiwa hakuna gates zinazoaminika."""
+    global THIN5
     fresh = None
     if os.environ.get('SKIP_KAGGLE_FETCH') != '1':
         shutil.rmtree('lab_output', ignore_errors=True)
@@ -144,11 +215,30 @@ def load_gates():
         warn(f"muundo wa gates12.json si sahihi ({type(e).__name__}: {e}) - vizingiti vimerukwa.")
         return None
     if fresh is not None:
+        attach_rates5(gates, 'lab_output')
         try:
             with open(GATES_CACHE, 'w', encoding='utf-8') as f:
                 json.dump(gates, f)
         except Exception as e:
             log(f"   siwezi kuhifadhi nakala ya gates: {e}")
+    # sheria ya ushahidi (v5): ligi 12 - ondoa masoko yenye faida nyembamba (ligi isibaki tupu)
+    try:
+        thin12 = []
+        for lg, sides in (gates.get('gates') or {}).items():
+            if lg not in allowed:
+                continue
+            for sd, rec in (sides or {}).items():
+                mk = prod.get(sd)
+                if mk in allowed[lg] and isinstance(rec, dict) and rec.get('show') and _thin(rec) and len(allowed[lg]) > 1:
+                    allowed[lg].discard(mk)
+                    thin12.append(f"{lg}:{mk}")
+        log(f"   sheria ya ushahidi (ligi 12): masoko yaliyoondolewa kwa faida nyembamba: {sorted(thin12) or 'hakuna'}")
+    except Exception as e:
+        log(f"   sheria ya ushahidi (ligi 12) imerukwa: {type(e).__name__}: {e}")
+    try:
+        THIN5 = {tuple(x.split(':', 1)) for x in ((gates.get('rates5') or {}).get('thin') or [])}
+    except Exception:
+        THIN5 = set()
     return allowed
 
 
@@ -275,6 +365,11 @@ def main():
         have = set(zip(pred['HomeTeam'].map(norm), pred['AwayTeam'].map(norm), pred['match_date'].astype(str).str[:10]))
         dup = [(norm(h), norm(a), str(d)[:10]) in have for h, a, d in zip(x['HomeTeam'], x['AwayTeam'], x['match_date'])]
         x = x[[not d for d in dup]]
+        if THIN5:
+            thin_m = [(lg_, m_) in THIN5 for lg_, m_ in zip(x['league'], x['market'])]
+            if any(thin_m):
+                log(f"   sheria ya ushahidi (ligi 5): picks {sum(thin_m)} zimeondolewa kwa faida nyembamba ({sorted(THIN5)})")
+                x = x[[not t for t in thin_m]]
         n_added = len(x)
         pred = pd.concat([pred[PRED_COLS + ['league']], x], ignore_index=True)
         log(f"   ligi 5: safu {n_added} zimeongezwa ({x[['HomeTeam', 'AwayTeam', 'match_date']].drop_duplicates().shape[0]} mechi): "
@@ -296,36 +391,4 @@ def main():
     # 5. combos.csv: ondoa combos zenye mguu uliofichwa
     cb = read_csv_safe(os.path.join(DATA, 'combos.csv'))
     if cb is not None and len(cb) and 'legs' in cb.columns and allowed is not None:
-        hidden = set()
-        visible = set()
-        for h, a, m in zip(pred['HomeTeam'], pred['AwayTeam'], pred['market']):
-            visible.add((norm(h), norm(a), m))
-        keep_rows = []
-        for legs in cb['legs']:
-            ok = True
-            for leg in str(legs).split(' + '):
-                mm = re.match(r'^(.*?) vs (.*?): (\S+) @', leg.strip())
-                if not mm:
-                    continue
-                h, a, m = norm(mm.group(1)), norm(mm.group(2)), mm.group(3)
-                lg = league_of(h, a, mp)
-                if lg in allowed and m in GATE_NAMES and m not in allowed[lg]:
-                    ok = False
-                    break
-            keep_rows.append(ok)
-        kept = cb[keep_rows]
-        if len(kept) == 0:
-            warn("combos: zote zingeondolewa na gates - nimeziacha kama zilivyo (fail-open).")
-        else:
-            kept.to_csv(os.path.join(DATA, 'combos.csv'), index=False)
-            log(f"   combos.csv: combos {len(cb) - len(kept)} zimeondolewa, {len(kept)} zimebaki")
-    log("merge_leagues: imekamilika.")
-    return 0
-
-
-if __name__ == '__main__':
-    try:
-        sys.exit(main())
-    except Exception as e:   # kamwe isivunje nightly
-        warn(f"merge_leagues imeshindwa ({type(e).__name__}: {e}) - data ya awali imebaki.")
-        sys.exit(0)
+        hidden = set(
