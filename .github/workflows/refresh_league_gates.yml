@@ -6,6 +6,7 @@
 #   - vizingiti (gates) vya ligi 5 (new_leagues_gates.json) na vya ligi 12 (gates12.json) vinahesabiwa upya.
 # Nightly ya usiku huo (22:00 UTC) inachukua matokeo mapya yenyewe (L5 ndani ya Kaggle + merge_leagues.py kwenye GitHub).
 # Hakuna cha kufanya kwa mkono. Ikishindwa mara mbili, run inakuwa nyekundu na bango linaonekana /admin/ops.
+# v3 (Nov 25 2026): funguo ya AllSportsAPI inachukuliwa na notebook kutoka ADMIN (dataset admin-link), kama nightly; hakuna secret ya ziada.
 name: Refresh League Gates
 
 on:
