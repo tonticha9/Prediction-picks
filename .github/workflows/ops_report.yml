@@ -1,5 +1,8 @@
 # Inaripoti hali ya kila workflow kwa Admin ya app (inafeli au inafanikiwa).
 # Majina kwenye 'workflows:' lazima yafanane na 'name:' ya kila workflow yako.
+# v2 (Nov 26 2026): jina "Retrain Weekly" lilikuwa SIO sahihi (jina halisi ni "Weekly Retrain Release", na workflow hiyo
+# inaripoti yenyewe kama 'retrain_weekly' kwa maelezo ya outcome), kwa hiyo limeondolewa; "Quality Weekly" na "V8 vs v6 Compare"
+# zimeongezwa (hazikuripotiwa kabisa). 'Instant Settle' (kila dakika 5) haijaongezwa kwa makusudi, ingejaza Actions na runs 288 kwa siku.
 name: Ops Report
 
 on:
@@ -7,8 +10,9 @@ on:
     workflows:
       - "Nightly Predictions Update"
       - "Hourly Catchup"
-      - "Retrain Weekly"
       - "Weekly Retrain v8"
+      - "Quality Weekly"
+      - "V8 vs v6 Compare"
     types: [completed]
 
 permissions:
