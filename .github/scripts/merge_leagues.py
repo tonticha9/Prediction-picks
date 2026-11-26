@@ -1,5 +1,8 @@
 """
-.github/scripts/merge_leagues.py  -  v2 (Nov 24 2026)
+.github/scripts/merge_leagues.py  -  v3 (Nov 26 2026)
+
+v3: KOSA LA KUHESABU LIMEREKEBISHWA: log ya nightly ilionyesha "safu -21340 zimeondolewa" (idadi hasi) kwa sababu pandas 2.x ilibadilisha 'keep' kuwa object.
+    Matokeo: ulinzi wa MAX_REMOVE_FRAC haukuweza kufanya kazi na idadi za log zilikuwa si sahihi. Sasa 'keep' ni numpy bool; idadi ni sahihi.
 
 v2: kupakua gates sasa kunaandika KILA kitu (matokeo ya Kaggle, orodha ya faili, hali ya notebook) ili kama gates12.json
     haipatikani tujue sababu; pia inatafuta gates kwenye faili yoyote ya .json ya output (si jina moja tu).
@@ -29,6 +32,7 @@ import subprocess
 import sys
 import zipfile
 
+import numpy as np
 import pandas as pd
 
 DATA = 'data'
@@ -212,10 +216,13 @@ def apply_gates(df, allowed, what):
     if df is None or not len(df) or allowed is None:
         return df, 0
     covered = df['market'].isin(GATE_NAMES) & df['league'].isin(allowed.keys())
-    keep = pd.Series(True, index=df.index)
+    # v2 (Nov 26 2026): 'keep' ni safu ya numpy ya bool. Awali ilikuwa pd.Series na pandas 2.x ilibadilisha kuwa 'object' (onyo la FutureWarning),
+    # ndipo (~keep).sum() ikatoa idadi HASI (-21340) na ulinzi wa MAX_REMOVE_FRAC haukuweza kufanya kazi kamwe.
+    keep = np.ones(len(df), dtype=bool)
     for lg, ok in allowed.items():
-        m = covered & (df['league'] == lg)
-        keep[m] = df.loc[m, 'market'].isin(ok)
+        m = (covered & (df['league'] == lg)).to_numpy()
+        if m.any():
+            keep[m] = df['market'].isin(ok).to_numpy()[m]
     n_cov = int(covered.sum()); n_rm = int((~keep).sum())
     if n_cov and n_rm / n_cov > MAX_REMOVE_FRAC:
         warn(f"{what}: gates zingeondoa {n_rm}/{n_cov} (>{int(MAX_REMOVE_FRAC * 100)}%) - ulinzi umezuia; data haijaguswa.")
