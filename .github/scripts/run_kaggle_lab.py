@@ -1,5 +1,5 @@
 """
-.github/scripts/run_kaggle_lab.py  -  v4 (Nov 25 2026)
+.github/scripts/run_kaggle_lab.py  -  v6 (Nov 25 2026)
 
 Inaendesha notebook ya Kaggle (KAGGLE_SLUG, mfano tonticha/add-league-lab-2) upya kwa ratiba, ili
 historia na vizingiti (gates) vya ligi 5 mpya + ligi 12 vijisasishe vyenyewe kila wiki.
@@ -22,6 +22,19 @@ v4 (Nov 25 2026, baada ya log ya v3): foleni ilikuwa SABABU - notebook ilikuwa n
 v3 ilizima na notebook ikaanza, lakini ikaishia ERROR ndani ya dakika 2. v4:
   - ikipata ERROR inapakua log na notebook iliyoshindwa na kuchapisha mistari ya mwisho na TRACEBACK (kama nightly),
   - haijaribu tena kwa kosa la notebook (ni la kudumu; kujaribu tena kunapoteza muda tu), inajaribu tena kwa makosa ya muda tu.
+
+v5 (Nov 25 2026, baada ya log ya v4): KOSA HALISI lilipatikana: "API key haipo: washa Secret ALLSPORTSAPI_KEY kwenye notebook".
+Secret ya Kaggle (Add-ons -> Secrets) HAIFIKI kwenye run inayoanzishwa kwa API (kernels push); inafanya kazi kwenye Save & Run All ya mkono tu.
+Nightly haina tatizo hili kwa sababu haitumii Secret. v5 inaingiza cell mpya ya KWANZA kwenye notebook kabla ya push, inayoweka
+ALLSPORTSAPI_KEY (kutoka GitHub secret ALLSPORTSAPI_KEY) kwenye mazingira na kwenye kaggle_secrets. Cell ya zamani ya aina hii
+inaondolewa kila run (haiongezeki). Funguo HAICHAPISHWI kwenye log. Tahadhari: toleo la notebook linalohifadhiwa Kaggle lina cell hiyo
+(notebook ni private; usiifanye public).
+
+v6 (Nov 25 2026): njia ya nightly (cell A1): funguo inachukuliwa kutoka ADMIN (kitufe cha API Key), si kuwekwa kwenye notebook.
+Script inahakikisha dataset ya 'admin-link' (admin_link.txt: mstari 1 = URL ya app, mstari 2 = token) ipo kwenye Inputs za notebook
+(inaiongeza yenyewe kwenye metadata ikikosekana), na inaingiza cell ya kwanza inayosoma admin_link.txt, kuita
+/api/internal/allsports-key (header X-Kaggle-Token), kuweka funguo kwenye mazingira na kwenye kaggle_secrets. Funguo HAIHIFADHIWI kwenye
+notebook wala kwenye GitHub; ukibadilisha key kwenye Admin, run inayofuata inatumia mpya. Hakuna GitHub secret ya ziada inayohitajika.
 """
 import glob
 import json
@@ -36,6 +49,8 @@ QUEUE_MAX_MIN = int(os.environ.get('QUEUE_MAX_MIN', '15'))
 POLL_SEC = int(os.environ.get('POLL_SEC', '120'))
 ATTEMPTS = 2
 META = os.path.join('kaggle_lab_kernel', 'kernel-metadata.json')
+INJECT_MARK = '# __GH_INJECT_KEY__'
+ADMIN_DS = os.environ.get('ADMIN_LINK_DATASET', 'admin-link')
 
 
 def kaggle(args):
@@ -85,6 +100,93 @@ def fix_metadata():
                 json.dump(meta, f, indent=2)
         except Exception as e:
             print(f"   siwezi kuandika {META}: {e}")
+
+
+def inject_key():
+    """Hakikisha dataset ya admin-link ipo kwenye Inputs, kisha ingiza cell ya kwanza inayochukua funguo kutoka Admin. Haichapishi funguo."""
+    owner = SLUG.split('/')[0]
+    try:
+        with open(META, encoding='utf-8') as f:
+            meta = json.load(f)
+    except Exception as e:
+        print(f"::warning::siwezi kusoma {META}: {type(e).__name__}: {e}")
+        return
+    ds = f"{owner}/{ADMIN_DS}"
+    sources = list(meta.get('dataset_sources') or [])
+    if ds not in sources:
+        sources.append(ds)
+        meta['dataset_sources'] = sources
+        try:
+            with open(META, 'w', encoding='utf-8') as f:
+                json.dump(meta, f, indent=2)
+            print(f"   dataset ya Admin '{ds}' imeongezwa kwenye Inputs za notebook kwa run hii.")
+        except Exception as e:
+            print(f"::warning::siwezi kuandika {META}: {e}")
+            return
+    code_file = meta.get('code_file') or 'add-league-lab-2.ipynb'
+    path = os.path.join('kaggle_lab_kernel', code_file)
+    try:
+        with open(path, encoding='utf-8') as f:
+            nb = json.load(f)
+    except Exception as e:
+        print(f"::warning::siwezi kusoma notebook ya kuingiza cell ya funguo: {type(e).__name__}: {e}")
+        return
+
+    def src_of(c):
+        src = c.get('source', '')
+        return ''.join(src) if isinstance(src, list) else str(src)
+
+    cells = [c for c in nb.get('cells', []) if not src_of(c).startswith(INJECT_MARK)]
+    removed = len(nb.get('cells', [])) - len(cells)
+    lines = [
+        INJECT_MARK + " (imewekwa na GitHub kwa run hii; inaondolewa na kuwekwa upya kila run; haina funguo ndani)",
+        "import glob as _g, json as _j, os as _os, time as _t, urllib.request as _u",
+        "def _fetch_admin_key():",
+        "    paths = _g.glob('/kaggle/input/**/admin_link.txt', recursive=True)",
+        "    if not paths:",
+        "        raise RuntimeError('admin_link.txt haipo: dataset admin-link haijawekwa kama Input ya notebook')",
+        "    rows = [l.strip() for l in open(paths[0], encoding='utf-8').read().splitlines() if l.strip()]",
+        "    url, tok = rows[0].rstrip('/'), rows[1]",
+        "    last = None",
+        "    for i in range(5):",
+        "        try:",
+        "            req = _u.Request(url + '/api/internal/allsports-key', headers={'X-Kaggle-Token': tok})",
+        "            with _u.urlopen(req, timeout=90) as r:",
+        "                k = str(_j.loads(r.read().decode()).get('key', '')).strip()",
+        "            if k:",
+        "                return k",
+        "            last = 'key tupu'",
+        "        except Exception as e:",
+        "            last = type(e).__name__ + ': ' + str(e)[:120]",
+        "        _t.sleep(10 * (i + 1))",
+        "    raise RuntimeError('imeshindwa kuchukua API key kutoka Admin: ' + str(last))",
+        "_GHK = _fetch_admin_key()",
+        "_os.environ['ALLSPORTSAPI_KEY'] = _GHK",
+        "try:",
+        "    import kaggle_secrets as _ks",
+        "    _orig = _ks.UserSecretsClient.get_secret",
+        "    def _gs(self, label, *a, **k):",
+        "        if 'allsport' in str(label).lower():",
+        "            return _GHK",
+        "        return _orig(self, label, *a, **k)",
+        "    _ks.UserSecretsClient.get_secret = _gs",
+        "except Exception as _e:",
+        "    print('kaggle_secrets patch skipped:', type(_e).__name__)",
+        "print('API key imechukuliwa kutoka Admin (urefu', len(_GHK), ')')",
+    ]
+    cell = {'cell_type': 'code', 'execution_count': None, 'metadata': {}, 'outputs': [],
+            'source': [l + '\n' for l in lines[:-1]] + [lines[-1]]}
+    if int(nb.get('nbformat_minor', 0) or 0) >= 5:
+        import uuid
+        cell['id'] = uuid.uuid4().hex[:8]
+    nb['cells'] = [cell] + cells
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(nb, f, ensure_ascii=False, indent=1)
+    except Exception as e:
+        print(f"::warning::siwezi kuandika notebook: {e}")
+        return
+    print(f"   cell ya kuchukua funguo kutoka Admin imeingizwa kama cell ya kwanza ya {os.path.basename(path)} (cell za zamani za aina hii zilizoondolewa: {removed})")
 
 
 def dump_failure():
@@ -160,6 +262,7 @@ def run_once():
         print(f"kernels pull imeshindwa: {out[:300]}")
         return 'error'
     fix_metadata()
+    inject_key()
     rc, out = kaggle(['kernels', 'push', '-p', 'kaggle_lab_kernel'])
     if rc != 0:
         print(f"kernels push imeshindwa: {out[:300]}")
