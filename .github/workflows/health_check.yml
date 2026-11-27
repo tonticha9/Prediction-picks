@@ -1,0 +1,39 @@
+# .github/workflows/health_check.yml
+#
+# UKAGUZI WA KILA SIKU (HATUA F5, v1, Nov 27 2026): funguo ya AllSportsAPI, mechi za ligi 5, na umri wa data ya gates.
+# Kila siku 05:10 UTC (08:10 EAT). Tatizo la kweli (funguo imekataliwa, data ya zamani) = run NYEKUNDU na GitHub inakutumia barua pepe;
+# pia inaripoti kwa /admin/ops (chanzo 'health_check'). Hakuna Kaggle, hakuna kinachobadilishwa kwenye repo.
+name: Health Check
+
+on:
+  schedule:
+    - cron: '10 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: health-check
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Health check
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+          ALLSPORTSAPI_KEY: ${{ secrets.ALLSPORTSAPI_KEY }}
+        run: python .github/scripts/health_check.py
