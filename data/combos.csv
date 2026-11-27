@@ -1,5 +1,5 @@
 target_odds,n_legs,legs,combined_odds,combined_prob_%
-2,2,Man United vs Brentford: dc_12 @1.28 + Ein Frankfurt vs Werder Bremen: dc_12 @1.25,1.6,81.9
+2,2,Telstar vs Groningen: dc_12 @1.28 + Ein Frankfurt vs Werder Bremen: dc_12 @1.25,1.6,78.2
 3,3,Levante vs Racing Santander: dc_1x @1.33 + Telstar vs Groningen: dc_12 @1.28 + Bournemouth vs Brighton: dc_1x @1.44,2.45,59.8
-5,6,Ein Frankfurt vs Werder Bremen: dc_12 @1.25 + Man City vs Leeds: dc_1x @1.14 + Az Alkmaar vs Psv Eindhoven: dc_x2 @1.36 + Werder Bremen vs M'Gladbach: dc_12 @1.22 + West Brom vs Bristol City: dc_12 @1.28 + Millwall vs Burnley: dc_1x @1.36,4.12,39.6
-7,6,Frosinone vs Parma: dc_12 @1.18 + Goztep vs Trabzonspor: dc_x2 @1.36 + Millwall vs Burnley: dc_1x @1.36 + St Truiden vs Genk: dc_1x @1.44 + Bournemouth vs Brighton: dc_1x @1.44 + Arsenal vs Man City: dc_12 @1.28,5.79,28.3
+5,6,Rb Leipzig vs Mainz: dc_1x @1.18 + Telstar vs Groningen: dc_12 @1.28 + Rizespor vs Kasimpasa: dc_12 @1.28 + Levante vs Racing Santander: dc_1x @1.33 + Elversberg vs Stuttgart: dc_x2 @1.28 + Union Berlin vs Hamburg: dc_12 @1.28,4.21,38.6
+7,6,Frosinone vs Parma: dc_12 @1.18 + Goztep vs Trabzonspor: dc_x2 @1.36 + Millwall vs Burnley: dc_1x @1.33 + St Truiden vs Genk: dc_1x @1.44 + Bournemouth vs Brighton: dc_1x @1.44 + Arsenal vs Man City: dc_12 @1.28,5.67,28.3
