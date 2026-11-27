@@ -1,5 +1,5 @@
 """
-league_gates_live.py: plugin (v1, Nov 26 2026) - HATUA E: kizingiti cha LIVE kwa kila ligi x soko.
+league_gates_live.py: plugin (v2, Nov 27 2026) - HATUA E + F3: kizingiti cha LIVE kwa kila ligi x soko, na kinga ya LIGI NZIMA kwa ligi 5 mpya.
 
 Tatizo: vizingiti vya Kaggle (gates12.json / new_leagues_gates.json) vinaamua kutokana na majaribio ya zamani. Soko la ligi fulani
 linaweza kuanza kufanya vibaya LIVE (matokeo halisi ya app) bila mtu kugundua. Plugin hii inalizima lenyewe na kulirudisha likipona.
@@ -14,6 +14,16 @@ Jinsi inavyofanya kazi (kila dakika 30, kutoka prediction_record):
   - Kinga: ikiwa zaidi ya LEAGUE_LIVE_CAP (35%) ya (ligi, soko) zote zinazopimika zingezimwa, plugin inajizuia (huenda tatizo
     ni la data, si la masoko) na hakuna kinachofichwa; ukurasa wa admin unaonyesha hali hiyo.
   - LEAGUE_LIVE_OFF=0 (Render env) inazima plugin kabisa.
+
+v2 (HATUA F3) - KINGA YA LIGI NZIMA (pooled): ligi 5 mpya (NOR, MEX, BRA, E2, EC) hazina picks 30 kwa kila soko kwa wiki nyingi, kwa hiyo
+kizingiti cha soko hakiwezi kuzipima mapema. Hapa picks za MASOKO YOTE ya ligi moja zinajumlishwa:
+  - ligi ikiwa na picks >= LEAGUE_POOL_MIN_N (30) zilizosettle (siku LEAGUE_LIVE_DAYS), winrate halisi dhidi ya wastani wa probability iliyotabiriwa;
+  - ligi inafichwa YOTE (picks zake zote hazionyeshwi) ikiwa winrate iko chini kwa >= LEAGUE_POOL_MIN_GAP (0.05) NA pengo hilo ni kubwa kuliko
+    LEAGUE_POOL_Z (2.0) x kosa la takwimu. Kosa linahesabiwa kwa jumla ya p(1-p) na kuzidishwa na LEAGUE_POOL_DEFF (1.5) kwa sababu picks za mechi
+    moja zinahusiana (mf. home_win na dc_1x), kwa hiyo bahati mbaya haizimi ligi;
+  - ligi ikipona (rolling LEAGUE_LIVE_DAYS), inarudi yenyewe;
+  - kinga: ikiwa ligi 3 au zaidi zinapimika na zaidi ya LEAGUE_POOL_CAP (60%) zingefichwa, hakuna kinachofichwa (huenda tatizo ni la data/settle);
+  - ligi zinazolindwa: LEAGUE_POOL_LEAGUES (chaguo-msingi NOR,MEX,BRA,E2,EC; 'ALL' = zote); LEAGUE_POOL_ENABLED=0 inazima sehemu hii tu.
 Ukurasa: /admin/league-gates (jedwali la ligi x soko, na lipi limezimwa), /admin/league-gates.json
 """
 import math
@@ -43,11 +53,19 @@ def _cfg():
         'z': _env_f('LEAGUE_LIVE_Z', 1.64),
         'cap': _env_f('LEAGUE_LIVE_CAP', 0.35),
         'ttl': int(_env_f('LEAGUE_LIVE_TTL', 1800)),
+        'pool_on': os.environ.get('LEAGUE_POOL_ENABLED', '1').strip() != '0',
+        'pool_leagues': os.environ.get('LEAGUE_POOL_LEAGUES', 'NOR,MEX,BRA,E2,EC').strip(),
+        'pool_min_n': int(_env_f('LEAGUE_POOL_MIN_N', 30)),
+        'pool_min_gap': _env_f('LEAGUE_POOL_MIN_GAP', 0.05),
+        'pool_z': _env_f('LEAGUE_POOL_Z', 2.0),
+        'pool_deff': max(1.0, _env_f('LEAGUE_POOL_DEFF', 1.5)),
+        'pool_cap': _env_f('LEAGUE_POOL_CAP', 0.60),
     }
 
 
 def _empty():
-    return {'off': {}, 'stats': [], 'tripped': False, 'measured': 0, 'at': time.time(), 'error': None}
+    return {'off': {}, 'stats': [], 'tripped': False, 'measured': 0, 'at': time.time(), 'error': None,
+            'league_off': {}, 'league_stats': [], 'league_tripped': False}
 
 
 def compute(ns):
@@ -62,6 +80,7 @@ def compute(ns):
         rows = PR.query.filter(PR.match_date >= cutoff, PR.result.in_(('WON', 'LOST'))).all()
         tmap = team_league_dict()
         agg = {}
+        pool = {}
         for r in rows:
             if (getattr(r, 'section', 'prediction') or 'prediction') != 'prediction':
                 continue
@@ -74,6 +93,12 @@ def compute(ns):
             a[0] += 1
             a[1] += 1 if r.result == 'WON' else 0
             a[2] += float(r.probability) / 100.0
+            pp = min(max(float(r.probability) / 100.0, 0.01), 0.99)
+            pl = pool.setdefault(lg, [0, 0, 0.0, 0.0])
+            pl[0] += 1
+            pl[1] += 1 if r.result == 'WON' else 0
+            pl[2] += pp
+            pl[3] += pp * (1 - pp)
         stats = []
         for (lg, mk), (n, w, sp) in agg.items():
             p = sp / n
@@ -95,6 +120,29 @@ def compute(ns):
             off = []
         res['stats'] = sorted(stats, key=lambda s: (-int(s.get('off_blocked', s['off'])), -s['gap']))
         res['off'] = {(s['league'], s['market']): s for s in off}
+        # ---- v2 (F3): kinga ya ligi nzima ----
+        scope = cfg['pool_leagues']
+        lstats = []
+        for lg, (n, w, sp, sv) in pool.items():
+            guarded = cfg['pool_on'] and (scope.upper() == 'ALL' or lg in {x.strip() for x in scope.split(',') if x.strip()})
+            p = sp / n
+            wr = w / n
+            gap = p - wr
+            sd = math.sqrt(max(sv, 1e-9) * cfg['pool_deff']) / n
+            measurable = n >= cfg['pool_min_n']
+            bad = bool(guarded and measurable and gap >= cfg['pool_min_gap'] and gap >= cfg['pool_z'] * sd)
+            lstats.append({'league': lg, 'n': n, 'wins': w, 'winrate': wr, 'avg_p': p, 'gap': gap, 'sd': sd,
+                           'measurable': measurable, 'guarded': guarded, 'off': bad})
+        scoped = [s for s in lstats if s['guarded'] and s['measurable']]
+        loff = [s for s in scoped if s['off']]
+        if len(scoped) >= 3 and len(loff) > cfg['pool_cap'] * len(scoped):
+            res['league_tripped'] = True
+            for s in lstats:
+                s['off_blocked'] = s['off']
+                s['off'] = False
+            loff = []
+        res['league_stats'] = sorted(lstats, key=lambda s: (-int(s.get('off_blocked', s['off'])), -s['gap']))
+        res['league_off'] = {s['league']: s for s in loff}
     except Exception as e:
         try:
             ns['db'].session.rollback()
@@ -147,13 +195,15 @@ def register(app, admin_only, app_ns):
             try:
                 if not _cfg()['on']:
                     return orig_pm(entries, settings)
-                off = get_state(app_ns)['off']
-                if not off:
+                st = get_state(app_ns)
+                off = st['off']
+                loff = st.get('league_off') or {}
+                if not off and not loff:
                     return orig_pm(entries, settings)
                 kept = []
                 for e in entries:
                     lg = _row_league(e[4], tmap_fn) if len(e) > 4 else None
-                    if lg and (lg, str(e[0])) in off:
+                    if lg and (lg in loff or (lg, str(e[0])) in off):
                         continue
                     kept.append(e)
                 if not kept:
@@ -178,7 +228,10 @@ def register(app, admin_only, app_ns):
     def admin_league_gates_json():
         st = get_state(app_ns, force=True)
         return jsonify({'tripped': st['tripped'], 'measured': st['measured'], 'error': st['error'],
-                        'off': [f'{k[0]}:{k[1]}' for k in st['off']], 'stats': st['stats']})
+                        'off': [f'{k[0]}:{k[1]}' for k in st['off']], 'stats': st['stats'],
+                        'league_tripped': st.get('league_tripped', False),
+                        'league_off': sorted((st.get('league_off') or {}).keys()),
+                        'league_stats': st.get('league_stats', [])})
 
     @app.route('/admin/league-gates')
     @admin_only
@@ -197,6 +250,30 @@ def register(app, admin_only, app_ns):
                 f"<td>{s['n']}</td><td>{s['winrate'] * 100:.1f}%</td><td>{s['avg_p'] * 100:.1f}%</td>"
                 f"<td>{s['gap'] * 100:+.1f}</td><td style='color:{color};font-weight:600'>{state}</td></tr>")
         unmeasured = len([s for s in st['stats'] if not s['measurable']])
+        lrows = []
+        for s in st.get('league_stats', []):
+            if not s['guarded']:
+                continue
+            blocked = s.get('off_blocked')
+            if not s['measurable']:
+                state, color = 'bado picks chache (%d/%d)' % (s['n'], cfg['pool_min_n']), '#7f8c8d'
+            elif s['off']:
+                state, color = 'IMEFICHWA', '#c0392b'
+            elif blocked:
+                state, color = 'ingefichwa (kinga)', '#d68910'
+            else:
+                state, color = 'sawa', '#1e8449'
+            lrows.append('<tr><td>' + escape(names.get(s['league'], s['league'])) + ' (' + escape(s['league']) + ')</td>'
+                         '<td>%d</td><td>%.1f%%</td><td>%.1f%%</td><td>%+.1f</td>' % (s['n'], s['winrate'] * 100, s['avg_p'] * 100, s['gap'] * 100)
+                         + "<td style='color:" + color + ";font-weight:600'>" + state + '</td></tr>')
+        league_html = ('<h3>Kinga ya ligi nzima (ligi 5 mpya)</h3><p>Picks za masoko yote ya ligi moja zinajumlishwa. Ligi inafichwa yote ikiwa na picks &ge; '
+                       + str(cfg['pool_min_n']) + ' zilizosettle na winrate iko chini ya probability kwa &ge; ' + format(cfg['pool_min_gap'] * 100, '.0f')
+                       + ' pointi (na si bahati tu). Ikipona, inarudi yenyewe.</p>'
+                       + ('' if cfg['pool_on'] else '<p style="color:#c0392b"><b>Sehemu hii imezimwa</b> (LEAGUE_POOL_ENABLED=0).</p>')
+                       + ('<p style="color:#d68910"><b>Kinga imewaka:</b> ligi nyingi sana zingefichwa kwa pamoja, kwa hiyo hakuna kinachofichwa. '
+                          'Angalia kama kuna tatizo la data/matokeo.</p>' if st.get('league_tripped') else '')
+                       + '<div class="w"><table><tr><th>Ligi</th><th>Picks</th><th>Winrate</th><th>Probability ya wastani</th><th>Pengo (pointi)</th><th>Hali</th></tr>'
+                       + (''.join(lrows) or '<tr><td colspan=6>Bado hakuna ligi inayolindwa yenye picks zilizosettle.</td></tr>') + '</table></div>')
         msg = ''
         if not cfg['on']:
             msg = '<p style="color:#c0392b"><b>Plugin imezimwa</b> (LEAGUE_LIVE_OFF=0). Hakuna soko linalofichwa.</p>'
@@ -215,5 +292,5 @@ th,td{{border:1px solid #ddd;padding:5px 7px;text-align:left}}th{{background:#ee
 kwa &ge; {cfg['min_gap'] * 100:.0f} pointi (na si bahati tu). Likipona, linarudi lenyewe. Linaonyeshwa hapa: {len(rows)} lililopimika, {len(st['off'])} lililozimwa,
 {unmeasured} bado hazina picks za kutosha.</p>{msg}
 <div class="w"><table><tr><th>Ligi</th><th>Soko</th><th>Picks</th><th>Winrate</th><th>Probability ya wastani</th><th>Pengo (pointi)</th><th>Hali</th></tr>
-{''.join(rows) or '<tr><td colspan=7>Bado hakuna soko lenye picks za kutosha.</td></tr>'}</table></div></body></html>"""
+{''.join(rows) or '<tr><td colspan=7>Bado hakuna soko lenye picks za kutosha.</td></tr>'}</table></div>{league_html}</body></html>"""
         return html
