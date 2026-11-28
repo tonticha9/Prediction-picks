@@ -391,4 +391,4 @@ def main():
     # 5. combos.csv: ondoa combos zenye mguu uliofichwa
     cb = read_csv_safe(os.path.join(DATA, 'combos.csv'))
     if cb is not None and len(cb) and 'legs' in cb.columns and allowed is not None:
-        hidden = set(
+        leg_re = re.c
