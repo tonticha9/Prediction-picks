@@ -1,11 +1,13 @@
 {
- "release_id": "2026-11-24_202611252115",
- "published_utc": "2026-11-25T21:16:35",
- "run_id": "45699033689",
+ "release_id": "2026-11-25_202611280936",
+ "published_utc": "2026-11-28T09:38:20",
+ "run_id": "46129167352",
  "rolled_back": false,
  "n_markets": 64,
- "data_end": "2026-11-24",
- "tier_demoted": [],
+ "data_end": "2026-11-25",
+ "tier_demoted": [
+  "dc_12"
+ ],
  "history": [
   {
    "release_id": "2026-11-07_202611080636",
@@ -35,6 +37,12 @@
    "release_id": "2026-11-22_202611240417",
    "published_utc": "2026-11-24T04:19:13",
    "run_id": "45322515047",
+   "rolled_back": false
+  },
+  {
+   "release_id": "2026-11-24_202611252115",
+   "published_utc": "2026-11-25T21:16:35",
+   "run_id": "45699033689",
    "rolled_back": false
   }
  ]
